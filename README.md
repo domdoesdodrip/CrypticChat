@@ -58,6 +58,6 @@ Ensure you are using a modern browser (Chrome, Firefox, Edge, or Safari). Intern
 
 * Custom domain.
 
-* View previous messages when you join.
+* View previous messages when you join. (ADDED)
 
 &copy; 2026 CrypticChat Protocol | *Stay hidden.*

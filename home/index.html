@@ -114,7 +114,7 @@
                             <button onclick="cancelReply()" class="text-xs opacity-50">✕</button>
                         </div>
                         <div class="flex gap-3 items-center glass p-2 rounded-2xl">
-                            <div id="input" contenteditable="true" placeholder="Enter transmission..." spellcheck="false" class="flex-1"></div>
+                            <div id="input" contenteditable="true" placeholder="Enter message..." spellcheck="false" class="flex-1"></div>
                             <button id="send-btn" class="bg-purple-600 p-4 rounded-xl">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             </button>
@@ -127,7 +127,7 @@
 </div>
 
 <script>
-const adminUID = 'uid-9payl298nl';
+const adminUID = 'uid-c3to79h1lq';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
 
 function initIdentity() {
@@ -151,7 +151,6 @@ document.getElementById("join-btn").onclick = async () => {
     myName = rawName;
     const roomID = (document.getElementById("room").value.trim() || "GlOBAL").toUpperCase();
     
-    // UPDATED: Points to your new serverless function file
     ably = new Ably.Realtime({ 
         authUrl: "/api/ably-token", 
         authParams: { clientId: myId } 

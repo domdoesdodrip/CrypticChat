@@ -4,83 +4,142 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CrypticChat</title>
+    <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
-        body { background: var(--bg); color: white; font-family: sans-serif; height: 100vh; overflow: hidden; }
+        body { margin: 0; background: var(--bg); color: white; font-family: Manrope, sans-serif; height: 100vh; overflow: hidden; }
+        #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .bubble { max-width: 80%; padding: 12px; border-radius: 15px; margin-bottom: 8px; }
-        .mine { background: var(--accent); align-self: flex-end; }
-        .theirs { background: #1f1d2b; align-self: flex-start; }
+        .bubble { max-width: 80%; padding: 12px 18px; border-radius: 20px; margin-bottom: 8px; word-wrap: break-word; position: relative; }
+        .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(150, 103, 244, 0.2); }
+        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
+        #modal-overlay { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); transition: opacity 0.2s; }
+        #messages::-webkit-scrollbar { width: 4px; }
+        #messages::-webkit-scrollbar-thumb { background: rgba(150, 103, 244, 0.4); border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div id="view-login" class="flex h-full items-center justify-center p-4">
-    <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
-        <h1 class="text-4xl font-black mb-8">CrypticChat</h1>
-        <div id="status" class="text-xs text-gray-500 mb-4 italic text-purple-400">Ready to join...</div>
-        <input id="name" type="text" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5" placeholder="Username">
-        <input id="room" type="text" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5" placeholder="Room ID">
-        <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-black">JOIN NETWORK</button>
+<canvas id="snow-canvas"></canvas>
+
+<div id="modal-overlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="glass max-w-sm w-full p-8 rounded-[2rem] text-center border-purple-500/30">
+        <h2 class="text-xl font-bold mb-2">Identity Check</h2>
+        <p id="modal-text" class="text-gray-400 text-sm mb-6"></p>
+        <div class="flex gap-3">
+            <button id="modal-cancel" class="flex-1 bg-white/5 py-3 rounded-xl font-bold hover:bg-white/10">CANCEL</button>
+            <button id="modal-confirm" class="flex-1 bg-purple-600 py-3 rounded-xl font-bold hover:bg-purple-500">PROCEED</button>
+        </div>
     </div>
 </div>
 
-<div id="view-chat" class="hidden h-full flex flex-col">
-    <header class="glass h-16 flex items-center justify-between px-6">
-        <div id="roomLabel" class="font-black text-purple-500 uppercase"></div>
-        <button onclick="location.reload()" class="text-red-500 text-xs font-bold">EXIT</button>
-    </header>
-    <div id="messages" class="flex-1 p-6 flex flex-col overflow-y-auto"></div>
-    <div class="p-6 bg-black/40 border-t border-white/10 flex gap-3">
-        <input id="input" type="text" class="flex-1 bg-white/10 p-4 rounded-2xl outline-none" placeholder="Message...">
-        <button id="send-btn" class="bg-purple-600 px-8 rounded-2xl font-black">SEND</button>
+<div id="app-root" class="h-full w-full relative z-10">
+    <div id="view-login" class="flex h-full items-center justify-center p-4">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
+            <h1 class="text-5xl font-black mb-10 tracking-tighter text-white">CrypticChat</h1>
+            <input id="name" type="text" maxlength="12" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5 focus:border-purple-500 text-white" placeholder="Username">
+            <input id="room" type="text" maxlength="12" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5 focus:border-purple-500 text-white" placeholder="Room ID (Optional)">
+            <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-black shadow-lg hover:bg-purple-500 active:scale-95 transition-all">JOIN NETWORK</button>
+        </div>
+    </div>
+
+    <div id="view-chat" class="hidden h-full flex flex-col">
+        <header class="glass h-20 flex items-center justify-between px-6 shrink-0">
+            <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest"></div>
+            <button onclick="location.reload()" class="bg-red-600/20 text-red-500 border border-red-500/30 px-6 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all">LEAVE</button>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <aside class="hidden lg:flex flex-col w-64 glass p-6 overflow-y-auto">
+                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest">Active Nodes (<span id="count">0</span>)</div>
+                <div id="users" class="space-y-2"></div>
+            </aside>
+            <main class="flex-1 flex flex-col relative">
+                <div id="messages" class="flex-1 p-6 flex flex-col overflow-y-auto space-y-2"></div>
+                <div class="p-6 bg-black/40 border-t border-white/10 shrink-0">
+                    <div class="flex gap-3 max-w-4xl mx-auto">
+                        <input id="input" type="text" class="flex-1 bg-white/10 p-4 rounded-2xl outline-none text-white border border-white/5 focus:border-purple-500" placeholder="Enter message..." autocomplete="off">
+                        <button id="send-btn" class="bg-purple-600 px-8 rounded-2xl font-black hover:bg-purple-500 transition-all">SEND</button>
+                    </div>
+                </div>
+            </main>
+        </div>
     </div>
 </div>
 
 <script>
+const canvas = document.getElementById("snow-canvas");
+const ctx = canvas.getContext("2d");
+let snow = [];
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 50}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2, d: Math.random()*0.5+0.2 })); }
+window.onresize = resize; resize();
+function drawSnow() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(150,103,244,0.15)"; snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(drawSnow); }
+drawSnow();
+
 let ably, channel, myName, myId;
 
+const showModal = (text) => new Promise(res => {
+    document.getElementById("modal-text").innerText = text;
+    document.getElementById("modal-overlay").classList.remove("hidden");
+    document.getElementById("modal-confirm").onclick = () => { document.getElementById("modal-overlay").classList.add("hidden"); res(true); };
+    document.getElementById("modal-cancel").onclick = () => { document.getElementById("modal-overlay").classList.add("hidden"); res(false); };
+});
+
 document.getElementById("join-btn").onclick = async () => {
-    const status = document.getElementById("status");
-    myName = document.getElementById("name").value.trim();
+    const rawName = document.getElementById("name").value.trim().replace(/[<>]/g, "");
     const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
-    if(!myName) return alert("Need a name!");
+    if(!rawName) return;
 
-    status.innerText = "Connecting to server...";
     myId = Math.random().toString(36).slice(2,8);
+    // Updated to your Render URL
+    ably = new Ably.Realtime({ authUrl: "https://server-js-158o.onrender.com/ably-token", authParams: { clientId: myId } });
+    channel = ably.channels.get("h:" + roomID);
 
-    try {
-        ably = new Ably.Realtime({ 
-            authUrl: "https://server-js-158o.onrender.com/ably-token",
-            authParams: { clientId: myId } 
-        });
+    channel.presence.enter({ user: rawName }, async () => {
+        channel.presence.get(async (err, members) => {
+            const duplicates = members.filter(m => m.data?.user?.toLowerCase() === rawName.toLowerCase() && m.clientId !== myId);
 
-        ably.connection.on('connected', async () => {
-            status.innerText = "Connected! Joining room...";
-            channel = ably.channels.get("h:" + roomID);
-            
-            await channel.presence.enter({ user: myName });
+            if (duplicates.length > 0) {
+                const suggestion = `${rawName}${Math.floor(Math.random()*99)}`;
+                const proceed = await showModal(`"${rawName}" is taken. Use "${suggestion}"?`);
+                await channel.presence.leave();
+                if (proceed) {
+                    document.getElementById("name").value = suggestion;
+                    document.getElementById("join-btn").click();
+                } else { ably.close(); }
+                return;
+            }
 
+            myName = rawName;
             document.getElementById("view-login").classList.add("hidden"); 
             document.getElementById("view-chat").classList.remove("hidden");
             document.getElementById("roomLabel").innerText = roomID;
-
-            channel.subscribe("msg", (m) => {
-                if(m.clientId !== myId) render(m.data.user, m.data.text, false);
-            });
+            
+            channel.subscribe("msg", m => { if(m.clientId !== myId) render(m.data.user, m.data.text, false); });
+            channel.presence.subscribe(() => syncUsers());
+            syncUsers();
         });
-
-        ably.connection.on('failed', (err) => {
-            status.innerText = "Connection Failed: " + err.reason;
-            alert("Connection Failed. Check your internet.");
-        });
-
-    } catch (err) {
-        status.innerText = "Error: " + err.message;
-    }
+    });
 };
+
+function syncUsers() {
+    channel.presence.get((err, members) => {
+        if(err) return;
+        const list = document.getElementById("users");
+        document.getElementById("count").innerText = members.length;
+        list.innerHTML = "";
+        members.forEach(m => {
+            const isMe = m.clientId === myId;
+            list.innerHTML += `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div class="h-2 w-2 rounded-full ${isMe?'bg-purple-500 shadow-[0_0_8px_#9667f4]':'bg-green-500'}"></div>
+                <span class="text-xs ${isMe?'text-white font-bold':'text-gray-400'}">${m.data?.user || 'Guest'}</span>
+            </div>`;
+        });
+    });
+}
 
 function send() {
     const el = document.getElementById("input");
@@ -97,9 +156,9 @@ function render(u, t, me) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
     div.className = `bubble ${me?'mine':'theirs'}`;
-    div.innerHTML = me ? t : `<div class="text-[10px] text-purple-400 font-bold mb-1 uppercase">${u}</div>${t}`;
+    div.innerHTML = me ? t : `<div class="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-tighter">${u}</div>${t}`;
     box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+    setTimeout(() => { box.scrollTop = box.scrollHeight; }, 30);
 }
 </script>
 </body>

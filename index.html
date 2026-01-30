@@ -4,10 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Entrance</title>
-    
     <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
-    
-    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -15,18 +12,11 @@
         body { margin: 0; background: var(--bg); color: white; font-family: Manrope, sans-serif; height: 100vh; overflow: hidden; }
         #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .bubble { max-width: 80%; padding: 12px 18px; border-radius: 20px; margin-bottom: 8px; word-wrap: break-word; }
-        .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(150, 103, 244, 0.2); }
-        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        #messages::-webkit-scrollbar { width: 4px; }
-        #messages::-webkit-scrollbar-thumb { background: rgba(150, 103, 244, 0.4); border-radius: 10px; }
         .doc-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 1.5rem; }
     </style>
 </head>
 <body>
-
 <canvas id="snow-canvas"></canvas>
-
 <div id="view-home" class="h-full w-full overflow-y-auto p-6 flex flex-col items-center">
     <div class="max-w-3xl w-full py-12">
         <div class="text-center mb-12">
@@ -37,7 +27,7 @@
         <div class="grid gap-6 mb-12">
             <div class="doc-card">
                 <h3 class="text-purple-400 font-black mb-2 uppercase text-xs tracking-widest">1 | Secure Channels</h3>
-                <p class="text-gray-400 text-sm leading-relaxed">Enter a custom Room ID to create a private frequency. Only users with your specific ID can intercept your messages. If you leave the Room ID blank, it will redirect you to a global chat room.</p>
+                <p class="text-gray-400 text-sm leading-relaxed">Enter a custom Room ID to create a private frequency. Only users with your specific ID can intercept your messages. Leaving it blank joins the Global node.</p>
             </div>
             <div class="doc-card">
                 <h3 class="text-purple-400 font-black mb-2 uppercase text-xs tracking-widest">2 | Real-time Nodes</h3>
@@ -45,18 +35,17 @@
             </div>
             <div class="doc-card">
                 <h3 class="text-purple-400 font-black mb-2 uppercase text-xs tracking-widest">3 | Privacy Ensured</h3>
-                <p class="text-gray-400 text-sm leading-relaxed">The server is ran by Render free servers, meaning you may have to wait up to a minute to load into a room, altough the messages are secure.</p>
+                <p class="text-gray-400 text-sm leading-relaxed">Now running on Vercel Edge functions. This ensures instant connection speeds and secure token handshakes without the cold-start delays.</p>
             </div>
         </div>
 
-        <button onclick="location.href='https://domdoesdodrip.github.io/CrypticChat/home'" class="w-full bg-purple-600 py-6 rounded-[2rem] font-black text-xl shadow-[0_0_30px_rgba(150,103,244,0.3)] hover:scale-[1.02] active:scale-95 transition-all">
+        <button onclick="window.location.href='./'" class="w-full bg-purple-600 py-6 rounded-[2rem] font-black text-xl shadow-[0_0_30px_rgba(150,103,244,0.3)] hover:scale-[1.02] active:scale-95 transition-all">
             ENTER TERMINAL
         </button>
     </div>
 </div>
 
 <script>
-/* SNOW EFFECT */
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let snow = [];
@@ -67,4 +56,3 @@ drawSnow();
 </script>
 </body>
 </html>
-

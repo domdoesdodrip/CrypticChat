@@ -7,7 +7,7 @@ A secure, real-time messaging terminal designed for ephemeral communication. No 
 
 ---
 
-## 🚀 Quick Start (For the Impatient)
+## 🚀 Quick Start
 
 1. **Access the Terminal:** Go to [domdoesdodrip.github.io/CrypticChat](https://domdoesdodrip.github.io/CrypticChat/)
 2. **Read the Protocol:** Click through the documentation home page.

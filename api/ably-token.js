@@ -12,22 +12,31 @@ module.exports = async (req, res) => {
         });
     }
 
-    try {
-        const client = new Ably.Rest(apiKey);
-        const tokenRequestData = await client.auth.createTokenRequest({ 
-            clientId: req.query.clientId || 'anonymous' 
-        });
-        
-        // CORS Headers
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.status(200).json(tokenRequestData);
+    // api/ably-token.js
+try {
+    const Ably = require('ably');
 
-    } catch (error) {
-        // 3. Send the REAL error back to the browser
-        res.status(500).json({ 
-            error: "Ably SDK Error", 
-            message: error.message,
-            stack: error.stack 
-        });
-    }
-};
+    module.exports = async (req, res) => {
+        const apiKey = process.env.ABLY_API_KEY;
+        
+        if (!apiKey) {
+            return res.status(500).json({ error: "API Key missing in Vercel Settings." });
+        }
+
+        const client = new Ably.Rest(apiKey);
+        
+        try {
+            const tokenRequestData = await client.auth.createTokenRequest({ 
+                clientId: req.query.clientId || 'anonymous' 
+            });
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.status(200).json(tokenRequestData);
+        } catch (err) {
+            res.status(500).json({ error: "Ably Auth Failed", details: err.message });
+        }
+    };
+} catch (e) {
+    module.exports = (req, res) => {
+        res.status(500).json({ error: "Module Loading Error", message: e.message });
+    };
+}

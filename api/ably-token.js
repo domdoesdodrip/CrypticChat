@@ -1,42 +1,39 @@
-const Ably = require('ably');
-
-module.exports = async (req, res) => {
-    // 1. Grab the key
+export default async function handler(req, res) {
     const apiKey = process.env.ABLY_API_KEY;
-
-    // 2. Immediate check: Is the key even there?
+    
+    // 1. Safety Check
     if (!apiKey) {
-        return res.status(500).json({ 
-            error: "Environment Variable Missing", 
-            details: "ABLY_API_KEY is not set in Vercel Settings." 
-        });
+        return res.status(500).json({ error: "ABLY_API_KEY not found in Vercel Settings." });
     }
 
-    // api/ably-token.js
-try {
-    const Ably = require('ably');
+    // 2. Prepare the request
+    const [keyId, keySecret] = apiKey.split(':');
+    const clientId = req.query.clientId || 'anonymous';
 
-    module.exports = async (req, res) => {
-        const apiKey = process.env.ABLY_API_KEY;
-        
-        if (!apiKey) {
-            return res.status(500).json({ error: "API Key missing in Vercel Settings." });
-        }
+    try {
+        // 3. Talk directly to Ably (No libraries needed)
+        const response = await fetch(`https://rest.ably.io/keys/${keyId}/requestToken`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${btoa(apiKey)}`
+            },
+            body: JSON.stringify({
+                clientId: clientId,
+                timestamp: Date.now()
+            })
+        });
 
-        const client = new Ably.Rest(apiKey);
-        
-        try {
-            const tokenRequestData = await client.auth.createTokenRequest({ 
-                clientId: req.query.clientId || 'anonymous' 
-            });
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.status(200).json(tokenRequestData);
-        } catch (err) {
-            res.status(500).json({ error: "Ably Auth Failed", details: err.message });
+        const tokenData = await response.json();
+
+        // 4. Send back to your chat
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if (response.ok) {
+            res.status(200).json(tokenData);
+        } else {
+            res.status(response.status).json({ error: "Ably Rejected Key", details: tokenData });
         }
-    };
-} catch (e) {
-    module.exports = (req, res) => {
-        res.status(500).json({ error: "Module Loading Error", message: e.message });
-    };
+    } catch (err) {
+        res.status(500).json({ error: "Fetch Error", details: err.message });
+    }
 }

@@ -19,14 +19,14 @@ A secure, real-time messaging terminal designed for ephemeral communication. No 
 ## 📖 Usage Protocol (Tutorial)
 
 ### 1. Identity Creation
-Your **Username** is your public callsign. 
+Your **Username** is public to all users in the room. 
 * **Limit:** 12 Characters.
-* **Advice:** Use a pseudonym. This network is designed for anonymity.
+* **Advice:** Use a nickname. This network is designed for anonymity.
 
 ### 2. Frequency (Room) Selection
 The **Room ID** determines which encrypted sub-channel you enter.
 * **Global Access:** Leave the Room ID blank to enter the public lobby.
-* **Private Frequency:** Enter a specific string (e.g., `GAMMA-7`) to create a hidden room. 
+* **Private Frequency:** Enter a specific word and numbers (e.g., `EXAMPLE123`) to create a hidden room. 
 * **Crucial:** Only users with the *exact* same Room ID can see your messages.
 
 ### 3. Connection States

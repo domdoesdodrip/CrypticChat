@@ -52,7 +52,7 @@ Ensure you are using a modern browser (Chrome, Firefox, Edge, or Safari). Intern
 
 # Next update soon
 
-* **Only one person can have the username, meaning there cannot be 2 people with the same name.
+* Only one person can have the username, meaning there cannot be 2 people with the same name.
 
 
 &copy; 2026 CrypticChat Protocol | *Stay hidden.*

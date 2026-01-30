@@ -9,7 +9,7 @@ A secure, real-time messaging terminal designed for ephemeral communication. No 
 
 ## 🚀 Quick Start
 
-1. **Access the Terminal:** Go to [domdoesdodrip.github.io/CrypticChat](https://domdoesdodrip.github.io/CrypticChat/)
+1. **Access the Terminal:** Go to [domdoesdodrip.github.io/CrypticChat,](https://domdoesdodrip.github.io/CrypticChat/) [ cryptical.wtf](https://cryptical.wtf) or [ crypticchat.vercel.app,](https://crypticchat.vercel.app)
 2. **Read the Protocol:** Click through the documentation home page.
 3. **Connect:** Hit **ENTER TERMINAL**.
 4. **Identify:** Enter a Username and a Room ID.
@@ -50,14 +50,14 @@ Ensure you are using a modern browser (Chrome, Firefox, Edge, or Safari). Intern
 
 ---
 
-# Next update soon
+# UPDATE
 
-* Only one person can have the username, meaning there cannot be 2 people with the same name. (ADDED)
+* Only one person can have the username, meaning there cannot be 2 people with the same name.
 
-* Mobile and Smaller screen support. (ADDED)
+* Mobile and Smaller screen support.
 
 * Custom domain.
-
-* View previous messages when you join. (ADDED)
+  
+* View previous messages when you join. 
 
 &copy; 2026 CrypticChat Protocol | *Stay hidden.*

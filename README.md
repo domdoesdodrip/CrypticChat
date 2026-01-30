@@ -9,7 +9,7 @@ A secure, real-time messaging terminal designed for ephemeral communication. No 
 
 ## 🚀 Quick Start
 
-1. **Access the Terminal:** Go to [domdoesdodrip.github.io/CrypticChat,](https://domdoesdodrip.github.io/CrypticChat/) [ cryptical.wtf](https://cryptical.wtf) or [ crypticchat.vercel.app,](https://crypticchat.vercel.app)
+1. **Access the Terminal:** Go to [domdoesdodrip.github.io/CrypticChat](https://domdoesdodrip.github.io/CrypticChat/), [ cryptical.wtf](https://cryptical.wtf) or [ crypticchat.vercel.app](https://crypticchat.vercel.app)
 2. **Read the Protocol:** Click through the documentation home page.
 3. **Connect:** Hit **ENTER TERMINAL**.
 4. **Identify:** Enter a Username and a Room ID.

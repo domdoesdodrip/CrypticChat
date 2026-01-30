@@ -39,15 +39,6 @@ To leave the network, click **DISCONNECT**.
 
 ---
 
-## 🛠 Technical Architecture
-
-* **Frontend:** HTML5 / Tailwind CSS (Hosted on GitHub Pages)
-* **Backend:** Node.js / Express (Hosted on Cloud)
-* **Network:** Ably Realtime Pub/Sub Protocol
-* **Logs:** Real-time event piping to Discord via Webhooks
-
----
-
 ## ⚠️ Troubleshooting
 
 **"I can't see my friend's messages!"**

@@ -10,10 +10,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; --glass: rgba(15, 12, 22, 0.85); }
+        :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; --glass: rgba(15, 12, 22, 0.85); --online: #22c55e; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; position: relative; }
         
-        /* FIX: Hide modals by default */
         .modal-base { 
             position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; 
             display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); 
@@ -41,13 +40,16 @@
         .mine { background: linear-gradient(135deg, #9667f4 0%, #6d28d9 100%); align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
-        .ping-pill { background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 8px; border-radius: 6px; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
-        .ping-active { border: 1px solid var(--ping-red) !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
-        
         #input { background: rgba(255,255,255,0.03); color: white; border: 1px solid rgba(255,255,255,0.08); outline: none; padding: 14px; border-radius: 16px; width: 100%; min-height: 52px; max-height: 150px; overflow-y: auto; transition: border 0.3s; }
         #input:empty:before { content: attr(placeholder); color: #4b5563; }
+
+        /* STATUS INDICATORS */
         .pulse { animation: pulse-animation 2s infinite; }
-        @keyframes pulse-animation { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        @keyframes pulse-animation { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+        
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-online { background-color: var(--online); box-shadow: 0 0 8px var(--online); }
+        .status-admin { background-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
     </style>
 </head>
 <body>
@@ -78,7 +80,7 @@
     <div id="view-login" class="flex-1 flex items-center justify-center p-6">
         <div class="glass w-full max-w-md p-10 rounded-[3rem] text-center relative overflow-hidden">
             <h1 class="text-5xl font-black mb-2 tracking-tighter text-white">CrypticChat</h1>
-            <p class="text-[10px] text-purple-400 font-bold uppercase tracking-[0.3em] mb-10">Secure Messanger</p>
+            <p class="text-[10px] text-purple-400 font-bold uppercase tracking-[0.3em] mb-10">Secure Messenger</p>
             <div class="space-y-4 mb-8">
                 <input id="name" type="text" maxlength="12" class="w-full p-4 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500 text-center font-bold" placeholder="USERNAME">
                 <input id="room" type="text" maxlength="12" class="w-full p-4 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500 text-center font-bold" placeholder="ROOMID (OPTIONAL)">
@@ -89,25 +91,30 @@
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-20 flex items-center justify-between px-6 shrink-0 z-30">
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col">
                 <div id="roomLabel" class="font-black text-white uppercase tracking-tighter text-lg leading-none"></div>
+                <div class="flex items-center mt-1">
+                    <span class="status-dot status-online pulse"></span>
+                    <span class="text-[9px] text-green-500 font-bold uppercase tracking-widest">Live Frequency</span>
+                </div>
             </div>
             <div class="flex items-center gap-3">
                 <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-full border border-purple-500/30 font-black tracking-widest">SYSOP</span>
+                <button onclick="toggleMobileUsers()" class="lg:hidden bg-white/5 p-2 rounded-xl"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></button>
                 <button onclick="location.reload()" class="bg-red-500/10 text-red-500 px-5 py-2 rounded-xl text-xs font-black uppercase border border-red-500/20">Exit</button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
             <aside class="hidden lg:flex flex-col w-72 glass p-6 overflow-y-auto border-r border-white/5">
-                <div class="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-4">Active Nodes</div>
+                <div class="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-4">Active Users</div>
                 <div id="users-desktop" class="space-y-2"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-6 pb-28 flex flex-col overflow-y-auto space-y-2"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-4 bg-black/80 z-20">
                     <div class="max-w-4xl mx-auto flex gap-3 items-center glass p-2 rounded-2xl">
-                        <div id="input" contenteditable="true" placeholder="Enter transmission..." spellcheck="false" class="flex-1"></div>
+                        <div id="input" contenteditable="true" placeholder="Enter message..." spellcheck="false" class="flex-1"></div>
                         <button id="send-btn" class="bg-purple-600 p-4 rounded-xl shadow-lg shadow-purple-600/30">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
@@ -145,7 +152,6 @@ document.getElementById("join-btn").onclick = async () => {
     myName = rawName;
     const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     
-    // Points to your Vercel API
     ably = new Ably.Realtime({ authUrl: "/api/ably-token", authParams: { clientId: myId } });
 
     ably.connection.on('connected', () => {
@@ -170,8 +176,11 @@ function syncUsers() {
         if(!members) return;
         const html = members.map(m => `
             <div class="glass-dark p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                <span class="text-xs font-black">${m.data.user}</span>
-                ${m.data.isAdmin ? '<span class="text-[8px] text-purple-400">SYS</span>' : ''}
+                <div class="flex items-center">
+                    <span class="status-dot ${m.data.isAdmin ? 'status-admin' : 'status-online'} pulse"></span>
+                    <span class="text-xs font-black tracking-tight">${m.data.user}</span>
+                </div>
+                ${m.data.isAdmin ? '<span class="text-[8px] text-purple-400 font-bold uppercase">Admin</span>' : ''}
             </div>`).join("");
         document.getElementById("users-desktop").innerHTML = html;
         document.getElementById("users-mobile-list").innerHTML = html;
@@ -184,12 +193,12 @@ function render(u, t, me, msgId, senderIsAdmin) {
     
     const div = document.createElement("div"); 
     div.id = msgId;
-    div.className = `bubble animate-msg flex flex-col ${me?'mine':'theirs'}`;
+    div.className = `bubble animate-msg flex flex-col group ${me?'mine':'theirs'}`;
     div.innerHTML = `
         ${!me ? `<div class="text-[9px] text-purple-400 font-black uppercase mb-1">${u} ${senderIsAdmin?'(ADMIN)':''}</div>` : ''}
         <div class="flex justify-between items-center gap-4">
             <span class="leading-relaxed font-semibold">${t}</span>
-            ${(me || isAdmin) ? `<button onclick="openDeleteModal('${div.id}')" class="opacity-30 hover:opacity-100"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
+            ${(me || isAdmin) ? `<button onclick="openDeleteModal('${div.id}')" class="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
         </div>`;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
@@ -213,7 +222,6 @@ document.getElementById("confirm-delete-btn").onclick = () => {
 document.getElementById("send-btn").onclick = send;
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 
-// Minimal Snow Effect
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let snow = [];

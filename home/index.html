@@ -4,17 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CrypticChat</title>
-    <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
-        body { margin: 0; background: var(--bg); color: white; font-family: Manrope, sans-serif; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: white; font-family: sans-serif; height: 100vh; overflow: hidden; }
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .bubble { max-width: 80%; padding: 12px 18px; border-radius: 20px; margin-bottom: 8px; }
-        .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
-        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .bubble { max-width: 80%; padding: 12px; border-radius: 15px; margin-bottom: 8px; }
+        .mine { background: var(--accent); align-self: flex-end; }
+        .theirs { background: #1f1d2b; align-self: flex-start; }
     </style>
 </head>
 <body>
@@ -22,27 +20,22 @@
 <div id="view-login" class="flex h-full items-center justify-center p-4">
     <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
         <h1 class="text-4xl font-black mb-8">CrypticChat</h1>
-        <input id="name" type="text" maxlength="12" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5 focus:border-purple-500 text-white" placeholder="Username">
-        <input id="room" type="text" maxlength="12" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5 focus:border-purple-500 text-white" placeholder="Room ID (Optional)">
-        <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-black hover:bg-purple-500 transition-all">JOIN ROOM</button>
+        <div id="status" class="text-xs text-gray-500 mb-4 italic text-purple-400">Ready to join...</div>
+        <input id="name" type="text" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5" placeholder="Username">
+        <input id="room" type="text" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5" placeholder="Room ID">
+        <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-black">JOIN NETWORK</button>
     </div>
 </div>
 
 <div id="view-chat" class="hidden h-full flex flex-col">
-    <header class="glass h-20 flex items-center justify-between px-6 shrink-0">
+    <header class="glass h-16 flex items-center justify-between px-6">
         <div id="roomLabel" class="font-black text-purple-500 uppercase"></div>
-        <button onclick="location.reload()" class="text-red-500 text-xs font-bold">DISCONNECT</button>
+        <button onclick="location.reload()" class="text-red-500 text-xs font-bold">EXIT</button>
     </header>
-    <div class="flex-1 flex overflow-hidden">
-        <main class="flex-1 flex flex-col">
-            <div id="messages" class="flex-1 p-6 flex flex-col overflow-y-auto space-y-2"></div>
-            <div class="p-6 bg-black/40 border-t border-white/10">
-                <div class="flex gap-3 max-w-4xl mx-auto">
-                    <input id="input" type="text" class="flex-1 bg-white/10 p-4 rounded-2xl outline-none text-white" placeholder="Message..." autocomplete="off">
-                    <button id="send-btn" class="bg-purple-600 px-8 rounded-2xl font-black">SEND</button>
-                </div>
-            </div>
-        </main>
+    <div id="messages" class="flex-1 p-6 flex flex-col overflow-y-auto"></div>
+    <div class="p-6 bg-black/40 border-t border-white/10 flex gap-3">
+        <input id="input" type="text" class="flex-1 bg-white/10 p-4 rounded-2xl outline-none" placeholder="Message...">
+        <button id="send-btn" class="bg-purple-600 px-8 rounded-2xl font-black">SEND</button>
     </div>
 </div>
 
@@ -50,34 +43,42 @@
 let ably, channel, myName, myId;
 
 document.getElementById("join-btn").onclick = async () => {
+    const status = document.getElementById("status");
     myName = document.getElementById("name").value.trim();
     const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
-    if(!myName) return;
+    if(!myName) return alert("Need a name!");
 
+    status.innerText = "Connecting to server...";
     myId = Math.random().toString(36).slice(2,8);
 
-    ably = new Ably.Realtime({ 
-        authUrl: "https://server-js-158o.onrender.com/ably-token",
-        authParams: { clientId: myId } 
-    });
-
-    channel = ably.channels.get("h:" + roomID);
-
     try {
-        await ably.connection.whenState('connected');
-        await channel.presence.enter({ user: myName });
+        ably = new Ably.Realtime({ 
+            authUrl: "https://server-js-158o.onrender.com/ably-token",
+            authParams: { clientId: myId } 
+        });
 
-        document.getElementById("view-login").classList.add("hidden"); 
-        document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = roomID;
+        ably.connection.on('connected', async () => {
+            status.innerText = "Connected! Joining room...";
+            channel = ably.channels.get("h:" + roomID);
+            
+            await channel.presence.enter({ user: myName });
 
-        channel.subscribe("msg", (m) => {
-            if(m.clientId !== myId) render(m.data.user, m.data.text, false);
+            document.getElementById("view-login").classList.add("hidden"); 
+            document.getElementById("view-chat").classList.remove("hidden");
+            document.getElementById("roomLabel").innerText = roomID;
+
+            channel.subscribe("msg", (m) => {
+                if(m.clientId !== myId) render(m.data.user, m.data.text, false);
+            });
+        });
+
+        ably.connection.on('failed', (err) => {
+            status.innerText = "Connection Failed: " + err.reason;
+            alert("Connection Failed. Check your internet.");
         });
 
     } catch (err) {
-        console.error("Connection Error:", err);
-        alert("Failed to connect. Check Render Logs.");
+        status.innerText = "Error: " + err.message;
     }
 };
 

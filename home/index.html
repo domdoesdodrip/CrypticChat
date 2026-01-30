@@ -17,9 +17,8 @@
         .glass { background: rgba(15, 12, 22, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
         @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64f, 1) forwards; }
+        .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         
-        /* FIX: Added overflow-wrap and word-break to prevent screen breaking on long messages */
         .bubble { 
             max-width: 85%; 
             padding: 10px 16px; 
@@ -140,6 +139,13 @@
 <script>
 const adminUID = 'uid-dkb2epnjnc';
 let ably, channel, myName, myId, userList = [], isAdmin = false, currentReply = null, deleteTargetId = null, kickTargetId = null;
+let unreadCount = 0;
+
+function playNotif() {
+    const sound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+    sound.volume = 0.5;
+    sound.play().catch(() => {});
+}
 
 function initIdentity() {
     let id = localStorage.getItem('cryptic_uid');
@@ -154,6 +160,11 @@ function initIdentity() {
     }
 }
 initIdentity();
+
+window.addEventListener('focus', () => {
+    unreadCount = 0;
+    document.title = "CrypticChat";
+});
 
 function toggleMobileUsers() {
     const el = document.getElementById("mobile-users");
@@ -180,7 +191,16 @@ document.getElementById("join-btn").onclick = async () => {
             document.getElementById("view-chat").classList.remove("hidden");
             document.getElementById("roomLabel").innerText = roomID;
             
-            channel.subscribe("msg", m => render(m.data.user, m.data.text, m.clientId === myId, m.data.msgId, m.data.isAdmin, m.data.reply));
+            channel.subscribe("msg", m => {
+                render(m.data.user, m.data.text, m.clientId === myId, m.data.msgId, m.data.isAdmin, m.data.reply);
+                if(m.clientId !== myId) {
+                    playNotif();
+                    if (document.hidden || !document.hasFocus()) {
+                        unreadCount++;
+                        document.title = `(${unreadCount > 99 ? '99+' : unreadCount}) CrypticChat`;
+                    }
+                }
+            });
             channel.subscribe("sys_announce", m => renderSystem(m.data.text));
             channel.subscribe("delete", m => document.getElementById(m.data.id)?.remove());
             

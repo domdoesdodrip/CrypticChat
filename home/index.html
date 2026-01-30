@@ -5,30 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>CrypticChat</title>
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; --glass: rgba(15, 12, 22, 0.85); }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
-        
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.8; }
         .glass { background: var(--glass); backdrop-filter: blur(25px); border: 1px solid rgba(150, 103, 244, 0.2); }
-        
         .bubble { max-width: 85%; padding: 14px 18px; border-radius: 24px; margin-bottom: 4px; font-weight: 600; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.2s; position: relative; }
         .mine { background: rgba(150, 103, 244, 0.25); align-self: flex-end; border-bottom-right-radius: 4px; border-color: rgba(150, 103, 244, 0.4); }
         .theirs { background: rgba(255, 255, 255, 0.05); align-self: flex-start; border-bottom-left-radius: 4px; }
-        
         .ping-pill { background: #3b82f6; color: white; padding: 1px 6px; border-radius: 6px; font-size: 0.9em; font-weight: 800; }
         .reply-preview { font-size: 11px; opacity: 0.5; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 6px; font-style: italic; }
-
         @keyframes popIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .animate-pop { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
         .popup-inner { background: #0c0a12; border: 1px solid rgba(150, 103, 244, 0.3); padding: 2.5rem; border-radius: 3rem; width: 90%; max-width: 380px; text-align: center; }
-
-        #input { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 16px; border-radius: 20px; width: 100%; transition: border 0.2s; max-height: 150px; overflow-y: auto; }
-        #input:focus { border-color: var(--accent); }
+        #input { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 16px; border-radius: 20px; width: 100%; max-height: 150px; overflow-y: auto; }
         #input:empty:before { content: attr(placeholder); color: #444; }
     </style>
 </head>
@@ -39,27 +32,17 @@
 <div id="loading-overlay" class="modal-base">
     <div class="text-center animate-pulse">
         <div class="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-[10px] font-black uppercase tracking-[0.4em]">Initializing</p>
+        <p class="text-[10px] font-black uppercase tracking-[0.4em]">Establishing Uplink</p>
     </div>
 </div>
 
 <div id="kick-modal" class="modal-base">
     <div class="popup-inner">
-        <h3 class="text-2xl font-black mb-4 uppercase">Kick User</h3>
-        <input id="kick-reason" type="text" placeholder="Enter Reason..." class="w-full p-4 bg-white/5 rounded-2xl mb-6 outline-none border border-white/10 text-center font-bold">
+        <h3 class="text-2xl font-black mb-4 uppercase">Sever Connection</h3>
+        <input id="kick-reason" type="text" placeholder="Reason..." class="w-full p-4 bg-white/5 rounded-2xl mb-6 outline-none border border-white/10 text-center font-bold">
         <div class="flex gap-3">
             <button onclick="closeModals()" class="flex-1 p-4 bg-white/5 rounded-2xl font-black text-xs">CANCEL</button>
             <button id="kick-confirm-btn" class="flex-1 p-4 bg-red-600 rounded-2xl font-black text-xs">CONFIRM</button>
-        </div>
-    </div>
-</div>
-
-<div id="exit-modal" class="modal-base">
-    <div class="popup-inner">
-        <h3 class="text-2xl font-black mb-6 uppercase">Disconnect?</h3>
-        <div class="flex gap-3">
-            <button onclick="closeModals()" class="flex-1 p-4 bg-white/5 rounded-2xl font-black text-xs">STAY</button>
-            <button onclick="location.reload()" class="flex-1 p-4 bg-red-600 rounded-2xl font-black text-xs">EXIT</button>
         </div>
     </div>
 </div>
@@ -68,10 +51,10 @@
     <div id="view-login" class="flex-1 flex items-center justify-center p-6">
         <div class="glass w-full max-w-md p-12 rounded-[4rem] text-center">
             <h1 class="text-5xl font-black tracking-tighter mb-2">CrypticChat</h1>
-            <p class="text-[10px] text-purple-400 font-black uppercase tracking-[0.3em] mb-12">Private Network</p>
+            <p class="text-[10px] text-purple-400 font-black uppercase tracking-[0.3em] mb-12">Encrypted Node</p>
             <div class="space-y-4 mb-10">
-                <input id="name" type="text" maxlength="12" class="w-full p-5 bg-white/5 rounded-3xl outline-none text-center font-bold" placeholder="Username">
-                <input id="room" type="text" maxlength="12" class="w-full p-5 bg-white/5 rounded-3xl outline-none text-center font-bold" placeholder="Room ID">
+                <input id="name" type="text" maxlength="12" class="w-full p-5 bg-white/5 rounded-3xl outline-none text-center font-bold" placeholder="Handle">
+                <input id="room" type="text" maxlength="12" class="w-full p-5 bg-white/5 rounded-3xl outline-none text-center font-bold" placeholder="Room Cluster">
             </div>
             <button id="join-btn" class="w-full bg-purple-600 py-6 rounded-3xl font-black uppercase tracking-widest text-lg transition-transform active:scale-95">Connect</button>
         </div>
@@ -81,31 +64,30 @@
         <header class="glass h-20 flex items-center justify-between px-8 shrink-0 z-30">
             <div class="flex items-center gap-4">
                 <div id="roomLabel" class="font-black text-white uppercase text-xl tracking-tighter"></div>
-                <div class="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[9px] font-black uppercase tracking-tighter">Live</div>
+                <div class="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[9px] font-black uppercase tracking-tighter">Secure</div>
             </div>
             <div class="flex items-center gap-4">
-                <span id="admin-indicator" class="hidden text-[9px] bg-white text-black px-4 py-1.5 rounded-full font-black uppercase">Admin Mode</span>
-                <button onclick="openExit()" class="bg-red-600/20 text-red-500 border border-red-500/20 px-6 py-2 rounded-2xl text-xs font-black uppercase tracking-widest">Exit</button>
+                <span id="admin-indicator" class="hidden text-[9px] bg-white text-black px-4 py-1.5 rounded-full font-black uppercase">Root Access</span>
+                <button onclick="location.reload()" class="bg-red-600/20 text-red-500 border border-red-500/20 px-6 py-2 rounded-2xl text-xs font-black uppercase tracking-widest">Exit</button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
             <aside class="hidden lg:flex flex-col w-72 glass p-8 overflow-y-auto border-r border-white/5">
-                <p class="text-[10px] text-gray-500 font-black uppercase mb-8 tracking-[0.2em]">Active Users</p>
+                <p class="text-[10px] text-gray-500 font-black uppercase mb-8 tracking-[0.2em]">Active Nodes</p>
                 <div id="active-list" class="space-y-4"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-8 pb-32 flex flex-col overflow-y-auto space-y-2"></div>
-                
                 <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent z-20">
                     <div class="max-w-4xl mx-auto">
-                        <div id="reply-bar" class="hidden glass mb-2 p-3 rounded-2xl flex justify-between items-center animate-pop border-b-0 rounded-b-none">
+                        <div id="reply-bar" class="hidden glass mb-2 p-3 rounded-2xl flex justify-between items-center animate-pop">
                             <span id="reply-text" class="text-xs opacity-60 truncate font-bold text-purple-400"></span>
                             <button onclick="cancelReply()" class="text-xs font-black text-red-500 px-2">✕</button>
                         </div>
                         <div id="mention-menu" class="hidden flex-col glass mb-2 rounded-2xl overflow-hidden border-purple-500/30"></div>
                         <div class="flex gap-4 items-center glass p-3 rounded-3xl">
-                            <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false" class="flex-1"></div>
+                            <div id="input" contenteditable="true" placeholder="Transmit message..." spellcheck="false" class="flex-1"></div>
                             <button id="send-btn" class="bg-purple-600 p-5 rounded-2xl transition-transform active:scale-90">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                             </button>
@@ -120,11 +102,9 @@
 <script>
 const adminUID = 'uid-c3to79h1lq';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, userList = [];
-let msgHistory = [], lastActive = Date.now();
-const pingSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+let msgHistory = [];
 
 function closeModals() { document.querySelectorAll('.modal-base').forEach(m => m.style.display = 'none'); }
-function openExit() { document.getElementById('exit-modal').style.display = 'flex'; }
 function cancelReply() { currentReply = null; document.getElementById('reply-bar').classList.add('hidden'); }
 
 function initIdentity() {
@@ -139,56 +119,31 @@ document.getElementById("join-btn").onclick = async () => {
     if(!nameInput) return;
     myName = nameInput;
     const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
-    
     document.getElementById("loading-overlay").style.display = 'flex';
-    
-    // Auth Logic: Vercel primary, Render fallback
-    const vercelUrl = "https://cryptic-chat-api.vercel.app/api/ably-token";
-    const renderUrl = "https://server-js-158o.onrender.com/ably-token";
 
-    ably = new Ably.Realtime({ 
-        authUrl: vercelUrl, 
-        authParams: { clientId: myId },
-        recover: (error, callback) => { callback(true); } 
-    });
+    // Prioritize Vercel, fallback to Render
+    const vercel = `https://cryptic-chat-api.vercel.app/api/ably-token`;
+    const render = `https://server-js-158o.onrender.com/ably-token`;
 
-    // Fallback trigger if Vercel fails
+    ably = new Ably.Realtime({ authUrl: vercel, authParams: { clientId: myId } });
+
     ably.connection.on('failed', () => {
-        ably = new Ably.Realtime({ authUrl: renderUrl, authParams: { clientId: myId } });
+        ably = new Ably.Realtime({ authUrl: render, authParams: { clientId: myId } });
     });
 
     channel = ably.channels.get("room-" + roomID);
 
-    channel.presence.get((err, members) => {
-        if(members && members.some(m => m.data.user.toLowerCase() === myName.toLowerCase() && m.clientId !== myId)) {
-            document.getElementById("loading-overlay").style.display = 'none';
-            alert("Name already taken.");
-            return;
-        }
-
-        channel.presence.enter({ user: myName, isAdmin }, () => {
-            document.getElementById("loading-overlay").style.display = 'none';
-            document.getElementById("view-login").classList.add("hidden"); 
-            document.getElementById("view-chat").classList.remove("hidden");
-            document.getElementById("roomLabel").innerText = roomID;
-            
-            channel.subscribe("msg", m => {
-                render(m.data.user, m.data.text, m.clientId === myId, m.data.isAdmin, m.id, m.data.reply);
-                if(m.clientId !== myId) {
-                    pingSfx.play().catch(()=>{});
-                    if(document.hidden) document.title = "(99+) CrypticChat";
-                }
-            });
-
-            channel.subscribe("delete", m => document.getElementById(m.data.id)?.remove());
-
-            channel.subscribe("kick", m => {
-                if(m.data.targetId === myId) { ably.close(); alert("KICKED: " + m.data.reason); location.reload(); }
-            });
-
-            channel.presence.subscribe(() => updateUsers());
-            updateUsers();
-        });
+    channel.presence.enter({ user: myName, isAdmin }, () => {
+        document.getElementById("loading-overlay").style.display = 'none';
+        document.getElementById("view-login").classList.add("hidden"); 
+        document.getElementById("view-chat").classList.remove("hidden");
+        document.getElementById("roomLabel").innerText = roomID;
+        
+        channel.subscribe("msg", m => renderMsg(m.data.user, m.data.text, m.clientId === myId, m.data.isAdmin, m.id, m.data.reply));
+        channel.subscribe("delete", m => document.getElementById(m.data.id)?.remove());
+        channel.subscribe("kick", m => { if(m.data.targetId === myId) location.reload(); });
+        channel.presence.subscribe(() => updateUsers());
+        updateUsers();
     });
 };
 
@@ -197,14 +152,13 @@ function updateUsers() {
         if(!members) return;
         userList = members.map(m => m.data.user);
         document.getElementById("active-list").innerHTML = members.map(m => `
-            <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+            <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 animate-pop">
                 <span onclick="insertMention('${m.data.user}')" class="text-xs font-black uppercase tracking-tighter cursor-pointer hover:text-purple-400">${m.data.user}</span>
-                ${isAdmin && m.clientId !== myId ? `<button onclick="startKick('${m.clientId}')" class="text-[8px] bg-red-500/20 text-red-500 px-3 py-1 rounded-lg font-black">KICK</button>` : ''}
+                ${isAdmin && m.clientId !== myId ? `<button onclick="startKick('${m.clientId}')" class="text-[8px] bg-red-500/20 text-red-500 px-3 py-1 rounded-lg font-black">DROP</button>` : ''}
             </div>`).join("");
     });
 }
 
-// Mention Logic
 const inputEl = document.getElementById("input");
 const menuEl = document.getElementById("mention-menu");
 
@@ -222,101 +176,72 @@ inputEl.oninput = () => {
 };
 
 function insertMention(u) {
-    const words = inputEl.innerText.split(/\s/);
+    const text = inputEl.innerText;
+    const words = text.split(/\s/);
     words.pop();
     inputEl.innerText = words.join(" ") + " ";
     inputEl.innerHTML += `<span class="ping-pill" contenteditable="false">@${u}</span>&nbsp;`;
     menuEl.style.display = 'none';
     inputEl.focus();
-    // Move cursor to end
-    const range = document.createRange();
-    const sel = window.getSelection();
-    range.selectNodeContents(inputEl);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
 }
 
-function startReply(u, t) {
-    currentReply = { user: u, text: t.substring(0, 40) + (t.length > 40 ? "..." : "") };
-    document.getElementById('reply-text').innerText = `Replying to @${u}: "${currentReply.text}"`;
-    document.getElementById('reply-bar').classList.remove('hidden');
-    inputEl.focus();
-}
-
-function render(u, t, me, admin, msgId, reply) {
+function renderMsg(u, t, me, admin, msgId, reply) {
     const box = document.getElementById("messages");
     const div = document.createElement("div"); 
     div.id = msgId;
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-pop shadow-xl`;
-    
-    const formattedText = t.replace(/@(\w+)/g, '<span class="ping-pill">@$1</span>');
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-pop`;
+    const formatted = t.replace(/@(\w+)/g, '<span class="ping-pill">@$1</span>');
 
     div.innerHTML = `
         ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
-        ${!me ? `<div class="text-[8px] font-black uppercase mb-1 opacity-50 tracking-widest">${u} ${admin?'(ADMIN)':''}</div>` : ''}
+        ${!me ? `<div class="text-[8px] font-black uppercase mb-1 opacity-50 tracking-widest">${u} ${admin?'(ROOT)':''}</div>` : ''}
         <div class="flex justify-between items-start gap-4">
-            <span class="leading-relaxed">${formattedText}</span>
+            <span class="leading-relaxed">${formatted}</span>
             <div class="flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
-                <button onclick="startReply('${u}', '${t.replace(/'/g, "\\'")}')" class="p-1 opacity-50 hover:opacity-100">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                </button>
-                ${(me || isAdmin) ? `
-                <button onclick="channel.publish('delete', {id:'${msgId}'})" class="p-1 text-red-400 opacity-50 hover:opacity-100">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                </button>` : ''}
+                <button onclick="startReply('${u}', '${t.replace(/'/g, "\\'")}')" class="p-1 opacity-50"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                ${(me || isAdmin) ? `<button onclick="channel.publish('delete', {id:'${msgId}'})" class="p-1 text-red-400 opacity-50"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
             </div>
         </div>`;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
 
+function startReply(u, t) {
+    currentReply = { user: u, text: t.substring(0, 30) + "..." };
+    document.getElementById('reply-text').innerText = `Replying to @${u}`;
+    document.getElementById('reply-bar').classList.remove('hidden');
+    inputEl.focus();
+}
+
 function send() {
     let text = inputEl.innerText.trim();
     if(!text) return;
-
     const now = Date.now();
     msgHistory.push(now);
     msgHistory = msgHistory.filter(t => now - t < 1300);
-    if(msgHistory.length >= 5) { channel.publish("kick", { targetId: myId, reason: "Spam" }); return; }
+    if(msgHistory.length >= 5) { channel.publish("kick", { targetId: myId, reason: "Flood Control" }); return; }
 
     channel.publish("msg", { user: myName, text, isAdmin, reply: currentReply });
-    inputEl.innerHTML = "";
-    cancelReply();
-    lastActive = now;
+    inputEl.innerHTML = ""; cancelReply();
 }
 
 function startKick(id) {
     document.getElementById('kick-modal').style.display = 'flex';
     document.getElementById('kick-confirm-btn').onclick = () => {
-        const reason = document.getElementById('kick-reason').value || "Admin Choice";
-        channel.publish("kick", { targetId: id, reason });
+        channel.publish("kick", { targetId: id, reason: document.getElementById('kick-reason').value || "Admin" });
         closeModals();
     };
 }
 
-window.onfocus = () => { document.title = "CrypticChat"; };
 document.getElementById("send-btn").onclick = send;
 inputEl.onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 
-// Snow
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let flakes = [];
-function resize() { 
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight; 
-    flakes = Array.from({length: 40}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2 + 0.5, d: Math.random() * 0.5 + 0.2, s: Math.random() * 0.2 - 0.1 })); 
-}
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; flakes = Array.from({length: 40}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2 + 0.5, d: Math.random() * 0.5 + 0.2, s: Math.random() * 0.2 - 0.1 })); }
 window.onresize = resize; resize();
-function draw() { 
-    ctx.clearRect(0,0,canvas.width,canvas.height); 
-    ctx.fillStyle="rgba(150, 103, 244, 0.4)"; 
-    flakes.forEach(f=>{
-        f.y += f.d; f.x += f.s; if(f.y > canvas.height) f.y = -5;
-        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
-    }); 
-    requestAnimationFrame(draw); 
-}
+function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle="rgba(150, 103, 244, 0.4)"; flakes.forEach(f=>{ f.y += f.d; f.x += f.s; if(f.y > canvas.height) f.y = -5; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(draw); }
 draw();
 </script>
 </body>

@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>CrypticChat</title>
     <link rel="icon" type="image/x-icon" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
-    
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; --glass: rgba(15, 12, 22, 0.85); }
+        :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; --glass: rgba(15, 12, 22, 0.9); }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; position: relative; }
         
         body::before {
@@ -19,59 +18,41 @@
             z-index: 50; background-size: 100% 2px, 3px 100%; pointer-events: none;
         }
 
-        #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.6; }
-        .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8); }
-        .glass-dark { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); }
-
-        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 1; }
+        .glass { background: var(--glass); backdrop-filter: blur(25px); border: 1px solid rgba(150, 103, 244, 0.25); }
+        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
         
-        @keyframes msgIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-msg { animation: msgIn 0.2s ease-out forwards; }
         
-        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 20px; margin-bottom: 8px; position: relative; transition: all 0.2s; overflow-wrap: break-word; font-size: 14px; }
-        .mine { background: linear-gradient(135deg, #9667f4 0%, #6d28d9 100%); align-self: flex-end; border-bottom-right-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
-        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
+        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 20px; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+        .mine { background: #9667f4; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         
-        .ping-pill { background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-family: 'JetBrains Mono'; font-size: 11px; }
-        .ping-active { border: 1px solid var(--ping-red) !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.15); }
-        
-        #input { background: rgba(255,255,255,0.03); color: white; border: 1px solid rgba(255,255,255,0.08); outline: none; padding: 14px; border-radius: 16px; width: 100%; min-height: 52px; max-height: 150px; overflow-y: auto; }
-        #input:empty:before { content: attr(placeholder); color: #4b5563; }
-
-        #mobile-users { position: fixed; inset: 0; z-index: 100; background: black; padding: 2rem; display: none; }
-        .pulse { animation: p 2s infinite; }
-        @keyframes p { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .ping-pill { background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono'; font-size: 11px; }
+        #input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; }
+        #input:empty:before { content: attr(placeholder); color: #6b7280; }
+        .pulse { animation: p 1.5s infinite; }
+        @keyframes p { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
 
-<div id="status-notice" class="modal-base">
-    <div class="glass p-10 rounded-[3rem] max-w-xs w-full text-center border-red-500/20">
-        <div class="text-red-500 mb-4 flex justify-center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></div>
-        <h3 id="status-title" class="text-2xl font-black mb-2 tracking-tighter">DISCONNECTED</h3>
-        <p id="status-desc" class="text-xs text-gray-500 mb-8 font-bold uppercase tracking-widest leading-loose"></p>
-        <button onclick="location.reload()" class="w-full bg-white/5 hover:bg-white/10 py-4 rounded-2xl font-black text-xs tracking-[0.2em]">RE-INITIALIZE</button>
+<div id="loading-screen" class="modal-base">
+    <div class="text-center">
+        <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="font-black tracking-widest text-xs uppercase">Connecting to Frequency...</p>
     </div>
 </div>
 
-<div id="delete-modal" class="modal-base">
-    <div class="glass p-8 rounded-[2rem] max-w-xs w-full text-center">
-        <h3 class="text-xl font-black mb-6">Purge Message?</h3>
-        <div class="flex gap-3">
-            <button onclick="closeDeleteModal()" class="flex-1 bg-white/5 py-3 rounded-xl font-bold">CANCEL</button>
-            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">DELETE</button>
-        </div>
+<div id="alert-modal" class="modal-base">
+    <div class="glass p-10 rounded-[3rem] max-w-xs w-full text-center">
+        <h3 id="alert-title" class="text-2xl font-black mb-2 tracking-tighter uppercase">Notice</h3>
+        <p id="alert-desc" class="text-sm text-gray-400 mb-8 font-bold leading-relaxed"></p>
+        <button onclick="location.reload()" class="w-full bg-white text-black py-4 rounded-2xl font-black text-xs uppercase">Back to Login</button>
     </div>
-</div>
-
-<div id="mobile-users" class="flex-col">
-    <div class="flex justify-between items-center mb-8">
-        <h2 class="text-2xl font-black">Users</h2>
-        <button onclick="toggleMobileUsers()" class="p-3 bg-white/5 rounded-full">✕</button>
-    </div>
-    <div id="users-mobile-list" class="space-y-3"></div>
 </div>
 
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
@@ -80,8 +61,8 @@
             <h1 class="text-5xl font-black mb-2 tracking-tighter">CrypticChat</h1>
             <p class="text-[10px] text-purple-400 font-bold uppercase tracking-[0.3em] mb-10">Secure Messenger</p>
             <div class="space-y-4 mb-8">
-                <input id="name" type="text" maxlength="12" class="w-full p-4 bg-white/5 rounded-2xl outline-none border border-white/5 text-center font-bold" placeholder="Username">
-                <input id="room" type="text" maxlength="12" class="w-full p-4 bg-white/5 rounded-2xl outline-none border border-white/5 text-center font-bold" placeholder="RoomID">
+                <input id="name" type="text" maxlength="12" class="w-full p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="Username">
+                <input id="room" type="text" maxlength="12" class="w-full p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="RoomID">
             </div>
             <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-lg">Initialize</button>
         </div>
@@ -91,32 +72,23 @@
         <header class="glass h-20 flex items-center justify-between px-6 shrink-0 z-30">
             <div class="flex items-center gap-4">
                 <div id="roomLabel" class="font-black text-white uppercase tracking-tighter text-lg"></div>
-                <span class="text-[10px] text-green-500 font-black uppercase pulse">Connected</span>
+                <span class="text-[10px] text-green-500 font-black uppercase pulse">Online</span>
             </div>
             <div class="flex items-center gap-3">
-                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-full border border-purple-500/30 font-black">SYSOP</span>
-                <button onclick="toggleMobileUsers()" class="lg:hidden bg-white/5 p-2 rounded-xl"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></button>
-                <button onclick="location.reload()" class="bg-red-500/10 text-red-500 px-5 py-2 rounded-xl text-xs font-black uppercase border border-red-500/20">Exit</button>
+                <span id="admin-indicator" class="hidden text-[10px] bg-white text-black px-3 py-1.5 rounded-full font-black uppercase">Admin Mode</span>
+                <button onclick="location.reload()" class="bg-red-600 px-5 py-2 rounded-xl text-xs font-black uppercase">Exit</button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-72 glass p-6 overflow-y-auto border-r border-white/5">
-                <div class="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-4">Active Users</div>
-                <div id="users-desktop" class="space-y-2"></div>
-            </aside>
             <main class="flex-1 flex flex-col relative">
-                <div id="messages" class="flex-1 p-6 pb-28 flex flex-col overflow-y-auto space-y-2"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent z-20">
+                <div id="messages" class="flex-1 p-6 pb-28 flex flex-col overflow-y-auto space-y-1"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent z-20">
                     <div class="max-w-4xl mx-auto">
-                        <div id="reply-bar" class="hidden flex justify-between items-center p-3 glass rounded-t-2xl mb-[-1px] border-b-0">
-                            <span id="reply-user" class="text-xs text-purple-400 font-bold italic"></span>
-                            <button onclick="cancelReply()" class="text-xs opacity-50">✕</button>
-                        </div>
                         <div class="flex gap-3 items-center glass p-2 rounded-2xl">
-                            <div id="input" contenteditable="true" placeholder="Enter message..." spellcheck="false" class="flex-1"></div>
+                            <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false" class="flex-1"></div>
                             <button id="send-btn" class="bg-purple-600 p-4 rounded-xl">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                             </button>
                         </div>
                     </div>
@@ -128,7 +100,15 @@
 
 <script>
 const adminUID = 'uid-c3to79h1lq';
-let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
+let ably, channel, myName, myId, isAdmin = false;
+let messageHistory = [];
+let lastActive = Date.now();
+
+function showAlert(title, desc) {
+    document.getElementById("alert-title").innerText = title;
+    document.getElementById("alert-desc").innerText = desc;
+    document.getElementById("alert-modal").style.display = 'flex';
+}
 
 function initIdentity() {
     myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
@@ -140,91 +120,50 @@ function initIdentity() {
 }
 initIdentity();
 
-function toggleMobileUsers() {
-    const el = document.getElementById("mobile-users");
-    el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
-}
-
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     if(!rawName) return;
     myName = rawName;
-    const roomID = (document.getElementById("room").value.trim() || "GlOBAL").toUpperCase();
+    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     
-    ably = new Ably.Realtime({ 
-        authUrl: "/api/ably-token", 
-        authParams: { clientId: myId } 
-    });
+    document.getElementById("loading-screen").style.display = 'flex';
     
+    ably = new Ably.Realtime({ authUrl: "/api/ably-token", authParams: { clientId: myId } });
     channel = ably.channels.get("room-" + roomID);
 
-    channel.presence.enter({ user: myName, isAdmin }, (err) => {
-        if(err) {
-            console.error("Connection failed", err);
+    // Name Taken Check
+    channel.presence.get((err, members) => {
+        if(members.some(m => m.data.user.toLowerCase() === myName.toLowerCase() && m.clientId !== myId)) {
+            document.getElementById("loading-screen").style.display = 'none';
+            alert("Name already taken in this room.");
             return;
         }
-        document.getElementById("view-login").classList.add("hidden"); 
-        document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = roomID;
-        
-        channel.subscribe("msg", m => render(m.data.user, m.data.text, m.clientId === myId, m.data.msgId, m.data.isAdmin, m.data.reply));
-        channel.subscribe("delete", m => document.getElementById(m.data.id)?.remove());
-        
-        channel.subscribe("kick", m => {
-            if(m.data.targetId === myId) {
-                ably.close();
-                document.getElementById("app-root").style.display = 'none';
-                document.getElementById("status-desc").innerText = m.data.reason || "Kicked by Sysop";
-                document.getElementById("status-notice").style.display = 'flex';
-            }
-        });
 
-        channel.presence.subscribe(() => syncUsers());
-        syncUsers();
+        channel.presence.enter({ user: myName, isAdmin }, (err) => {
+            document.getElementById("loading-screen").style.display = 'none';
+            document.getElementById("view-login").classList.add("hidden"); 
+            document.getElementById("view-chat").classList.remove("hidden");
+            document.getElementById("roomLabel").innerText = roomID;
+            
+            channel.subscribe("msg", m => render(m.data.user, m.data.text, m.clientId === myId, m.data.isAdmin));
+            channel.subscribe("kick", m => {
+                if(m.data.targetId === myId) {
+                    ably.close();
+                    showAlert("KICKED", m.data.reason);
+                }
+            });
+        });
     });
 };
 
-function syncUsers() {
-    channel.presence.get((err, members) => {
-        if(!members) return;
-        const html = members.map(m => `
-            <div class="flex items-center justify-between glass-dark p-3 rounded-xl border border-white/5">
-                <div class="flex items-center gap-3">
-                    <div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'} pulse"></div>
-                    <span class="text-xs font-black uppercase tracking-tighter">${m.data.user}</span>
-                </div>
-                ${isAdmin && m.clientId !== myId ? `<button onclick="kickUser('${m.clientId}', '${m.data.user}')" class="text-[8px] text-red-500 font-black">KICK</button>` : ''}
-            </div>`).join("");
-        document.getElementById("users-desktop").innerHTML = html;
-        document.getElementById("users-mobile-list").innerHTML = html;
-    });
-}
-
-function kickUser(targetId, targetName) {
-    const reason = prompt(`Kick ${targetName}? Reason:`) || "Removed";
-    channel.publish("kick", { targetId, reason });
-}
-
-function render(u, t, me, msgId, senderIsAdmin, reply) {
+function render(u, t, me, senderIsAdmin) {
     const box = document.getElementById("messages");
-    if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); 
-    div.id = msgId;
-    const isPinged = !me && t.includes(`@${myName}`);
-    div.className = `bubble flex flex-col group ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg`;
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-msg`;
     const formattedText = t.replace(/@(\w+)/g, '<span class="ping-pill">@$1</span>');
     div.innerHTML = `
-        ${reply ? `<div class="text-white/40 text-[10px] italic mb-1 border-l border-white/20 pl-2">@${reply.user}: ${reply.text}</div>` : ''}
-        <div class="flex flex-col">
-            ${!me ? `<div class="text-[9px] text-purple-400 font-black uppercase mb-1">${u} ${senderIsAdmin?'(ADMIN)':''}</div>` : ''}
-            <div class="flex justify-between items-start gap-4">
-                <span class="leading-relaxed font-semibold">${formattedText}</span>
-                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
-                    ${(me || isAdmin) ? `<button onclick="openDeleteModal('${div.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
-                </div>
-            </div>
-        </div>`;
+        ${!me ? `<div class="text-[9px] opacity-70 uppercase mb-1">${u} ${senderIsAdmin?'(ADMIN)':''}</div>` : ''}
+        <span>${formattedText}</span>`;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
@@ -233,33 +172,46 @@ function send() {
     const input = document.getElementById("input");
     let text = input.innerText.trim();
     if(!text) return;
-    const msgId = 'm-' + Math.random().toString(36).slice(2,9);
-    channel.publish("msg", { user: myName, text, msgId, isAdmin, reply: currentReply });
-    input.innerHTML = ""; cancelReply();
+
+    // Spam Filter: 5 msgs in 1.3s
+    const now = Date.now();
+    messageHistory.push(now);
+    messageHistory = messageHistory.filter(t => now - t < 1300);
+    if(messageHistory.length >= 5) {
+        channel.publish("kick", { targetId: myId, reason: "Auto-kick: Spam detected." });
+        return;
+    }
+
+    lastActive = now;
+    channel.publish("msg", { user: myName, text, isAdmin });
+    input.innerHTML = "";
 }
 
-function startReply(u, t) {
-    currentReply = { user: u, text: t.substring(0, 30) + (t.length > 30 ? '...' : '') };
-    document.getElementById("reply-bar").classList.remove("hidden");
-    document.getElementById("reply-user").innerText = `Replying to @${u}`;
-    document.getElementById("input").focus();
-}
-function cancelReply() { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); }
-function openDeleteModal(id) { deleteTargetId = id; document.getElementById("delete-modal").style.display = 'flex'; }
-function closeDeleteModal() { document.getElementById("delete-modal").style.display = 'none'; }
-document.getElementById("confirm-delete-btn").onclick = () => {
-    if(deleteTargetId) { channel.publish("delete", { id: deleteTargetId }); closeDeleteModal(); }
-};
+// Inactivity Kick: 15 mins
+setInterval(() => {
+    if(Date.now() - lastActive > 15 * 60 * 1000 && ably) {
+        channel.publish("kick", { targetId: myId, reason: "Auto-kick: Inactive for 15 minutes." });
+    }
+}, 10000);
 
 document.getElementById("send-btn").onclick = send;
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 
+// Pop-out Snow
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let snow = [];
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 40}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2, d: Math.random() * 0.4 + 0.2 })); }
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 50}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 3 + 1, d: Math.random() * 1 + 0.5 })); }
 window.onresize = resize; resize();
-function drawSnow() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle="rgba(150, 103, 244, 0.15)"; snow.forEach(p=>{p.y+=p.d; if(p.y>canvas.height)p.y=-5; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();}); requestAnimationFrame(drawSnow); }
+function drawSnow() { 
+    ctx.clearRect(0,0,canvas.width,canvas.height); 
+    ctx.fillStyle="rgba(150, 103, 244, 0.4)"; 
+    snow.forEach(p=>{
+        p.y+=p.d; if(p.y>canvas.height)p.y=-5; 
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    }); 
+    requestAnimationFrame(drawSnow); 
+}
 drawSnow();
 </script>
 </body>

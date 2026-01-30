@@ -2,55 +2,80 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>CrypticChat</title>
+    <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
-        body { margin: 0; background: var(--bg); color: white; font-family: Manrope, sans-serif; height: 100vh; overflow: hidden; }
+        /* Use dvh (Dynamic Viewport Height) for mobile browsers */
+        body { margin: 0; background: var(--bg); color: white; font-family: Manrope, sans-serif; height: 100dvh; overflow: hidden; }
+        
         #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        /* Animations */
         @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .bubble { max-width: 80%; padding: 12px 18px; border-radius: 20px; margin-bottom: 8px; word-wrap: break-word; }
+        .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        /* Chat Bubbles */
+        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; word-wrap: break-word; font-size: 15px; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .sys-msg { align-self: center; font-size: 11px; color: #6b7280; text-transform: uppercase; margin: 12px 0; background: rgba(255,255,255,0.03); padding: 4px 12px; border-radius: 99px; }
+        
+        .sys-msg { align-self: center; font-size: 10px; color: #6b7280; text-transform: uppercase; margin: 12px 0; background: rgba(255,255,255,0.03); padding: 4px 12px; border-radius: 99px; }
+
+        /* Custom Scrollbar */
+        #messages::-webkit-scrollbar { width: 4px; }
+        #messages::-webkit-scrollbar-thumb { background: rgba(150, 103, 244, 0.3); border-radius: 10px; }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
 
-<div id="app-root" class="h-full w-full relative z-10">
-    <div id="view-login" class="flex h-full items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-            <h1 class="text-5xl font-black mb-10 tracking-tighter">CrypticChat</h1>
-            <input id="name" type="text" maxlength="12" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
-            <input id="room" type="text" maxlength="12" class="w-full mb-4 p-4 bg-white/10 rounded-2xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Room ID (Optional)">
-            <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-black hover:bg-purple-500 transition-all">JOIN NETWORK</button>
+<div id="app-root" class="h-[100dvh] w-full relative z-10 flex flex-col">
+
+    <div id="view-login" class="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div class="glass w-full max-w-md p-6 sm:p-10 rounded-3xl text-center shadow-2xl mx-auto">
+            <h1 class="text-3xl sm:text-5xl font-black mb-8 tracking-tighter text-white">CrypticChat</h1>
+            <input id="name" type="text" maxlength="12" class="w-full mb-3 p-4 bg-white/10 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500 transition-colors" placeholder="Username">
+            <input id="room" type="text" maxlength="12" class="w-full mb-6 p-4 bg-white/10 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500 transition-colors" placeholder="Room ID (Optional)">
+            <button id="join-btn" class="w-full bg-purple-600 py-4 rounded-xl font-bold shadow-lg hover:bg-purple-500 active:scale-95 transition-all text-sm sm:text-base">JOIN NETWORK</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
-        <header class="glass h-20 flex items-center justify-between px-6 shrink-0">
-            <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest"></div>
-            <button onclick="location.reload()" class="bg-red-600/20 text-red-500 border border-red-500/30 px-6 py-2 rounded-xl text-xs font-black">LEAVE</button>
+        <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-20">
+            <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
+            <div class="flex gap-2">
+                <div class="lg:hidden bg-white/5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-gray-400 border border-white/5">
+                    <span id="mobile-count">0</span> ONLINE
+                </div>
+                <button onclick="location.reload()" class="bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-1.5 rounded-lg text-[10px] font-black hover:bg-red-600 hover:text-white transition-all">LEAVE</button>
+            </div>
         </header>
 
-        <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-6 overflow-y-auto">
-                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase">Active Nodes (<span id="count">0</span>)</div>
+        <div class="flex flex-1 overflow-hidden relative">
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
+                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest">Active Nodes (<span id="count">0</span>)</div>
                 <div id="users" class="space-y-2"></div>
             </aside>
-            <main class="flex-1 flex flex-col">
-                <div id="messages" class="flex-1 p-6 flex flex-col overflow-y-auto space-y-1"></div>
-                <div class="p-6 bg-black/40 border-t border-white/10">
-                    <div class="flex gap-3 max-w-4xl mx-auto">
-                        <input id="input" type="text" class="flex-1 bg-white/10 p-4 rounded-2xl outline-none border border-white/5 focus:border-purple-500" placeholder="Enter message...">
-                        <button id="send-btn" class="bg-purple-600 px-8 rounded-2xl font-black">SEND</button>
+
+            <main class="flex-1 flex flex-col min-w-0">
+                <div id="messages" class="flex-1 p-4 flex flex-col overflow-y-auto space-y-1 overscroll-contain"></div>
+                
+                <div class="p-3 sm:p-4 bg-black/60 backdrop-blur-md border-t border-white/10 shrink-0 z-20">
+                    <div class="flex gap-2 max-w-4xl mx-auto items-center">
+                        <input id="input" type="text" class="flex-1 bg-white/5 p-3 sm:p-4 rounded-xl outline-none text-white border border-white/5 focus:border-purple-500 text-sm sm:text-base transition-colors" placeholder="Message..." autocomplete="off">
+                        <button id="send-btn" class="bg-purple-600 p-3 sm:px-6 sm:py-4 rounded-xl font-bold hover:bg-purple-500 transition-all shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:hidden" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                            </svg>
+                            <span class="hidden sm:block">SEND</span>
+                        </button>
                     </div>
                 </div>
             </main>
@@ -59,68 +84,112 @@
 </div>
 
 <script>
-let ably, channel, myName, myId;
-
-// Snow Effect
+/* --- SNOW EFFECT (Optimized for Mobile Performance) --- */
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let snow = [];
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2, d: Math.random()*0.5+0.2 })); }
-window.onresize = resize; resize();
-function drawSnow() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(150,103,244,0.1)"; snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(drawSnow); }
+// Reduce particle count on mobile
+const particleCount = window.innerWidth < 600 ? 25 : 50; 
+
+function resize() { 
+    canvas.width = window.innerWidth; 
+    canvas.height = window.innerHeight; 
+    snow = Array.from({length: particleCount}, () => ({ 
+        x: Math.random()*canvas.width, 
+        y: Math.random()*canvas.height, 
+        r: Math.random()*2, 
+        d: Math.random()*0.5+0.2 
+    })); 
+}
+window.onresize = resize; 
+resize();
+
+function drawSnow() { 
+    ctx.clearRect(0,0,canvas.width,canvas.height); 
+    ctx.fillStyle = "rgba(150,103,244,0.15)"; 
+    snow.forEach(p => { 
+        p.y += p.d; 
+        if(p.y > canvas.height) p.y = -5; 
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); 
+        ctx.fill(); 
+    }); 
+    requestAnimationFrame(drawSnow); 
+}
 drawSnow();
 
-document.getElementById("join-btn").onclick = async () => {
-    const rawName = document.getElementById("name").value.trim();
-    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
-    if(!rawName) return alert("Enter a name");
+/* --- CHAT LOGIC --- */
+let ably, channel, myName, myId;
 
+document.getElementById("join-btn").onclick = async () => {
+    const rawName = document.getElementById("name").value.trim().replace(/[<>]/g, ""); // Basic sanitizer
+    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    if(!rawName) return;
+
+    // UI Transition
+    document.getElementById("join-btn").innerText = "CONNECTING...";
+    
     myId = Math.random().toString(36).slice(2,8);
     
-    // IMPORTANT: Make sure this URL is correct!
-    ably = new Ably.Realtime({ 
-        authUrl: "https://server-js-158o.onrender.com/ably-token", 
-        authParams: { clientId: myId } 
-    });
-
-    // Simple channel name to avoid errors
-    channel = ably.channels.get("room-" + roomID);
-
-    channel.presence.enter({ user: rawName }, (err) => {
-        if(err) {
-            console.error(err);
-            return alert("Connection Error: " + err.message);
-        }
-
-        myName = rawName;
-        document.getElementById("view-login").classList.add("hidden"); 
-        document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = roomID;
-        
-        renderSystem(`Connected to ${roomID}`);
-        renderSystem(`User: ${myName}`);
-
-        channel.subscribe("msg", m => { 
-            if(m.clientId !== myId) render(m.data.user, m.data.text, false); 
+    // Connect
+    try {
+        ably = new Ably.Realtime({ 
+            authUrl: "https://server-js-158o.onrender.com/ably-token", 
+            authParams: { clientId: myId } 
         });
 
-        channel.presence.subscribe(() => syncUsers());
-        syncUsers();
-    });
+        channel = ably.channels.get("room-" + roomID);
+
+        channel.presence.enter({ user: rawName }, (err) => {
+            if(err) {
+                alert("Connection Failed: " + err.message);
+                document.getElementById("join-btn").innerText = "JOIN NETWORK";
+                return;
+            }
+
+            myName = rawName;
+            document.getElementById("view-login").classList.add("hidden"); 
+            document.getElementById("view-chat").classList.remove("hidden");
+            document.getElementById("roomLabel").innerText = roomID;
+            
+            renderSystem(`Connected to ${roomID}`);
+
+            // Subscribe
+            channel.subscribe("msg", m => { 
+                if(m.clientId !== myId) render(m.data.user, m.data.text, false); 
+            });
+
+            // Presence
+            channel.presence.subscribe(() => syncUsers());
+            syncUsers();
+        });
+
+    } catch(e) {
+        alert("System Error: " + e);
+    }
 };
 
 function syncUsers() {
     channel.presence.get((err, members) => {
-        if(err) return;
+        if(err || !members) return;
+        
+        // Update both desktop sidebar and mobile header count
+        const count = members.length;
+        document.getElementById("count").innerText = count;
+        document.getElementById("mobile-count").innerText = count;
+        
         const list = document.getElementById("users");
-        document.getElementById("count").innerText = members.length;
         list.innerHTML = "";
+        
         members.forEach(m => {
             const isMe = m.clientId === myId;
-            list.innerHTML += `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5 animate-msg">
+            const div = document.createElement("div");
+            div.className = "flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5 animate-msg";
+            div.innerHTML = `
                 <div class="h-2 w-2 rounded-full ${isMe?'bg-purple-500 shadow-[0_0_8px_#9667f4]':'bg-green-500'}"></div>
-                <span class="text-xs ${isMe?'text-white font-bold':'text-gray-400'}">${m.data?.user || 'Guest'}</span>
-            </div>`;
+                <span class="text-xs ${isMe?'text-white font-bold':'text-gray-400'} truncate">${m.data?.user || 'Guest'}</span>
+            `;
+            list.appendChild(div);
         });
     });
 }
@@ -137,9 +206,13 @@ function renderSystem(msg) {
 function send() {
     const el = document.getElementById("input");
     if(!el.value.trim()) return;
-    render(myName, el.value, true);
-    channel.publish("msg", { user: myName, text: el.value });
-    el.value = "";
+    
+    const text = el.value;
+    el.value = ""; // Clear immediately for speed
+    el.focus(); // Keep keyboard open on mobile
+    
+    render(myName, text, true);
+    channel.publish("msg", { user: myName, text: text });
 }
 
 document.getElementById("send-btn").onclick = send;
@@ -149,9 +222,10 @@ function render(u, t, me) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
     div.className = `bubble ${me?'mine':'theirs'} animate-msg`;
-    div.innerHTML = me ? t : `<div class="text-[10px] text-purple-400 font-bold mb-1 uppercase">${u}</div>${t}`;
+    div.innerHTML = me ? t : `<div class="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-tighter">${u}</div>${t}`;
     box.appendChild(div);
-    setTimeout(() => { box.scrollTop = box.scrollHeight; }, 30);
+    // Smooth scroll to bottom
+    setTimeout(() => { box.scrollTop = box.scrollHeight; }, 10);
 }
 </script>
 </body>

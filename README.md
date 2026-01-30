@@ -56,4 +56,6 @@ Ensure you are using a modern browser (Chrome, Firefox, Edge, or Safari). Intern
 
 * Mobile and Smaller screen support.
 
+* Custom domain.
+
 &copy; 2026 CrypticChat Protocol | *Stay hidden.*

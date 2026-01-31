@@ -1,24 +1,28 @@
 const Ably = require('ably');
+const crypto = require('crypto');
 
 export default async function handler(req, res) {
-    const { clientId, fingerprint } = req.query;
-    
-    // 1. Get the user's IP from the request headers
-    const forwarded = req.headers['x-forwarded-for'];
-    const userIP = forwarded ? forwarded.split(',')[0] : req.socket.remoteAddress;
+    const { username, password } = req.query;
 
-    // 2. Compare against your 3 Secrets
-    const isUIDMatch = (clientId === process.env.ADMIN_UID);
-    const isFingerprintMatch = (fingerprint === process.env.ADMIN_FINGERPRINT);
-    const isIPMatch = (userIP === process.env.ADMIN_IP);
+    if (!username || !password) return res.status(400).send("Missing credentials");
 
-    const isVerifiedAdmin = (isUIDMatch && isFingerprintMatch && isIPMatch);
+    // Generate a unique ID for this account (Name + Pass)
+    const accountId = crypto.createHash('sha256')
+        .update(username.toLowerCase() + password)
+        .digest('hex')
+        .substring(0, 12);
+
+    // Verify Admin status against your Vercel Environment Variables
+    const isAdminAccount = (
+        username === process.env.ADMIN_USER && 
+        password === process.env.ADMIN_PASS
+    );
 
     const realtime = new Ably.Rest(process.env.ABLY_API_KEY);
 
     const tokenParams = {
-        clientId: clientId,
-        capability: isVerifiedAdmin 
+        clientId: accountId,
+        capability: isAdminAccount 
             ? { "*": ["*"] } 
             : { "*": ["subscribe", "publish", "presence"] }
     };
@@ -27,6 +31,6 @@ export default async function handler(req, res) {
         const tokenRequest = await realtime.auth.createTokenRequest(tokenParams);
         res.status(200).json(tokenRequest);
     } catch (error) {
-        res.status(500).send("Error creating token");
+        res.status(500).send("Internal Auth Error");
     }
 }

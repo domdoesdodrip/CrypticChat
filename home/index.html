@@ -39,32 +39,30 @@
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
             <h1 id="auth-title" class="text-5xl font-black mb-10 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400 uppercase">Log In</h1>
             <div class="space-y-4 mb-8">
-                <input id="username" type="text" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500/50 transition-colors" placeholder="Username">
-                <input id="password" type="password" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500/50 transition-colors" placeholder="Password">
+                <input id="username" type="text" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500/50" placeholder="Username">
+                <input id="password" type="password" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500/50" placeholder="Password">
             </div>
-            <button id="auth-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-extrabold active:scale-[0.97] transition-all uppercase tracking-widest text-sm shadow-lg shadow-purple-900/20">Enter Node</button>
-            <p id="auth-footer" class="mt-8 text-[11px] text-white/30 font-bold uppercase tracking-widest">
-                No access? <button onclick="setAuthMode('signup')" class="text-purple-400 hover:text-white transition-colors">Sign Up</button>
-            </p>
+            <button id="auth-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold active:scale-95 uppercase tracking-widest text-sm">Enter Node</button>
+            <p id="auth-footer" class="mt-8 text-[11px] text-white/30 font-bold uppercase tracking-widest"></p>
         </div>
     </div>
 
     <div id="view-setup" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
             <h1 class="text-3xl font-black mb-2 tracking-tighter uppercase">Identity Verified</h1>
-            <p class="text-[10px] text-purple-400/60 mb-10 font-bold uppercase tracking-[0.2em]">Configure Session Metadata</p>
-            <div class="space-y-5 mb-8 text-left">
-                <input id="display-name" type="text" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Mask Name (Display)">
+            <p class="text-[10px] text-purple-400/60 mb-10 font-bold uppercase tracking-widest">Configure Session</p>
+            <div class="space-y-5 mb-8">
+                <input id="display-name" type="text" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Display Name (Optional)">
                 <input id="room" type="text" class="w-full p-5 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Room ID (GLOBAL)">
             </div>
-            <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-extrabold uppercase tracking-widest text-sm">Initialize Session</button>
+            <button id="join-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase tracking-widest text-sm">Initialize Session</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-20 flex items-center justify-between px-6 z-30">
             <div class="flex flex-col">
-                <span id="roomLabel" class="font-black text-purple-500 uppercase tracking-[0.3em] text-xs"></span>
+                <span id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-xs"></span>
                 <span class="text-[8px] font-bold text-white/20 uppercase tracking-widest">Encrypted Node</span>
             </div>
             <div class="flex items-center gap-4">
@@ -75,9 +73,9 @@
         <main class="flex-1 flex flex-col relative overflow-hidden">
             <div id="messages" class="flex-1 p-6 pb-28 flex flex-col overflow-y-auto space-y-2"></div>
             <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent">
-                <div class="glass max-w-4xl mx-auto flex items-center p-2 rounded-2xl border-white/10">
+                <div class="glass max-w-4xl mx-auto flex items-center p-2 rounded-2xl">
                     <div id="input" contenteditable="true" class="flex-1 p-4 bg-transparent outline-none text-sm empty:before:content-[attr(placeholder)] empty:before:text-white/20" placeholder="Transmit data..."></div>
-                    <button id="send-btn" class="bg-purple-600 p-4 rounded-xl transition-all">SEND</button>
+                    <button id="send-btn" class="bg-purple-600 p-4 rounded-xl">SEND</button>
                 </div>
             </div>
         </main>
@@ -113,32 +111,26 @@ window.notify = (text) => {
 
 window.setAuthMode = (mode) => {
     authMode = mode;
-    const isLogin = mode === 'login';
-    document.getElementById('auth-title').innerText = isLogin ? 'Log In' : 'Sign Up';
-    document.getElementById('auth-btn').innerText = isLogin ? 'Enter Node' : 'Initialize Account';
-    
-    // UI FIX: Toggle the footer text based on mode
-    document.getElementById('auth-footer').innerHTML = isLogin 
-        ? `No access? <button onclick="setAuthMode('signup')" class="text-purple-400 hover:text-white transition-colors">Sign Up</button>`
-        : `Already a member? <button onclick="setAuthMode('login')" class="text-purple-400 hover:text-white transition-colors">Log In</button>`;
-    
-    document.getElementById('btn-login').className = isLogin ? 'px-5 py-2.5 rounded-xl text-[10px] font-black bg-white/10 text-white border border-white/10' : 'px-5 py-2.5 rounded-xl text-[10px] font-black bg-white/5 text-white/40 border border-white/5';
-    document.getElementById('btn-signup').className = !isLogin ? 'px-5 py-2.5 rounded-xl text-[10px] font-black bg-white/10 text-white border border-white/10' : 'px-5 py-2.5 rounded-xl text-[10px] font-black bg-white/5 text-white/40 border border-white/5';
+    const isL = mode === 'login';
+    document.getElementById('auth-title').innerText = isL ? 'Log In' : 'Sign Up';
+    document.getElementById('auth-btn').innerText = isL ? 'Enter Node' : 'Initialize Account';
+    document.getElementById('auth-footer').innerHTML = isL 
+        ? `No access? <button onclick="setAuthMode('signup')" class="text-purple-400">Sign Up</button>`
+        : `Member? <button onclick="setAuthMode('login')" class="text-purple-400">Log In</button>`;
 }
+setAuthMode('login');
 
 document.getElementById("auth-btn").onclick = async () => {
     const user = document.getElementById("username").value.trim().toLowerCase();
     const pass = document.getElementById("password").value.trim();
-    if(!user || !pass) return notify("Credentials Required");
+    if(!user || !pass) return notify("Fields Required");
 
     const userRef = doc(db, "users", user);
-
     if (authMode === 'signup') {
-        if (pass.length < 8 || !/\d/.test(pass)) return notify("Pass: 8+ chars & 1 number");
         const snap = await getDoc(userRef);
-        if (snap.exists()) return notify("Username Taken");
+        if (snap.exists()) return notify("Taken Username");
         await setDoc(userRef, { password: pass });
-        notify("Account Secured. Log In now.");
+        notify("Account Created. Log In.");
         setAuthMode('login');
         return;
     }
@@ -146,21 +138,17 @@ document.getElementById("auth-btn").onclick = async () => {
     const snap = await getDoc(userRef);
     if (!snap.exists() || snap.data().password !== pass) return notify("Access Denied");
 
-    notify("Synchronizing...");
-
-    ably = new Ably.Realtime({ 
-        authUrl: 'https://cryptic-chat-jv2gn7l5s-doms-projects-35c46312.vercel.app/api/ably-token', 
-        authParams: { username: user, password: pass, rnd: Math.random() } 
-    });
+    notify("Syncing...");
+    ably = new Ably.Realtime({ authUrl: '/api/ably-token', authParams: { username: user, password: pass } });
 
     ably.connection.on('connected', () => {
         myAccountName = user;
         isAdmin = JSON.stringify(ably.auth.tokenDetails.capability).includes('"*":["*"]');
         document.getElementById('view-auth').classList.add('hidden');
         document.getElementById('view-setup').classList.remove('hidden');
-        notify(isAdmin ? "Welcome Back, Dom" : "Identity Verified");
+        notify(isAdmin ? "Welcome Back, Dom" : "Verified");
     });
-    ably.connection.on('failed', () => notify("Connection Failed"));
+    ably.connection.on('failed', () => notify("Sync Failed"));
 };
 
 document.getElementById("join-btn").onclick = () => {
@@ -169,7 +157,6 @@ document.getElementById("join-btn").onclick = () => {
     myDisplayName = display || myAccountName;
     document.getElementById("view-setup").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
-    document.getElementById("auth-toggles").classList.add("hidden");
     document.getElementById("roomLabel").innerText = roomID;
     if(isAdmin) document.getElementById("admin-indicator").classList.remove("hidden");
     channel = ably.channels.get("room-" + roomID);
@@ -181,7 +168,7 @@ function render(u, t, me, isA) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-msg`;
-    div.innerHTML = `<div class="text-[9px] ${me?'text-white/50':'text-purple-400'} font-black uppercase mb-1">${u} ${isA ? '• ADMIN' : ''}</div><span class="text-[13px]">${t}</span>`;
+    div.innerHTML = `<div class="text-[9px] ${me?'text-white/50':'text-purple-400'} font-black uppercase mb-1">${u} ${isA?'• ADMIN':''}</div><span class="text-[13px]">${t}</span>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
@@ -201,14 +188,14 @@ const ctx = canvas.getContext("2d");
 let snow = [];
 function resize() { 
     canvas.width = window.innerWidth; canvas.height = window.innerHeight; 
-    snow = Array.from({length: 50}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2 + 1, d: Math.random() * 0.5 + 0.3, w: Math.random() * 0.02, a: Math.random() * Math.PI, o: Math.random() * 0.4 + 0.1 })); 
+    snow = Array.from({length: 40}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2 + 1, d: Math.random() * 0.5 + 0.2, w: Math.random() * 0.02, a: Math.random() * Math.PI, o: Math.random() * 0.3 + 0.1 })); 
 }
 window.onresize = resize; resize();
 function drawSnow() { 
     ctx.clearRect(0, 0, canvas.width, canvas.height); 
     snow.forEach(p => { 
         p.y += p.d; p.a += p.w; p.x += Math.sin(p.a) * 0.3;
-        if(p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
+        if(p.y > canvas.height) p.y = -10;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); 
     }); 
     requestAnimationFrame(drawSnow); 

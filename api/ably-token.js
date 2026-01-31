@@ -2,10 +2,9 @@ const Ably = require('ably');
 const crypto = require('crypto');
 
 export default async function handler(req, res) {
-    // Keep these headers so the browser doesn't trip up
+    // Keep CORS headers just in case
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
@@ -28,9 +27,10 @@ export default async function handler(req, res) {
         );
 
         if (!process.env.ABLY_API_KEY) {
-            return res.status(500).json({ error: "ABLY_API_KEY missing in Vercel settings" });
+            return res.status(500).json({ error: "ABLY_API_KEY missing in Vercel" });
         }
 
+        // Initialize Ably Rest
         const realtime = new Ably.Rest({ key: process.env.ABLY_API_KEY });
 
         const tokenParams = {
@@ -40,10 +40,18 @@ export default async function handler(req, res) {
                 : { "*": ["subscribe", "publish", "presence"] }
         };
 
-        const tokenRequest = await realtime.auth.createTokenRequest(tokenParams);
+        // --- THE FIX: Use the promise-based version of createTokenRequest ---
+        const tokenRequest = await new Promise((resolve, reject) => {
+            realtime.auth.createTokenRequest(tokenParams, (err, tokenRequest) => {
+                if (err) reject(err);
+                else resolve(tokenRequest);
+            });
+        });
+
         return res.status(200).json(tokenRequest);
 
     } catch (error) {
+        console.error("Auth Error:", error);
         return res.status(500).json({ error: "Internal Auth Error", details: error.message });
     }
 }

@@ -149,7 +149,7 @@ document.getElementById("auth-btn").onclick = async () => {
     notify("Synchronizing...");
 
     ably = new Ably.Realtime({ 
-        authUrl: 'https://cryptic-chat-jv2gn7l5s-doms-projects-35c46312.vercel.app/api/ably-token.js', 
+        authUrl: 'https://cryptic-chat-jv2gn7l5s-doms-projects-35c46312.vercel.app/api/ably-token', 
         authParams: { username: user, password: pass, rnd: Math.random() } 
     });
 

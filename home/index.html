@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>CrypticChat | Secure</title>
+    <title>CrypticChat</title>
     <link rel="icon" href="https://fav.farm/🥷" />
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,9 +16,8 @@
         .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        
         #notification-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 12px 24px; border-radius: 12px; border: 1px solid rgba(150, 103, 244, 0.3); backdrop-filter: blur(10px); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; animation: toastIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards; }
+        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 12px 24px; border-radius: 12px; border: 1px solid rgba(150, 103, 244, 0.3); backdrop-filter: blur(10px); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; animation: toastIn 0.4s forwards; }
         @keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -28,49 +27,44 @@
 <div id="notification-container"></div>
 
 <div id="auth-toggles" class="fixed top-6 right-6 z-50 flex gap-2">
-    <button onclick="setAuthMode('login')" id="btn-login" class="px-4 py-2 rounded-lg text-xs font-black transition-all bg-white/10 text-white border border-white/10">LOG-IN</button>
-    <button onclick="setAuthMode('signup')" id="btn-signup" class="px-4 py-2 rounded-lg text-xs font-black transition-all bg-white/5 text-white/40 border border-white/5">SIGN-UP</button>
+    <button onclick="setAuthMode('login')" id="btn-login" class="px-4 py-2 rounded-lg text-xs font-black bg-white/10 text-white border border-white/10">LOG-IN</button>
+    <button onclick="setAuthMode('signup')" id="btn-signup" class="px-4 py-2 rounded-lg text-xs font-black bg-white/5 text-white/40 border border-white/5">SIGN-UP</button>
 </div>
 
 <div id="app-root" class="h-full w-full flex flex-col">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl">
-            <h1 id="auth-title" class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400 uppercase">Log In</h1>
+        <div class="glass w-full max-w-md p-8 rounded-3xl text-center">
+            <h1 id="auth-title" class="text-4xl font-black mb-8 uppercase tracking-tighter">Log In</h1>
             <div class="space-y-3 mb-6">
-                <input id="username" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
-                <input id="password" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="Password">
+                <input id="username" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Username">
+                <input id="password" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Password">
             </div>
-            <button id="auth-btn" class="w-full bg-purple-600 py-4 rounded-xl font-extrabold active:scale-95 transition-all uppercase tracking-tighter">Connect</button>
-            <p id="auth-footer" class="mt-6 text-xs text-white/40 font-bold">
-                Don't have an account? <button onclick="setAuthMode('signup')" class="text-purple-400 hover:underline">Sign Up</button>
-            </p>
+            <button id="auth-btn" class="w-full bg-purple-600 py-4 rounded-xl font-extrabold uppercase">Connect</button>
         </div>
     </div>
 
     <div id="view-setup" class="hidden flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl">
-            <h1 class="text-2xl font-black mb-6 tracking-tighter uppercase">Session Config</h1>
-            <div class="space-y-3 mb-6 text-left">
-                <label class="text-[10px] font-black text-purple-400 ml-1 uppercase">Display Name</label>
-                <input id="display-name" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="Mask Name (Optional)">
-                <label class="text-[10px] font-black text-purple-400 ml-1 uppercase">Target Room</label>
-                <input id="room" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="GLOBAL">
+        <div class="glass w-full max-w-md p-8 rounded-3xl text-center">
+            <h1 class="text-2xl font-black mb-6 uppercase">Room Config</h1>
+            <div class="space-y-3 mb-6">
+                <input id="display-name" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Display Name">
+                <input id="room" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Room ID (Optional)">
             </div>
-            <button id="join-btn" class="w-full bg-purple-600 py-4 rounded-xl font-extrabold active:scale-95 transition-all uppercase tracking-tighter">Join Channel</button>
+            <button id="join-btn" class="w-full bg-purple-600 py-4 rounded-xl font-extrabold uppercase">Enter</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
-        <header class="glass h-16 flex items-center justify-between px-4 z-30">
-            <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
-            <button onclick="location.reload()" class="bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">Exit</button>
+        <header class="glass h-16 flex items-center justify-between px-4">
+            <div id="roomLabel" class="font-black text-purple-500 uppercase"></div>
+            <button onclick="location.reload()" class="bg-red-500/10 text-red-500 px-3 py-1 text-[10px] font-black uppercase">Exit</button>
         </header>
         <main class="flex-1 flex flex-col relative overflow-hidden">
             <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-1"></div>
-            <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md border-t border-white/10">
+            <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 border-t border-white/10">
                 <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                    <div id="input" contenteditable="true" class="flex-1 p-3 bg-white/5 rounded-xl outline-none border border-white/10" placeholder="Message..."></div>
-                    <button id="send-btn" class="bg-purple-600 p-3 rounded-xl font-bold">SEND</button>
+                    <div id="input" contenteditable="true" class="flex-1 p-3 bg-white/5 rounded-xl outline-none border border-white/10"></div>
+                    <button id="send-btn" class="bg-purple-600 p-3 rounded-xl">SEND</button>
                 </div>
             </div>
         </main>
@@ -78,7 +72,6 @@
 </div>
 
 <script type="module">
-// --- FIREBASE SETUP ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -94,87 +87,76 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- APP LOGIC ---
 let ably, channel, myAccountName, myDisplayName, isAdmin = false;
 let authMode = 'login';
 
 window.notify = (text) => {
     const container = document.getElementById('notification-container');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerText = text;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3500);
+    const t = document.createElement('div');
+    t.className = 'toast'; t.innerText = text;
+    container.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
 }
 
-window.setAuthMode = (mode) => {
-    authMode = mode;
-    const isLogin = mode === 'login';
-    document.getElementById('auth-title').innerText = isLogin ? 'Log In' : 'Sign Up';
-    document.getElementById('auth-btn').innerText = isLogin ? 'Enter Node' : 'Create Account';
-    document.getElementById('auth-footer').innerHTML = isLogin 
-        ? `Don't have an account? <button onclick="setAuthMode('signup')" class="text-purple-400 hover:underline">Sign Up</button>`
-        : `Already have an account? <button onclick="setAuthMode('login')" class="text-purple-400 hover:underline">Log In</button>`;
+window.setAuthMode = (m) => {
+    authMode = m;
+    const isL = m === 'login';
+    document.getElementById('auth-title').innerText = isL ? 'Log In' : 'Sign Up';
+    document.getElementById('auth-btn').innerText = isL ? 'Connect' : 'Create';
 }
 
 document.getElementById("auth-btn").onclick = async () => {
     const user = document.getElementById("username").value.trim().toLowerCase();
     const pass = document.getElementById("password").value.trim();
-
     if(!user || !pass) return notify("Fields required");
 
     const userRef = doc(db, "users", user);
 
     if (authMode === 'signup') {
-        if (pass.length < 8 || !/\d/.test(pass)) return notify("Pass: 8+ chars & 1 number");
-        
-        // FIREBASE CHECK: See if user exists
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) return notify("Username Taken");
-
-        // CREATE IN FIREBASE
-        await setDoc(userRef, { password: pass, createdAt: Date.now() });
-        notify("Account Secured. Now Login.");
+        const snap = await getDoc(userRef);
+        if (snap.exists()) return notify("Username Taken");
+        await setDoc(userRef, { password: pass });
+        notify("Account Created");
         setAuthMode('login');
         return;
     }
 
-    // LOGIN LOGIC
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists() || userSnap.data().password !== pass) return notify("Invalid Credentials");
+    const snap = await getDoc(userRef);
+    if (!snap.exists() || snap.data().password !== pass) return notify("Invalid Auth");
 
-    // ABLY CONNECT
-    ably = new Ably.Realtime({ authUrl: '/api/ably-token', authParams: { username: user, password: pass, rnd: Math.random() } });
+    ably = new Ably.Realtime({ 
+        authUrl: '/api/ably-token', 
+        authParams: { username: user, password: pass } 
+    });
 
     ably.connection.on('connected', () => {
         myAccountName = user;
-        const caps = ably.auth.tokenDetails.capability;
-        isAdmin = JSON.stringify(caps).includes('"*":["*"]');
+        isAdmin = JSON.stringify(ably.auth.tokenDetails.capability).includes('"*":["*"]');
         document.getElementById('view-auth').classList.add('hidden');
         document.getElementById('view-setup').classList.remove('hidden');
-        notify(isAdmin ? "Welcome Back, Dom" : "Access Granted");
+        notify(isAdmin ? "Welcome Dom" : "Access Granted");
     });
+    
+    ably.connection.on('failed', () => notify("Ably Connection Failed"));
 };
 
 document.getElementById("join-btn").onclick = () => {
     const display = document.getElementById("display-name").value.trim();
     const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     myDisplayName = display || myAccountName;
-
     document.getElementById("view-setup").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = roomID;
-
     channel = ably.channels.get("room-" + roomID);
     channel.subscribe("msg", m => { if(m.clientId !== ably.auth.clientId) render(m.data.user, m.data.text, false, m.data.isAdmin); });
     channel.presence.enter({ user: myDisplayName, isAdmin });
 };
 
-function render(u, t, me, isSenderAdmin) {
+function render(u, t, me, isA) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'} shadow-lg`;
-    div.innerHTML = `<div class="text-[9px] ${me?'text-white/60':'text-purple-400'} font-black uppercase mb-0.5">${u} ${isSenderAdmin?'(Admin)':''}</div><span class="text-sm">${t}</span>`;
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
+    div.innerHTML = `<div class="text-[9px] ${me?'text-white/60':'text-purple-400'} font-black uppercase mb-0.5">${u} ${isA?'(Admin)':''}</div><span class="text-sm">${t}</span>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
@@ -188,29 +170,6 @@ window.send = () => {
 }
 
 document.getElementById("send-btn").onclick = window.send;
-document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); window.send(); } };
-</script>
-
-<script>
-// --- SNOW ENGINE ---
-const canvas = document.getElementById("snow-canvas");
-const ctx = canvas.getContext("2d");
-let snow = [];
-function resize() { 
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight; 
-    snow = Array.from({length: 60}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.8 + 0.5, w: Math.random() * 0.03, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); 
-}
-window.onresize = resize; resize();
-function drawSnow() { 
-    ctx.clearRect(0, 0, canvas.width, canvas.height); 
-    snow.forEach(p => { 
-        p.y += p.d; p.a += p.w; p.x += Math.sin(p.a) * 0.5;
-        if(p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); 
-    }); 
-    requestAnimationFrame(drawSnow); 
-}
-drawSnow();
 </script>
 </body>
 </html>

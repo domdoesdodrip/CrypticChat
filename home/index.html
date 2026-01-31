@@ -118,11 +118,10 @@
 </div>
 
 <script>
-// HARDENED ADMIN CHECK
-// This uses a fingerprint combined with the ID. 
-// Even if they spoof the ID in localStorage, the hardware/browser fingerprint won't match yours.
-const adminUID = 'uid-dr9n7fztht';
-const adminFingerprint = '2440_1440_24'; // Example: screenWidth_screenHeight_colorDepth
+// ADMIN CREDENTIALS
+const adminUID = 'uid-hn8whyyxhl';
+const adminFingerprint = '1680_1050_24';
+const API_KEY = "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8";
 
 let ably, channel, myName, myId, userList = [], isAdmin = false, currentReply = null, deleteTargetId = null, kickTargetId = null;
 
@@ -131,11 +130,18 @@ function getFingerprint() {
 }
 
 function initIdentity() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // PERMANENT FIX: Visit site with ?iamadmin to restore your Admin UID
+    if (urlParams.has('iamadmin')) {
+        localStorage.setItem('cryptic_uid', adminUID);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     let id = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
     localStorage.setItem('cryptic_uid', id);
     myId = id;
 
-    // Secure Verification
     if(myId === adminUID && getFingerprint() === adminFingerprint) {
         isAdmin = true;
         document.getElementById("admin-indicator").classList.remove("hidden");
@@ -159,11 +165,11 @@ document.getElementById("join-btn").onclick = async () => {
     btn.disabled = true;
     btn.innerText = "VERIFYING...";
 
-    // 1. Temporary connection to check names
-    const checkAbly = new Ably.Realtime({ authUrl: "https://crypticchat.vercel.app/api/ably-token", authParams: { clientId: "checker-" + myId } });
-    const checkChannel = checkAbly.channels.get("room-" + roomID);
-    
-    checkChannel.presence.get((err, members) => {
+    // Use API Key directly for faster/more reliable join
+    ably = new Ably.Realtime({ key: API_KEY, clientId: myId });
+    channel = ably.channels.get("room-" + roomID);
+
+    channel.presence.get((err, members) => {
         const nameTaken = members && members.some(m => m.data.user.toLowerCase() === rawName.toLowerCase());
         
         if (nameTaken) {
@@ -171,16 +177,11 @@ document.getElementById("join-btn").onclick = async () => {
             document.getElementById("name").classList.add("error-shake");
             btn.disabled = false;
             btn.innerText = "JOIN";
-            checkAbly.close();
             setTimeout(() => document.getElementById("name").classList.remove("error-shake"), 500);
             return;
         }
 
-        // 2. Name is clear, proceed with real connection
         myName = rawName;
-        ably = new Ably.Realtime({ authUrl: "https://crypticchat.vercel.app/api/ably-token", authParams: { clientId: myId } });
-        channel = ably.channels.get("room-" + roomID);
-
         channel.presence.enter({ user: myName, isAdmin }, () => {
             document.getElementById("view-login").classList.add("hidden"); 
             document.getElementById("view-chat").classList.remove("hidden");
@@ -193,7 +194,6 @@ document.getElementById("join-btn").onclick = async () => {
             
             channel.presence.subscribe(() => syncUsers());
             syncUsers();
-            checkAbly.close();
         });
     });
 };
@@ -215,7 +215,6 @@ function syncUsers() {
     });
 }
 
-// Input and Mention logic
 const input = document.getElementById("input");
 const menu = document.getElementById("mention-menu");
 
@@ -242,7 +241,6 @@ function insertMention(u) {
     menu.style.display = 'none'; input.focus();
 }
 
-// Modals
 function openDeleteModal(id) { deleteTargetId = id; document.getElementById("delete-modal").style.display = 'flex'; }
 function closeDeleteModal() { document.getElementById("delete-modal").style.display = 'none'; }
 document.getElementById("confirm-delete-btn").onclick = () => {
@@ -315,7 +313,6 @@ function send() {
 document.getElementById("send-btn").onclick = send;
 input.onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 
-// Snow Engine
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let snow = [];
@@ -336,6 +333,5 @@ function drawSnow() {
 }
 drawSnow();
 </script>
-
 </body>
 </html>

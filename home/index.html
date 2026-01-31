@@ -118,7 +118,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY",
@@ -134,12 +134,11 @@ const db = getFirestore(app);
 
 const ADMIN_USERNAME = 'domdoesdodrip';
 let ably, channel, myAccountName, myDisplayName, isAdmin = false, authMode = 'login', currentRoom = '';
-let currentReply = null, deleteTargetId = null, kickTarget = null;
+let currentReply = null, deleteTargetId = null, kickTarget = null, unsubscribeHistory = null;
 
-// Persistent Session
+// Auth Logic
 window.addEventListener('DOMContentLoaded', () => {
-    const u = localStorage.getItem('cc_user');
-    const p = localStorage.getItem('cc_pass');
+    const u = localStorage.getItem('cc_user'), p = localStorage.getItem('cc_pass');
     if(u && p) loginSequence(u, p);
 });
 
@@ -147,34 +146,24 @@ window.toggleAuthMode = () => {
     authMode = authMode === 'login' ? 'signup' : 'login';
     document.getElementById('auth-title').innerText = authMode.toUpperCase();
     document.getElementById('auth-main-btn').innerText = authMode === 'login' ? 'ENTER' : 'REGISTER';
-    document.getElementById('auth-switch-btn').innerText = authMode === 'login' ? 'Sign Up' : 'Login';
 }
 
 document.getElementById("auth-main-btn").onclick = async () => {
     const user = document.getElementById("auth-user").value.trim().toLowerCase();
     const pass = document.getElementById("auth-pass").value.trim();
-    if(!user || !pass) return notify("Fields Required");
-
     if (authMode === 'signup') {
-        const userRef = doc(db, "users", user);
-        if ((await getDoc(userRef)).exists()) return notify("Username Taken");
-        await setDoc(userRef, { password: pass });
-        notify("Account Created. Log In.");
+        const ref = doc(db, "users", user);
+        if ((await getDoc(ref)).exists()) return notify("Taken");
+        await setDoc(ref, { password: pass });
         toggleAuthMode();
-    } else {
-        loginSequence(user, pass);
-    }
+    } else loginSequence(user, pass);
 };
 
 async function loginSequence(user, pass) {
     const snap = await getDoc(doc(db, "users", user));
-    if (!snap.exists() || snap.data().password !== pass) return notify("Invalid Login");
-
-    localStorage.setItem('cc_user', user);
-    localStorage.setItem('cc_pass', pass);
-    myAccountName = user;
-    if (user === ADMIN_USERNAME) isAdmin = true;
-
+    if (!snap.exists() || snap.data().password !== pass) return notify("Invalid");
+    localStorage.setItem('cc_user', user); localStorage.setItem('cc_pass', pass);
+    myAccountName = user; isAdmin = (user === ADMIN_USERNAME);
     initAbly(user, pass);
 }
 
@@ -183,52 +172,35 @@ function initAbly(user, pass) {
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        document.getElementById("welcome-msg").innerText = `Logged in: ${user}`;
+        document.getElementById("welcome-msg").innerText = `User: ${user}`;
     });
 }
 
+// Room Logic
 document.getElementById("join-room-btn").onclick = () => {
     myDisplayName = document.getElementById("display-name").value.trim() || myAccountName;
-    const rID = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
-    currentRoom = rID;
+    currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
-    document.getElementById("roomLabel").innerText = rID;
-    document.getElementById("messages").innerHTML = '';
-
-    // History Loading
-    const history = JSON.parse(localStorage.getItem(`cc_history_${rID}`) || "[]");
-    history.forEach(m => m.type === 'announce' ? renderAnnounce(m.text, false) : render(m.user, m.text, m.user === myDisplayName, m.id, m.reply, false));
-
-    channel = ably.channels.get("room-" + rID);
-    channel.presence.enter({ user: myDisplayName, isAdmin: isAdmin });
+    document.getElementById("roomLabel").innerText = currentRoom;
     
-    channel.subscribe("msg", m => {
-        if(m.clientId !== ably.auth.clientId) {
-            saveMsg(rID, { type: 'msg', user: m.data.user, text: m.data.text, id: m.data.msgId, reply: m.data.reply });
-            render(m.data.user, m.data.text, false, m.data.msgId, m.data.reply);
-        }
+    // FIREBASE SYNC
+    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
+    unsubscribeHistory = onSnapshot(q, (snapshot) => {
+        const box = document.getElementById("messages");
+        box.innerHTML = ''; // Fresh render on changes
+        snapshot.forEach(doc => {
+            const m = doc.data();
+            if(m.type === 'announce') renderAnnounce(m.text);
+            else render(m.user, m.text, m.user === myDisplayName, doc.id, m.reply);
+        });
     });
 
-    channel.subscribe("announce", m => {
-        if(m.clientId !== ably.auth.clientId) renderAnnounce(m.data.text);
-    });
-
-    channel.subscribe("kick", m => {
-        if (m.data.target === myDisplayName) {
-            alert("You have been kicked.");
-            logout();
-        }
-    });
-
+    channel = ably.channels.get("room-" + currentRoom);
+    channel.presence.enter({ user: myDisplayName, isAdmin: isAdmin });
+    channel.subscribe("kick", m => { if (m.data.target === myDisplayName) logout(); });
     channel.subscribe("disco", m => startDisco(m.data.duration));
-
-    channel.subscribe("delete", m => {
-        document.getElementById(m.data.id)?.remove();
-        deleteMsgFromHistory(rID, m.data.id);
-    });
-
     channel.presence.subscribe(() => syncUsers());
 };
 
@@ -243,23 +215,26 @@ function syncUsers() {
     });
 }
 
-// Kick Confirmation Logic
-window.confirmKick = (name) => {
-    kickTarget = name;
-    document.getElementById("kick-target-name").innerText = name;
-    document.getElementById("kick-modal").style.display = 'flex';
+// Database Actions
+async function sendMessage(text, type = 'msg') {
+    const colRef = collection(db, "rooms", currentRoom, "messages");
+    await addDoc(colRef, {
+        user: myDisplayName,
+        text: text,
+        type: type,
+        reply: currentReply,
+        timestamp: serverTimestamp()
+    });
+    cancelReply();
 }
 
-document.getElementById("confirm-kick-btn").onclick = () => {
-    if(kickTarget) channel.publish("kick", { target: kickTarget });
-    closeModals();
-};
+async function deleteMessage(id) {
+    await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
+}
 
-function render(u, t, me, msgId, reply, save = true) {
+// Rendering
+function render(u, t, me, id, reply) {
     const box = document.getElementById("messages");
-    const id = msgId || 'm-' + Math.random().toString(36).slice(2,9);
-    if(save && me) saveMsg(currentRoom, { type: 'msg', user: u, text: t, id: id, reply });
-
     const div = document.createElement("div"); div.id = id;
     div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
     div.innerHTML = `
@@ -277,14 +252,26 @@ function render(u, t, me, msgId, reply, save = true) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-function renderAnnounce(text, save = true) {
+function renderAnnounce(text) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
-    div.className = "announcement";
-    div.innerText = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-    if(save) saveMsg(currentRoom, { type: 'announce', text });
+    div.className = "announcement"; div.innerText = text;
+    box.appendChild(div); box.scrollTop = box.scrollHeight;
+}
+
+// UI Triggers
+document.getElementById("send-btn").onclick = () => {
+    const input = document.getElementById("input");
+    let text = input.innerText.trim();
+    if(!text) return;
+
+    if (text.startsWith("/") && isAdmin) {
+        const args = text.split(" ");
+        if (args[0] === "/announce") sendMessage(text.replace("/announce", "").trim(), 'announce');
+        else if (args[0] === "/disco") channel.publish("disco", { duration: parseInt(args[1]) || 15 });
+        input.innerHTML = ""; return;
+    }
+    sendMessage(text); input.innerHTML = "";
 }
 
 function startDisco(duration) {
@@ -293,83 +280,23 @@ function startDisco(duration) {
     setTimeout(() => overlay.classList.remove("disco-active"), (duration || 15) * 1000);
 }
 
-document.getElementById("send-btn").onclick = () => {
-    const input = document.getElementById("input");
-    let text = input.innerText.trim();
-    if(!text) return;
-
-    if (text.startsWith("/") && isAdmin) {
-        const args = text.split(" ");
-        const cmd = args[0].toLowerCase();
-        if (cmd === "/announce") {
-            const val = text.replace("/announce", "").trim();
-            channel.publish("announce", { text: val });
-            renderAnnounce(val);
-        } else if (cmd === "/disco") {
-            const time = parseInt(args[1]) || 15;
-            channel.publish("disco", { duration: time });
-            startDisco(time);
-        }
-        input.innerHTML = ""; return;
-    }
-
-    const msgId = 'm-' + Math.random().toString(36).slice(2,9);
-    channel.publish("msg", { user: myDisplayName, text, msgId, reply: currentReply });
-    render(myDisplayName, text, true, msgId, currentReply);
-    input.innerHTML = ""; cancelReply();
-}
-
-// Storage Helpers
-function saveMsg(room, data) {
-    let history = JSON.parse(localStorage.getItem(`cc_history_${room}`) || "[]");
-    history.push(data);
-    if(history.length > 100) history.shift();
-    localStorage.setItem(`cc_history_${room}`, JSON.stringify(history));
-}
-
-function deleteMsgFromHistory(room, id) {
-    let history = JSON.parse(localStorage.getItem(`cc_history_${room}`) || "[]");
-    history = history.filter(m => m.id !== id);
-    localStorage.setItem(`cc_history_${room}`, JSON.stringify(history));
-}
-
+window.confirmKick = (n) => { kickTarget = n; document.getElementById("kick-target-name").innerText = n; document.getElementById("kick-modal").style.display = 'flex'; }
+document.getElementById("confirm-kick-btn").onclick = () => { if(kickTarget) channel.publish("kick", { target: kickTarget }); closeModals(); };
+window.openDeleteModal = (id) => { deleteTargetId = id; document.getElementById("delete-modal").style.display = 'flex'; }
+document.getElementById("confirm-delete-btn").onclick = () => { if(deleteTargetId) deleteMessage(deleteTargetId); closeModals(); };
+window.closeModals = () => { document.getElementById("delete-modal").style.display = 'none'; document.getElementById("kick-modal").style.display = 'none'; }
+window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to ${u}`; }
+window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); }
 window.notify = (text) => {
     const container = document.getElementById('notification-container');
     const t = document.createElement('div'); t.className = 'toast'; t.innerText = text;
-    container.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+    container.appendChild(t); setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
 }
-
-window.startReply = (u, t) => {
-    currentReply = { user: u, text: t.substring(0, 30) };
-    document.getElementById("reply-bar").classList.remove("hidden");
-    document.getElementById("reply-user").innerText = `Replying to ${u}`;
-}
-window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); }
-window.openDeleteModal = (id) => { deleteTargetId = id; document.getElementById("delete-modal").style.display = 'flex'; }
-window.closeModals = () => { 
-    document.getElementById("delete-modal").style.display = 'none'; 
-    document.getElementById("kick-modal").style.display = 'none';
-}
-
-document.getElementById("confirm-delete-btn").onclick = () => {
-    document.getElementById(deleteTargetId)?.remove();
-    deleteMsgFromHistory(currentRoom, deleteTargetId);
-    channel.publish("delete", { id: deleteTargetId });
-    closeModals();
-};
-
-window.logout = () => {
-    localStorage.removeItem('cc_user');
-    localStorage.removeItem('cc_pass');
-    location.reload();
-}
+window.logout = () => { localStorage.clear(); location.reload(); }
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); document.getElementById("send-btn").click(); } };
-</script>
 
-<script>
-const canvas = document.getElementById("snow-canvas");
-const ctx = canvas.getContext("2d");
+// Visuals
+const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2 + 1, d: Math.random() * 0.5 + 0.3 })); }
 window.onresize = resize; resize();

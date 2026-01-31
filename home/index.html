@@ -17,6 +17,8 @@
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden-status { opacity: 0; pointer-events: none; transform: translateY(5px); transition: all 0.3s ease; }
+        .show-status { opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body>
@@ -24,21 +26,29 @@
 <canvas id="snow-canvas"></canvas>
 
 <div id="auth-toggles" class="fixed top-6 right-6 z-50 flex gap-2">
-    <button onclick="setAuthMode('login')" id="btn-login" class="px-4 py-2 rounded-lg text-xs font-black transition-all bg-white/10 text-white border border-white/10 hover:bg-white/20">LOG-IN</button>
-    <button onclick="setAuthMode('signup')" id="btn-signup" class="px-4 py-2 rounded-lg text-xs font-black transition-all bg-white/5 text-white/40 border border-white/5 hover:bg-white/10">SIGN-UP</button>
+    <button onclick="setAuthMode('login')" id="btn-login" class="px-4 py-2 rounded-lg text-xs font-black transition-all bg-white/10 text-white border border-white/10">LOG-IN</button>
+    <button onclick="setAuthMode('signup')" id="btn-signup" class="px-4 py-2 rounded-lg text-xs font-black transition-all bg-white/5 text-white/40 border border-white/5">SIGN-UP</button>
 </div>
 
 <div id="app-root" class="h-full w-full flex flex-col">
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl transition-all duration-500">
+        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl">
             <h1 id="auth-title" class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400 uppercase">Log In</h1>
+            
             <div class="space-y-3 mb-6">
                 <input id="username" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
                 <input id="password" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="Password">
                 <input id="room" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 focus:border-purple-500" placeholder="Room ID">
             </div>
+
             <button id="join-btn" class="w-full bg-purple-600 py-4 rounded-xl font-extrabold active:scale-95 transition-all uppercase tracking-tighter">Enter Node</button>
-            <p id="auth-hint" class="mt-4 text-[10px] text-white/30 font-bold uppercase tracking-widest">Accessing secure channel...</p>
+            
+            <p id="auth-footer" class="mt-6 text-xs text-white/40 font-bold">
+                Don't have an account? 
+                <button onclick="setAuthMode('signup')" class="text-purple-400 hover:underline">Sign Up</button>
+            </p>
+
+            <p id="auth-status" class="mt-4 text-[10px] text-purple-400 font-black uppercase tracking-widest hidden-status">Connecting to Node...</p>
         </div>
     </div>
 
@@ -66,15 +76,18 @@
 let ably, channel, myName, isAdmin = false;
 let authMode = 'login';
 
-// Toggle between Login and Signup modes
 function setAuthMode(mode) {
     authMode = mode;
     const isLogin = mode === 'login';
     document.getElementById('auth-title').innerText = isLogin ? 'Log In' : 'Sign Up';
-    document.getElementById('join-btn').innerText = isLogin ? 'Enter Node' : 'Initialize Account';
-    document.getElementById('auth-hint').innerText = isLogin ? 'Accessing secure channel...' : 'Generating encrypted ID...';
+    document.getElementById('join-btn').innerText = isLogin ? 'Enter Node' : 'Create Account';
     
-    // Visual button feedback
+    // Switch Footer
+    document.getElementById('auth-footer').innerHTML = isLogin 
+        ? `Don't have an account? <button onclick="setAuthMode('signup')" class="text-purple-400 hover:underline">Sign Up</button>`
+        : `Already have an account? <button onclick="setAuthMode('login')" class="text-purple-400 hover:underline">Log In</button>`;
+
+    // Update Header Buttons
     document.getElementById('btn-login').className = isLogin ? 'px-4 py-2 rounded-lg text-xs font-black bg-white/10 text-white border border-white/10' : 'px-4 py-2 rounded-lg text-xs font-black bg-white/5 text-white/40 border border-white/5';
     document.getElementById('btn-signup').className = !isLogin ? 'px-4 py-2 rounded-lg text-xs font-black bg-white/10 text-white border border-white/10' : 'px-4 py-2 rounded-lg text-xs font-black bg-white/5 text-white/40 border border-white/5';
 }
@@ -86,12 +99,18 @@ document.getElementById("join-btn").onclick = async () => {
 
     if(!user || !pass) return alert("Credentials required.");
 
+    // Show status only during connection
+    const status = document.getElementById('auth-status');
+    status.innerText = authMode === 'login' ? "Verifying Credentials..." : "Initializing Identity...";
+    status.classList.add('show-status');
+
     ably = new Ably.Realtime({ 
         authUrl: '/api/ably-token', 
         authParams: { username: user, password: pass, mode: authMode } 
     });
 
     ably.connection.on('connected', () => {
+        status.classList.remove('show-status');
         myName = user;
         const caps = ably.auth.tokenDetails.capability;
         if (JSON.stringify(caps).includes('"*":["*"]')) {
@@ -106,7 +125,11 @@ document.getElementById("join-btn").onclick = async () => {
         channel.subscribe("msg", m => { if(m.clientId !== ably.auth.clientId) render(m.data.user, m.data.text, false, m.data.isAdmin); });
         channel.presence.enter({ user: myName, isAdmin });
     });
-    ably.connection.on('failed', () => alert("Auth Failed."));
+
+    ably.connection.on('failed', () => {
+        status.classList.remove('show-status');
+        alert("Authentication failed. Check your connection.");
+    });
 };
 
 function render(u, t, me, isSenderAdmin) {
@@ -139,23 +162,19 @@ function resize() {
         x: Math.random() * canvas.width, 
         y: Math.random() * canvas.height, 
         r: Math.random() * 2.5 + 1, 
-        d: Math.random() * 0.8 + 0.5, // Vertical speed
-        w: Math.random() * 0.03,      // Wind frequency
-        a: Math.random() * Math.PI,   // Wind angle
-        o: Math.random() * 0.5 + 0.3  // Opacity
+        d: Math.random() * 0.8 + 0.5,
+        w: Math.random() * 0.03, 
+        a: Math.random() * Math.PI,
+        o: Math.random() * 0.5 + 0.3 
     })); 
 }
 window.onresize = resize; resize();
 function drawSnow() { 
     ctx.clearRect(0, 0, canvas.width, canvas.height); 
     snow.forEach(p => { 
-        p.y += p.d; 
-        p.a += p.w; 
-        p.x += Math.sin(p.a) * 0.5; // Horizontal sway
+        p.y += p.d; p.a += p.w; p.x += Math.sin(p.a) * 0.5;
         if(p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; }
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); 
-        ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; 
-        ctx.fill(); 
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); 
     }); 
     requestAnimationFrame(drawSnow); 
 }

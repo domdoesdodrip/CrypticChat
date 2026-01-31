@@ -14,7 +14,7 @@ A secure, real-time messaging terminal designed for ephemeral communication. No 
 3. **Connect:** Hit **ENTER TERMINAL**.
 4. **Signup:** Click Sign Up then enter a Username and a password.
 5. **Login:** The login with a Username and a password.
-6. **Enter Room:*fy* Enter a Alias (Name) and a RoomID (Leave blankt to join a global room).
+6. **Enter Room:** Enter a Alias (Name) and a RoomID (Leave blankt to join a global room).
 ---
 
 ## 📖 Usage Protocol (Tutorial)

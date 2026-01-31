@@ -9,102 +9,97 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; transition: background 0.5s; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; }
+        #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+        .glass { background: rgba(15, 12, 22, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
-        /* RAINBOW DISCO MODE */
-        @keyframes rainbow { 
-            0% { filter: hue-rotate(0deg); } 
-            100% { filter: hue-rotate(360deg); } 
+        /* DISCO OVERLAY */
+        #disco-overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 9999; display: none;
+            background: linear-gradient(120deg, rgba(255,0,0,0.2), rgba(0,255,0,0.2), rgba(0,0,255,0.2));
+            background-size: 200% 200%;
         }
-        .disco-mode { animation: rainbow 2s linear infinite; }
+        @keyframes discoAnim { 
+            0% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; filter: hue-rotate(360deg); }
+        }
+        .disco-active { display: block !important; animation: discoAnim 3s linear infinite; }
 
-        .glass { background: rgba(20, 20, 30, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; }
+        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; border: 2px solid transparent; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
-        .theirs { background: #2d2b3b; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .sys-msg { align-self: center; font-size: 10px; color: #9ca3af; text-transform: uppercase; margin: 12px 0; background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 99px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); }
         
-        /* SYSTEM ANNOUNCEMENT STYLE */
-        .sys-announce { align-self: center; text-align: center; background: linear-gradient(135deg, #FFD700, #FFA500); color: black; font-weight: 800; padding: 8px 20px; border-radius: 50px; font-size: 11px; margin: 10px 0; text-transform: uppercase; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); max-width: 90%; }
+        .announcement { align-self: center; background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 12px 24px; border-radius: 12px; border: 1px solid rgba(150, 103, 244, 0.4); font-size: 12px; font-weight: 800; text-transform: uppercase; margin: 10px 0; max-width: 80%; text-align: center; }
 
-        #input { background: rgba(255,255,255,0.1); color: white; outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
-        #input:empty:before { content: attr(placeholder); color: #888; }
-        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; display: none; align-items: center; justify-content: center; }
-        .toast { background: #333; color: white; padding: 10px 20px; border-radius: 99px; font-size: 12px; font-weight: bold; margin-bottom: 8px; border: 1px solid #555; }
-        #notification-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; }
+        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
+        #input:empty:before { content: attr(placeholder); color: #6b7280; }
+        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(150, 103, 244, 0.3); font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
     </style>
 </head>
-<body id="main-body">
+<body>
 
-<canvas id="snow-canvas" style="position: fixed; inset: 0; z-index: -1; pointer-events: none;"></canvas>
-<div id="notification-container"></div>
+<div id="disco-overlay"></div>
+<canvas id="snow-canvas"></canvas>
+<div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none"></div>
 
 <div id="delete-modal" class="modal-base">
-    <div class="glass p-6 rounded-3xl max-w-xs w-full text-center">
-        <h3 class="text-lg font-bold mb-4">Delete Message?</h3>
+    <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
+        <h3 class="text-xl font-bold mb-4 uppercase">Destroy?</h3>
         <div class="flex gap-3">
-            <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold text-xs">Cancel</button>
-            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold text-xs">Delete</button>
+            <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold text-xs uppercase">Abort</button>
+            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold text-xs uppercase">Delete</button>
         </div>
     </div>
 </div>
 
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
-    
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-            <h1 id="auth-title" class="text-3xl font-black mb-8">Welcome Back</h1>
-            <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-xl outline-none border border-white/10" placeholder="Username">
-            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-xl outline-none border border-white/10" placeholder="Password">
-            <button id="auth-main-btn" class="w-full bg-purple-600 hover:bg-purple-500 transition py-4 rounded-xl font-bold text-sm">Sign In</button>
-            
-            <div class="mt-6 text-xs text-gray-400">
-                <span id="auth-switch-label">Need an account?</span>
-                <button onclick="toggleAuthMode()" id="auth-switch-btn" class="text-purple-400 hover:text-white font-bold ml-1">Sign Up</button>
-            </div>
+            <h1 id="auth-title" class="text-4xl font-black mb-10 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400 uppercase">Login</h1>
+            <input id="auth-user" type="text" maxlength="20" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Username">
+            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Password">
+            <button id="auth-main-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase text-xs">Enter</button>
+            <p class="mt-8 text-[10px] text-white/30 font-bold uppercase">
+                Switch Mode: <button onclick="toggleAuthMode()" id="auth-switch-btn" class="text-purple-400">Sign Up</button>
+            </p>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-            <h1 class="text-2xl font-black mb-2">Hello!</h1>
-            <p id="welcome-msg" class="text-sm text-gray-400 mb-8"></p>
-            
-            <input id="display-name" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-xl outline-none border border-white/10" placeholder="Your Nickname (Optional)">
-            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-xl outline-none border border-white/10" placeholder="Room Name (e.g. GLOBAL)">
-            
-            <button id="join-room-btn" class="w-full bg-purple-600 hover:bg-purple-500 transition py-4 rounded-xl font-bold text-sm mb-4">Join Chat</button>
-            <button onclick="logout()" class="text-red-400 hover:text-red-300 text-xs font-bold">Log Out</button>
+            <h1 class="text-3xl font-black mb-2 uppercase">Verified</h1>
+            <p id="welcome-msg" class="text-[10px] text-purple-400/60 mb-10 font-bold uppercase"></p>
+            <input id="display-name" type="text" maxlength="20" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Alias">
+            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Room ID">
+            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Enter User</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
-        <header class="glass h-16 flex items-center justify-between px-6 shrink-0 z-30 border-b border-white/5">
-            <div>
-                <div class="text-[10px] text-gray-400 font-bold uppercase">Room</div>
-                <div id="roomLabel" class="font-black text-xl leading-none"></div>
-            </div>
-            <button onclick="exitRoom()" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs font-bold">Leave</button>
+        <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
+            <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs"></div>
+            <button onclick="exitRoom()" class="bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">Exit</button>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
-                <div class="text-xs text-gray-500 font-bold mb-4 uppercase text-center">People Here</div>
+            <aside class="hidden lg:flex flex-col w-72 glass p-4 overflow-y-auto border-r border-white/5">
+                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase text-center">Active Users</div>
                 <div id="users-desktop" class="space-y-2"></div>
             </aside>
 
-            <main class="flex-1 flex flex-col relative bg-black/20">
-                <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-2"></div>
-                
-                <div class="absolute bottom-0 left-0 right-0 p-3 bg-[#050307]/95 backdrop-blur-md border-t border-white/10 z-20">
-                    <div id="reply-bar" class="hidden flex justify-between items-center p-2 bg-purple-500/10 rounded-t-xl mb-1 border border-purple-500/20 border-b-0">
-                        <span id="reply-user" class="text-xs text-purple-400 font-bold"></span>
-                        <button onclick="cancelReply()" class="text-xs px-2 opacity-50 hover:opacity-100">✕</button>
+            <main class="flex-1 flex flex-col relative">
+                <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-1"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md border-t border-white/10 z-20">
+                    <div id="reply-bar" class="hidden flex justify-between items-center p-2 bg-white/5 rounded-t-xl mb-1">
+                        <span id="reply-user" class="text-xs text-purple-400 font-bold uppercase"></span>
+                        <button onclick="cancelReply()" class="text-xs px-2 opacity-50">X</button>
                     </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold text-white">
-                            Send
-                        </button>
+                        <div id="input" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
+                        <button id="send-btn" class="bg-purple-600 p-3 rounded-xl font-bold uppercase">Send</button>
                     </div>
                 </div>
             </main>
@@ -128,72 +123,49 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- CONFIG ---
 const ADMIN_USERNAME = 'domdoesdodrip';
-// --------------
-
 let ably, channel, myAccountName, myDisplayName, isAdmin = false, authMode = 'login', currentRoom = '';
 let currentReply = null, deleteTargetId = null;
 
-// --- AUTO LOGIN ---
+// Persistent login
 window.addEventListener('DOMContentLoaded', () => {
-    const savedUser = localStorage.getItem('cc_user');
-    const savedPass = localStorage.getItem('cc_pass');
-    if(savedUser && savedPass) {
-        document.getElementById("auth-user").value = savedUser;
-        document.getElementById("auth-pass").value = savedPass;
-        loginSequence(savedUser, savedPass);
-    }
+    const u = localStorage.getItem('cc_user');
+    const p = localStorage.getItem('cc_pass');
+    if(u && p) loginSequence(u, p);
 });
 
-// --- AUTH UI HANDLERS ---
 window.toggleAuthMode = () => {
     authMode = authMode === 'login' ? 'signup' : 'login';
-    const isLogin = authMode === 'login';
-    document.getElementById('auth-title').innerText = isLogin ? 'Welcome Back' : 'Create Account';
-    document.getElementById('auth-main-btn').innerText = isLogin ? 'Sign In' : 'Sign Up';
-    document.getElementById('auth-switch-label').innerText = isLogin ? 'Need an account?' : 'Already have one?';
-    document.getElementById('auth-switch-btn').innerText = isLogin ? 'Sign Up' : 'Sign In';
+    document.getElementById('auth-title').innerText = authMode.toUpperCase();
+    document.getElementById('auth-main-btn').innerText = authMode === 'login' ? 'ENTER' : 'REGISTER';
+    document.getElementById('auth-switch-btn').innerText = authMode === 'login' ? 'Sign Up' : 'Login';
 }
 
 document.getElementById("auth-main-btn").onclick = async () => {
     const user = document.getElementById("auth-user").value.trim().toLowerCase();
     const pass = document.getElementById("auth-pass").value.trim();
-    if(!user || !pass) return notify("Please fill in all fields");
+    if(!user || !pass) return notify("Credentials Required");
 
     if (authMode === 'signup') {
         const userRef = doc(db, "users", user);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) return notify("That username is taken!");
-        
+        if ((await getDoc(userRef)).exists()) return notify("Taken");
         await setDoc(userRef, { password: pass });
-        notify("Account created! Signing you in...");
-        loginSequence(user, pass);
+        notify("Saved. Login now.");
+        toggleAuthMode();
     } else {
         loginSequence(user, pass);
     }
 };
 
 async function loginSequence(user, pass) {
-    const userRef = doc(db, "users", user);
-    const snap = await getDoc(userRef);
-
-    if (!snap.exists() || snap.data().password !== pass) {
-        localStorage.removeItem('cc_user'); 
-        localStorage.removeItem('cc_pass');
-        return notify("Incorrect username or password");
-    }
-
-    // CHECK ADMIN
-    if (user === ADMIN_USERNAME) {
-        isAdmin = true;
-        notify("✨ ADMIN POWER GRANTED ✨");
-    }
+    const snap = await getDoc(doc(db, "users", user));
+    if (!snap.exists() || snap.data().password !== pass) return notify("Invalid");
 
     localStorage.setItem('cc_user', user);
     localStorage.setItem('cc_pass', pass);
-    
     myAccountName = user;
+    if (user === ADMIN_USERNAME) isAdmin = true;
+
     initAbly(user, pass);
 }
 
@@ -202,196 +174,136 @@ function initAbly(user, pass) {
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        document.getElementById("welcome-msg").innerText = `Signed in as ${user}`;
+        document.getElementById("welcome-msg").innerText = `User: ${user}`;
     });
 }
 
-// --- ROOM LOGIC ---
 document.getElementById("join-room-btn").onclick = () => {
     myDisplayName = document.getElementById("display-name").value.trim() || myAccountName;
     const rID = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     currentRoom = rID;
-
+    
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = rID;
     document.getElementById("messages").innerHTML = '';
 
-    // Load History
-    const savedMsgs = JSON.parse(localStorage.getItem(`cc_history_${rID}`) || "[]");
-    savedMsgs.forEach(m => {
-        if(m.isAnnounce) renderAnnouncement(m.text);
-        else render(m.user, m.text, m.user === myDisplayName, m.id, m.reply, false);
-    });
+    // Load history
+    const history = JSON.parse(localStorage.getItem(`cc_history_${rID}`) || "[]");
+    history.forEach(m => m.type === 'announce' ? renderAnnounce(m.text, false) : render(m.user, m.text, m.user === myDisplayName, m.id, m.reply, false));
 
     channel = ably.channels.get("room-" + rID);
     channel.presence.enter({ user: myDisplayName, isAdmin: isAdmin });
     
-    // SUBSCRIBE TO EVENTS
     channel.subscribe("msg", m => {
         if(m.clientId !== ably.auth.clientId) {
-            saveMessage(rID, m.data);
+            saveMsg(rID, { type: 'msg', ...m.data });
             render(m.data.user, m.data.text, false, m.data.msgId, m.data.reply);
         }
     });
 
     channel.subscribe("announce", m => {
-        renderAnnouncement(m.data.text);
-        saveMessage(rID, { ...m.data, isAnnounce: true });
+        if(m.clientId !== ably.auth.clientId) {
+            renderAnnounce(m.data.text);
+        }
     });
 
     channel.subscribe("kick", m => {
-        if (m.data.target === myDisplayName) {
-            alert("You have been kicked by an Admin.");
-            location.reload();
-        }
+        if (m.data.target === myDisplayName) location.reload();
     });
 
     channel.subscribe("disco", m => {
-        const duration = m.data.duration || 15;
-        startDisco(duration);
+        startDisco(m.data.duration);
     });
-    
-    channel.subscribe("delete", m => {
-        document.getElementById(m.data.id)?.remove();
-        deleteMessageFromStorage(rID, m.data.id);
-    });
-    
+
+    channel.subscribe("delete", m => document.getElementById(m.data.id)?.remove());
     channel.presence.subscribe(() => syncUsers());
 };
-
-// --- CHAT FUNCTIONS ---
-
-// Handle Admin Commands in the text input
-document.getElementById("send-btn").onclick = () => {
-    const input = document.getElementById("input");
-    let text = input.innerText.trim();
-    if(!text) return;
-
-    // ADMIN COMMANDS
-    if (text.startsWith("/")) {
-        if (!isAdmin) {
-            notify("Unknown command.");
-            input.innerHTML = "";
-            return;
-        }
-
-        const args = text.split(" ");
-        const command = args[0].toLowerCase();
-
-        if (command === "/kick" && args[1]) {
-            channel.publish("kick", { target: args[1] });
-            notify(`Kicking ${args[1]}...`);
-        } 
-        else if (command === "/announce") {
-            const announcement = text.substring(9).trim();
-            if(announcement) {
-                channel.publish("announce", { text: announcement });
-                renderAnnouncement(announcement);
-                saveMessage(currentRoom, { text: announcement, isAnnounce: true, msgId: Date.now() });
-            }
-        }
-        else if (command === "/disco") {
-            const seconds = parseInt(args[1]) || 15;
-            channel.publish("disco", { duration: seconds });
-            startDisco(seconds);
-            notify(`DISCO TIME! (${seconds}s)`);
-        }
-        else {
-            notify("Invalid Command");
-        }
-
-        input.innerHTML = "";
-        return;
-    }
-
-    // Normal Message
-    const msgId = 'm-' + Math.random().toString(36).slice(2,9);
-    const msgData = { user: myDisplayName, text, msgId, reply: currentReply };
-    channel.publish("msg", msgData);
-    render(myDisplayName, text, true, msgId, currentReply, true);
-    input.innerHTML = ""; cancelReply();
-}
-
-function renderAnnouncement(text) {
-    const box = document.getElementById("messages");
-    const div = document.createElement("div");
-    div.className = "sys-announce animate-msg";
-    div.innerText = "📢 " + text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-}
-
-function startDisco(seconds) {
-    const body = document.getElementById("main-body");
-    body.classList.add("disco-mode");
-    notify(`🕺 PARTY MODE ON! (${seconds}s)`);
-    
-    setTimeout(() => {
-        body.classList.remove("disco-mode");
-        notify("Party's over.");
-    }, seconds * 1000);
-}
-
-// STORAGE & UTILS
-function saveMessage(room, msgData) {
-    let hist = JSON.parse(localStorage.getItem(`cc_history_${room}`) || "[]");
-    hist.push({ ...msgData, id: msgData.msgId });
-    if(hist.length > 50) hist.shift(); 
-    localStorage.setItem(`cc_history_${room}`, JSON.stringify(hist));
-}
-
-function deleteMessageFromStorage(room, msgId) {
-    let hist = JSON.parse(localStorage.getItem(`cc_history_${room}`) || "[]");
-    hist = hist.filter(m => m.id !== msgId);
-    localStorage.setItem(`cc_history_${room}`, JSON.stringify(hist));
-}
-
-window.exitRoom = () => {
-    channel.presence.leave();
-    channel.detach();
-    document.getElementById("view-chat").classList.add("hidden");
-    document.getElementById("view-join").classList.remove("hidden");
-}
-
-window.logout = () => {
-    localStorage.removeItem('cc_user');
-    localStorage.removeItem('cc_pass');
-    location.reload();
-}
 
 function syncUsers() {
     channel.presence.get((err, members) => {
         if(!members) return;
         document.getElementById("users-desktop").innerHTML = members.map(m => `
-            <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-xs font-bold flex justify-between">
-                <span>${m.data.user}</span>
-                ${m.data.isAdmin ? '<span class="text-purple-400">★ Admin</span>' : ''}
+            <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-xs font-bold flex justify-between items-center">
+                <span>${m.data.user} ${m.data.isAdmin ? '(ADMIN)' : ''}</span>
+                ${isAdmin && m.data.user !== myDisplayName ? `<button onclick="kickUser('${m.data.user}')" class="text-red-500 text-[9px] uppercase font-black">Kick</button>` : ''}
             </div>`).join("");
     });
 }
 
+window.kickUser = (name) => channel.publish("kick", { target: name });
+
 function render(u, t, me, msgId, reply, save = true) {
     const box = document.getElementById("messages");
     const id = msgId || 'm-' + Math.random().toString(36).slice(2,9);
-    
-    if(save && me) saveMessage(currentRoom, { user: u, text: t, msgId: id, reply });
+    if(save && me) saveMsg(currentRoom, { type: 'msg', user: u, text: t, id: id, reply });
 
     const div = document.createElement("div"); div.id = id;
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-msg`;
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
     div.innerHTML = `
-        ${reply ? `<div style="font-size:10px; opacity:0.7; margin-bottom:4px; border-left:2px solid #9667f4; padding-left:6px;">@${reply.user}: ${reply.text}</div>` : ''}
+        ${reply ? `<div class="text-[10px] opacity-50 border-left-2 border-purple-500 pl-2 mb-1">@${reply.user}: ${reply.text}</div>` : ''}
         <div class="flex flex-col">
-            ${!me ? `<div class="text-[10px] text-purple-400 font-bold mb-1">${u}</div>` : ''}
-            <div class="flex justify-between items-start gap-3">
-                <span class="text-sm leading-relaxed">${t}</span>
-                <div class="flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
-                    <button onclick="startReply('${u}', '${t.replace(/'/g, "\\'")}')" class="text-xs">↩</button>
-                    ${(me || isAdmin) ? `<button onclick="openDeleteModal('${id}')" class="text-xs text-red-400">🗑</button>` : ''}
+            ${!me ? `<div class="text-[9px] text-purple-400 font-extrabold mb-0.5 uppercase">${u}</div>` : ''}
+            <div class="flex justify-between items-start gap-4">
+                <span class="text-sm">${t}</span>
+                <div class="flex gap-2 opacity-10 hover:opacity-100">
+                    <button onclick="startReply('${u}', '${t}')" class="text-[10px]">REPLY</button>
+                    ${(me || isAdmin) ? `<button onclick="openDeleteModal('${id}')" class="text-[10px] text-red-500">DEL</button>` : ''}
                 </div>
             </div>
         </div>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
+}
+
+function renderAnnounce(text, save = true) {
+    const box = document.getElementById("messages");
+    const div = document.createElement("div");
+    div.className = "announcement";
+    div.innerText = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    if(save) saveMsg(currentRoom, { type: 'announce', text });
+}
+
+function startDisco(duration) {
+    const overlay = document.getElementById("disco-overlay");
+    overlay.classList.add("disco-active");
+    setTimeout(() => overlay.classList.remove("disco-active"), (duration || 15) * 1000);
+}
+
+document.getElementById("send-btn").onclick = () => {
+    const input = document.getElementById("input");
+    let text = input.innerText.trim();
+    if(!text) return;
+
+    if (text.startsWith("/") && isAdmin) {
+        const args = text.split(" ");
+        const cmd = args[0].toLowerCase();
+        if (cmd === "/announce") {
+            const val = text.replace("/announce", "").trim();
+            channel.publish("announce", { text: val });
+            renderAnnounce(val);
+        } else if (cmd === "/disco") {
+            const time = parseInt(args[1]) || 15;
+            channel.publish("disco", { duration: time });
+            startDisco(time);
+        } else if (cmd === "/kick") {
+            channel.publish("kick", { target: args[1] });
+        }
+        input.innerHTML = ""; return;
+    }
+
+    const msgId = 'm-' + Math.random().toString(36).slice(2,9);
+    channel.publish("msg", { user: myDisplayName, text, msgId, reply: currentReply });
+    render(myDisplayName, text, true, msgId, currentReply);
+    input.innerHTML = ""; cancelReply();
+}
+
+function saveMsg(room, data) {
+    let history = JSON.parse(localStorage.getItem(`cc_history_${room}`) || "[]");
+    history.push(data);
+    if(history.length > 100) history.shift();
+    localStorage.setItem(`cc_history_${room}`, JSON.stringify(history));
 }
 
 window.notify = (text) => {
@@ -415,9 +327,15 @@ document.getElementById("confirm-delete-btn").onclick = () => {
     closeDeleteModal();
 };
 
+window.exitRoom = () => {
+    localStorage.removeItem('cc_user');
+    localStorage.removeItem('cc_pass');
+    location.reload();
+}
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); document.getElementById("send-btn").click(); } };
+</script>
 
-// --- SNOW EFFECT ---
+<script>
 const canvas = document.getElementById("snow-canvas");
 const ctx = canvas.getContext("2d");
 let snow = [];

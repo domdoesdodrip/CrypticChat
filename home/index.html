@@ -252,7 +252,7 @@ function syncUsers() {
         if(!members) return;
         const html = members.map(m => `
             <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-[10px] font-bold flex justify-between items-center uppercase">
-                <span>${m.data.user} ${m.data.isAdmin ? '⭐' : ''}</span>
+                <span>${m.data.user} ${m.data.isAdmin ? '(ADMIN)' : ''}</span>
                 ${isAdmin && m.data.user !== myDisplayName ? `<button onclick="confirmKick('${m.data.user}')" class="text-orange-500">KICK</button>` : ''}
             </div>`).join("");
         document.getElementById("users-desktop").innerHTML = html;

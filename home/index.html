@@ -29,7 +29,6 @@
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(150, 103, 244, 0.3); font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
         
-        /* Mobile User List Toggle */
         #mobile-users-panel { transition: transform 0.3s ease; transform: translateY(-100%); z-index: 25; }
         #mobile-users-panel.open { transform: translateY(0); }
     </style>
@@ -76,10 +75,15 @@
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-            <h1 class="text-3xl font-black mb-2">Welcome Back!</h1>
+            <h1 class="text-3xl font-black mb-2 uppercase">Welcome Back!</h1>
             <p id="welcome-msg" class="text-[10px] text-purple-400/60 mb-10 font-bold uppercase"></p>
             <input id="display-name" type="text" maxlength="20" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Alias">
-            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Room ID">
+            <input id="room-id" type="text" class="w-full mb-2 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Room ID">
+            
+            <p class="text-[9px] text-white/40 font-bold uppercase mb-8 tracking-wider">
+                <span class="text-purple-400">TIP:</span> Leave the "ROOMID" blank to enter a global room!
+            </p>
+
             <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs mb-4 uppercase">Join Chat</button>
             <button onclick="logout()" class="text-[9px] text-white/20 font-black uppercase hover:text-red-500 transition-colors">Logout Account</button>
         </div>
@@ -147,12 +151,10 @@ const ADMIN_USERNAME = 'domdoesdodrip';
 let ably, channel, myAccountName, myDisplayName, isAdmin = false, authMode = 'login', currentRoom = '';
 let currentReply = null, deleteTargetId = null, kickTarget = null, unsubscribeHistory = null;
 
-// UI State
 document.getElementById('toggle-users-mobile').onclick = () => {
     document.getElementById('mobile-users-panel').classList.toggle('open');
 };
 
-// Auth Logic
 window.addEventListener('DOMContentLoaded', () => {
     const u = localStorage.getItem('cc_user'), p = localStorage.getItem('cc_pass');
     if(u && p) loginSequence(u, p, true);
@@ -204,7 +206,6 @@ function showJoinView() {
     document.getElementById("room-id").value = localStorage.getItem('cc_last_room') || "";
 }
 
-// Room Logic
 document.getElementById("join-room-btn").onclick = () => {
     const alias = document.getElementById("display-name").value.trim() || myAccountName;
     const room = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
@@ -214,11 +215,9 @@ document.getElementById("join-room-btn").onclick = () => {
 function joinRoom(room, alias) {
     myDisplayName = alias; currentRoom = room;
     localStorage.setItem('cc_last_room', room); localStorage.setItem('cc_last_alias', alias);
-    
     document.querySelectorAll('#view-join, #view-auth').forEach(v => v.classList.add('hidden'));
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
-    
     const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(70));
     unsubscribeHistory = onSnapshot(q, (snapshot) => {
         const box = document.getElementById("messages");
@@ -229,7 +228,6 @@ function joinRoom(room, alias) {
         });
         box.scrollTop = box.scrollHeight;
     });
-
     channel = ably.channels.get("room-" + currentRoom);
     channel.presence.enter({ user: myDisplayName, isAdmin: isAdmin });
     channel.subscribe("kick", m => { if (m.data.target === myDisplayName) logout(); });

@@ -93,18 +93,14 @@
 </div>
 
 <script>
-    // REDIRECT LOGIC
     document.getElementById('redirectBtn').addEventListener('click', function() {
         const host = window.location.hostname;
-        let target = "https://cryptical.wtf"; // Standard 
+        let target = "https://cryptical.wtf/home";
 
-        // If on GitHub
         if (host.includes("github.io")) {
-            target = "https://domdoesdodrip.github.io/CrypticChat/";
-        } 
-        // If on Vercel
-        else if (host.includes("vercel.app")) {
-            target = "https://crypticchat.vercel.app/";
+            target = "https://domdoesdodrip.github.io/CrypticChat/home";
+        } else if (host.includes("vercel.app")) {
+            target = "https://crypticchat.vercel.app/home";
         }
 
         window.location.href = target;

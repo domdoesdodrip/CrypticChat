@@ -1,38 +1,30 @@
-export default async function handler(req, res) {
-    const apiKey = process.env.ABLY_API_KEY;
-    
-    if (!apiKey || !apiKey.includes(':')) {
-        return res.status(500).json({ error: "Invalid or missing ABLY_API_KEY in Vercel." });
-    }
+const Ably = require('ably');
 
-    // Split the key into ID and Secret
-    const [keyName, keySecret] = apiKey.split(':');
-    const clientId = req.query.clientId || 'anonymous';
+export default async function handler(req, res) {
+    const { clientId, fingerprint } = req.query;
+    
+    // Read the secrets you set in Vercel settings
+    const masterAdminID = process.env.ADMIN_UID;
+    const masterFingerprint = process.env.ADMIN_FINGERPRINT;
+
+    const realtime = new Ably.Rest(process.env.ABLY_API_KEY);
+
+    // SERVER-SIDE CHECK: Only the real admin gets "Delete/Kick" powers
+    const isVerifiedAdmin = (clientId === masterAdminID && fingerprint === masterFingerprint);
+
+    const tokenParams = {
+        clientId: clientId,
+        // If verified, grant wildcard [*] permissions. 
+        // If not, only allow basic chat functions.
+        capability: isVerifiedAdmin 
+            ? { "*": ["*"] } 
+            : { "*": ["subscribe", "publish", "presence"] }
+    };
 
     try {
-        const response = await fetch(`https://rest.ably.io/keys/${keyName}/requestToken`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${btoa(apiKey)}`
-            },
-            body: JSON.stringify({
-                keyName: keyName, // <--- This was the missing piece!
-                clientId: clientId,
-                timestamp: Date.now()
-            })
-        });
-
-        const tokenData = await response.json();
-
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        
-        if (response.ok) {
-            res.status(200).json(tokenData);
-        } else {
-            res.status(response.status).json({ error: "Ably Rejected Request", details: tokenData });
-        }
-    } catch (err) {
-        res.status(500).json({ error: "Fetch Error", details: err.message });
+        const tokenRequest = await realtime.auth.createTokenRequest(tokenParams);
+        res.status(200).json(tokenRequest);
+    } catch (error) {
+        res.status(500).send("Error creating token");
     }
 }

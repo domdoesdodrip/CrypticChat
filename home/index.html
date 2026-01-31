@@ -6,6 +6,7 @@
     <title>CrypticChat</title>
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
@@ -83,14 +84,15 @@
             <p id="welcome-msg" class="text-[10px] text-purple-400/60 mb-10 font-bold uppercase"></p>
             <input id="display-name" type="text" maxlength="20" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Alias">
             <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Room ID">
-            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Join Chat</button>
+            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs mb-4 uppercase">Join Chat</button>
+            <button onclick="logout()" class="text-[9px] text-white/20 font-black uppercase hover:text-red-500 transition-colors">Logout Account</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs"></div>
-            <button onclick="logout()" class="bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">Logout</button>
+            <button onclick="exitRoom()" class="bg-white/5 text-white/60 px-4 py-2 rounded-lg text-[10px] font-black uppercase border border-white/10">Exit Room</button>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
@@ -168,12 +170,16 @@ async function loginSequence(user, pass) {
 }
 
 function initAbly(user, pass) {
+    if(ably) return showJoinView(); // Already init
     ably = new Ably.Realtime({ authUrl: '/api/ably-token', authParams: { username: user, password: pass } });
-    ably.connection.on('connected', () => {
-        document.getElementById("view-auth").classList.add("hidden");
-        document.getElementById("view-join").classList.remove("hidden");
-        document.getElementById("welcome-msg").innerText = `User: ${user}`;
-    });
+    ably.connection.on('connected', () => showJoinView());
+}
+
+function showJoinView() {
+    document.getElementById("view-auth").classList.add("hidden");
+    document.getElementById("view-join").classList.remove("hidden");
+    document.getElementById("view-chat").classList.add("hidden");
+    document.getElementById("welcome-msg").innerText = `User: ${myAccountName}`;
 }
 
 // Room Logic
@@ -185,16 +191,16 @@ document.getElementById("join-room-btn").onclick = () => {
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
     
-    // FIREBASE SYNC
-    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
+    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(70));
     unsubscribeHistory = onSnapshot(q, (snapshot) => {
         const box = document.getElementById("messages");
-        box.innerHTML = ''; // Fresh render on changes
+        box.innerHTML = '';
         snapshot.forEach(doc => {
             const m = doc.data();
             if(m.type === 'announce') renderAnnounce(m.text);
             else render(m.user, m.text, m.user === myDisplayName, doc.id, m.reply);
         });
+        box.scrollTop = box.scrollHeight;
     });
 
     channel = ably.channels.get("room-" + currentRoom);
@@ -203,6 +209,20 @@ document.getElementById("join-room-btn").onclick = () => {
     channel.subscribe("disco", m => startDisco(m.data.duration));
     channel.presence.subscribe(() => syncUsers());
 };
+
+window.exitRoom = () => {
+    if(channel) {
+        channel.presence.leave();
+        channel.unsubscribe();
+    }
+    unsubscribeHistory?.();
+    showJoinView();
+}
+
+window.logout = () => {
+    localStorage.clear();
+    location.reload();
+}
 
 function syncUsers() {
     channel.presence.get((err, members) => {
@@ -215,15 +235,11 @@ function syncUsers() {
     });
 }
 
-// Database Actions
 async function sendMessage(text, type = 'msg') {
     const colRef = collection(db, "rooms", currentRoom, "messages");
     await addDoc(colRef, {
-        user: myDisplayName,
-        text: text,
-        type: type,
-        reply: currentReply,
-        timestamp: serverTimestamp()
+        user: myDisplayName, text: text, type: type,
+        reply: currentReply, timestamp: serverTimestamp()
     });
     cancelReply();
 }
@@ -232,7 +248,6 @@ async function deleteMessage(id) {
     await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
 }
 
-// Rendering
 function render(u, t, me, id, reply) {
     const box = document.getElementById("messages");
     const div = document.createElement("div"); div.id = id;
@@ -249,22 +264,20 @@ function render(u, t, me, id, reply) {
                 </div>
             </div>
         </div>`;
-    box.appendChild(div); box.scrollTop = box.scrollHeight;
+    box.appendChild(div);
 }
 
 function renderAnnounce(text) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
     div.className = "announcement"; div.innerText = text;
-    box.appendChild(div); box.scrollTop = box.scrollHeight;
+    box.appendChild(div);
 }
 
-// UI Triggers
 document.getElementById("send-btn").onclick = () => {
     const input = document.getElementById("input");
     let text = input.innerText.trim();
     if(!text) return;
-
     if (text.startsWith("/") && isAdmin) {
         const args = text.split(" ");
         if (args[0] === "/announce") sendMessage(text.replace("/announce", "").trim(), 'announce');
@@ -292,10 +305,8 @@ window.notify = (text) => {
     const t = document.createElement('div'); t.className = 'toast'; t.innerText = text;
     container.appendChild(t); setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
 }
-window.logout = () => { localStorage.clear(); location.reload(); }
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); document.getElementById("send-btn").click(); } };
 
-// Visuals
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2 + 1, d: Math.random() * 0.5 + 0.3 })); }

@@ -3,19 +3,21 @@ const Ably = require('ably');
 export default async function handler(req, res) {
     const { clientId, fingerprint } = req.query;
     
-    // Read the secrets you set in Vercel settings
-    const masterAdminID = process.env.ADMIN_UID;
-    const masterFingerprint = process.env.ADMIN_FINGERPRINT;
+    // 1. Get the user's IP from the request headers
+    const forwarded = req.headers['x-forwarded-for'];
+    const userIP = forwarded ? forwarded.split(',')[0] : req.socket.remoteAddress;
+
+    // 2. Compare against your 3 Secrets
+    const isUIDMatch = (clientId === process.env.ADMIN_UID);
+    const isFingerprintMatch = (fingerprint === process.env.ADMIN_FINGERPRINT);
+    const isIPMatch = (userIP === process.env.ADMIN_IP);
+
+    const isVerifiedAdmin = (isUIDMatch && isFingerprintMatch && isIPMatch);
 
     const realtime = new Ably.Rest(process.env.ABLY_API_KEY);
 
-    // SERVER-SIDE CHECK: Only the real admin gets "Delete/Kick" powers
-    const isVerifiedAdmin = (clientId === masterAdminID && fingerprint === masterFingerprint);
-
     const tokenParams = {
         clientId: clientId,
-        // If verified, grant wildcard [*] permissions. 
-        // If not, only allow basic chat functions.
         capability: isVerifiedAdmin 
             ? { "*": ["*"] } 
             : { "*": ["subscribe", "publish", "presence"] }

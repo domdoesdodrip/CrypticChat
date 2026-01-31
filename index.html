@@ -15,8 +15,7 @@
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100vh; overflow: hidden; }
         #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .doc-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 1.5rem; transition: border 0.3s ease; }
-        .doc-card:hover { border-color: rgba(150, 103, 244, 0.4); }
+        .doc-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 1.5rem; }
     </style>
 </head>
 <body>
@@ -37,19 +36,19 @@
             </div>
             <div class="doc-card">
                 <h3 class="text-purple-400 font-black mb-2 uppercase text-xs tracking-widest">2 | Real-time Nodes</h3>
-                <p class="text-gray-400 text-sm leading-relaxed">Powered by the Ably Realtime Network, ensuring sub-100ms latency across all global connection points via our GitHub-hosted front-end.</p>
+                <p class="text-gray-400 text-sm leading-relaxed">Powered by the Ably Realtime Network and hosted on GitHub Pages, ensuring sub-100ms latency across all global connection points.</p>
             </div>
             <div class="doc-card">
                 <h3 class="text-purple-400 font-black mb-2 uppercase text-xs tracking-widest">3 | Privacy Ensured</h3>
-                <p class="text-gray-400 text-sm leading-relaxed">With logic managed by Vercel and hosting by GitHub, your communication remains decentralized. Usernames are restricted to 20 characters to maintain terminal stability.</p>
+                <p class="text-gray-400 text-sm leading-relaxed">The server-side logic is managed by Vercel, meaning your data remains private and your connection is secured through GitHub's distributed network.</p>
             </div>
         </div>
 
-        <button onclick="location.href='https://domdoesdodrip.github.io/CrypticChat/home'" class="w-full bg-purple-600 py-6 rounded-[2rem] font-black text-xl shadow-[0_0_30px_rgba(150,103,244,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest">
+        <button onclick="window.location.pathname += 'home'" class="w-full bg-purple-600 py-6 rounded-[2rem] font-black text-xl shadow-[0_0_30px_rgba(150,103,244,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest">
             ENTER TERMINAL
         </button>
         
-        <p class="text-center mt-8 text-[10px] text-gray-600 font-bold uppercase tracking-[0.2em]">Deployment: GitHub Pages x Vercel Serverless</p>
+        <p class="text-center mt-8 text-[10px] text-gray-600 font-bold uppercase tracking-[0.2em]">Deployment: GitHub Pages Node</p>
     </div>
 </div>
 

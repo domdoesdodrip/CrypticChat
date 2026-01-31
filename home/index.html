@@ -141,13 +141,14 @@ let currentReply = null, deleteTargetId = null, kickTarget = null, unsubscribeHi
 // Auth Logic
 window.addEventListener('DOMContentLoaded', () => {
     const u = localStorage.getItem('cc_user'), p = localStorage.getItem('cc_pass');
-    if(u && p) loginSequence(u, p);
+    if(u && p) loginSequence(u, p, true); // True = initial load
 });
 
 window.toggleAuthMode = () => {
     authMode = authMode === 'login' ? 'signup' : 'login';
     document.getElementById('auth-title').innerText = authMode.toUpperCase();
     document.getElementById('auth-main-btn').innerText = authMode === 'login' ? 'ENTER' : 'REGISTER';
+    document.getElementById('auth-switch-btn').innerText = authMode === 'login' ? 'Sign Up' : 'Login';
 }
 
 document.getElementById("auth-main-btn").onclick = async () => {
@@ -161,18 +162,31 @@ document.getElementById("auth-main-btn").onclick = async () => {
     } else loginSequence(user, pass);
 };
 
-async function loginSequence(user, pass) {
+async function loginSequence(user, pass, isAuto = false) {
     const snap = await getDoc(doc(db, "users", user));
     if (!snap.exists() || snap.data().password !== pass) return notify("Invalid");
     localStorage.setItem('cc_user', user); localStorage.setItem('cc_pass', pass);
     myAccountName = user; isAdmin = (user === ADMIN_USERNAME);
-    initAbly(user, pass);
+    initAbly(user, pass, isAuto);
 }
 
-function initAbly(user, pass) {
-    if(ably) return showJoinView(); // Already init
+function initAbly(user, pass, isAuto) {
+    if(ably) return checkAutoJoin();
     ably = new Ably.Realtime({ authUrl: '/api/ably-token', authParams: { username: user, password: pass } });
-    ably.connection.on('connected', () => showJoinView());
+    ably.connection.on('connected', () => {
+        if(isAuto) checkAutoJoin();
+        else showJoinView();
+    });
+}
+
+function checkAutoJoin() {
+    const lastRoom = localStorage.getItem('cc_last_room');
+    const lastAlias = localStorage.getItem('cc_last_alias');
+    if(lastRoom) {
+        joinRoom(lastRoom, lastAlias || myAccountName);
+    } else {
+        showJoinView();
+    }
 }
 
 function showJoinView() {
@@ -180,14 +194,25 @@ function showJoinView() {
     document.getElementById("view-join").classList.remove("hidden");
     document.getElementById("view-chat").classList.add("hidden");
     document.getElementById("welcome-msg").innerText = `User: ${myAccountName}`;
+    document.getElementById("display-name").value = localStorage.getItem('cc_last_alias') || "";
+    document.getElementById("room-id").value = localStorage.getItem('cc_last_room') || "";
 }
 
 // Room Logic
 document.getElementById("join-room-btn").onclick = () => {
-    myDisplayName = document.getElementById("display-name").value.trim() || myAccountName;
-    currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
+    const alias = document.getElementById("display-name").value.trim() || myAccountName;
+    const room = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
+    joinRoom(room, alias);
+};
+
+function joinRoom(room, alias) {
+    myDisplayName = alias;
+    currentRoom = room;
+    localStorage.setItem('cc_last_room', room);
+    localStorage.setItem('cc_last_alias', alias);
     
     document.getElementById("view-join").classList.add("hidden");
+    document.getElementById("view-auth").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
     
@@ -208,7 +233,7 @@ document.getElementById("join-room-btn").onclick = () => {
     channel.subscribe("kick", m => { if (m.data.target === myDisplayName) logout(); });
     channel.subscribe("disco", m => startDisco(m.data.duration));
     channel.presence.subscribe(() => syncUsers());
-};
+}
 
 window.exitRoom = () => {
     if(channel) {
@@ -216,6 +241,7 @@ window.exitRoom = () => {
         channel.unsubscribe();
     }
     unsubscribeHistory?.();
+    localStorage.removeItem('cc_last_room');
     showJoinView();
 }
 

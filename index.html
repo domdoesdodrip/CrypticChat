@@ -23,7 +23,7 @@
     
     <div class="text-center mb-12">
         <h1 class="text-4xl font-black tracking-tighter mb-4">CrypticChat | Guide</h1>
-        <p class="text-white/40 font-bold text-sm">Learn how to use CrypticChat.</p>
+        <p class="text-white/40 font-bold text-sm tracking-widest">Learn How to Use CrypticChat</p>
     </div>
 
     <div class="space-y-6">
@@ -45,7 +45,7 @@
                 <h2 class="text-xl font-black uppercase mb-2">Pick your Alias</h2>
                 <p class="text-white/60 leading-relaxed font-semibold">
                     Inside the app, enter an <span class="text-purple-400 font-black">Alias</span>. 
-                    This is the name people will see in the chat. It can be anything you want!
+                    This is the name people will see in the chat.
                 </p>
             </div>
         </div>
@@ -55,16 +55,16 @@
             <div>
                 <h2 class="text-xl font-black uppercase mb-2">Choose a Room</h2>
                 <p class="text-white/60 leading-relaxed font-semibold mb-4">
-                    The <span class="text-purple-400 font-black">Room ID</span> field is how you find people.
+                    The <span class="text-purple-400 font-black">Room ID</span> field determines your frequency.
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                         <p class="text-[10px] font-black uppercase text-purple-400 mb-1">Public Chat</p>
-                        <p class="text-xs font-bold">Leave it blank to join the Global room.</p>
+                        <p class="text-xs font-bold">Leave blank for Global Room.</p>
                     </div>
                     <div class="bg-white/5 p-4 rounded-2xl border border-white/10">
                         <p class="text-[10px] font-black uppercase text-white/40 mb-1">Private Chat</p>
-                        <p class="text-xs font-bold">Type a secret name (like "MyRoom123") to chat privately.</p>
+                        <p class="text-xs font-bold">Enter a secret ID for hidden chats.</p>
                     </div>
                 </div>
             </div>
@@ -75,8 +75,8 @@
             <div>
                 <h2 class="text-xl font-black uppercase mb-2">Leave Safely</h2>
                 <p class="text-white/60 leading-relaxed font-semibold">
-                    When you are done, click the <span class="text-red-400 font-black">Exit Icon</span> or logout. 
-                    If you just close the tab, your name might stay in the room for 30 seconds.
+                    Click the <span class="text-red-400 font-black">Disconnect</span> icon. 
+                    Closing the tab without disconnecting may leave a "ghost" for 30 seconds.
                 </p>
             </div>
         </div>
@@ -84,8 +84,8 @@
     </div>
 
     <div class="mt-12 text-center">
-        <button onclick="handleRedirect()" class="w-full bg-purple-600 hover:bg-purple-500 py-6 rounded-[2rem] font-black text-sm tracking-widest transition-all shadow-xl shadow-purple-500/20 active:scale-95">
-            I'm Ready - Open CrypticChat
+        <button id="redirectBtn" class="w-full bg-purple-600 hover:bg-purple-500 py-6 rounded-[2rem] font-black text-sm tracking-widest transition-all shadow-xl shadow-purple-500/20 active:scale-95">
+            INITIALIZE TERMINAL
         </button>
         <p class="mt-6 text-[10px] font-bold text-white/20">© CrypticChat 2026 // Stay Secure</p>
     </div>
@@ -93,13 +93,22 @@
 </div>
 
 <script>
-    function handleRedirect() {
+    // REDIRECT LOGIC
+    document.getElementById('redirectBtn').addEventListener('click', function() {
         const host = window.location.hostname;
-        let target = "https://cryptical.wtf"; 
-        if (host.includes("github.io")) target = "https://domdoesdodrip.github.io/CrypticChat/home";
-        else if (host.includes("vercel.app")) target = "https://crypticchat.vercel.app/home";
+        let target = "https://cryptical.wtf"; // Standard 
+
+        // If on GitHub
+        if (host.includes("github.io")) {
+            target = "https://domdoesdodrip.github.io/CrypticChat/";
+        } 
+        // If on Vercel
+        else if (host.includes("vercel.app")) {
+            target = "https://crypticchat.vercel.app/";
+        }
+
         window.location.href = target;
-    }
+    });
 
     const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
     let snow = [];

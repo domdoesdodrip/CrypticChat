@@ -1,6 +1,6 @@
 # 🔓 CrypticChat Protocol
 
-![Status](https://img.shields.io/badge/Status-Operational-9667f4?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Updating-9667f4?style=for-the-badge)
 ![Encryption](https://img.shields.io/badge/Encryption-AES--256-blueviolet?style=for-the-badge)
 
 A secure, real-time messaging terminal designed for ephemeral communication. No logs, no tracking, just data.

@@ -48,16 +48,6 @@ To leave the network, click **DISCONNECT**.
 **"The site won't load!"**
 Ensure you are using a modern browser (Chrome, Firefox, Edge, or Safari). Internet Explorer is not supported.
 
----
 
-# UPDATE
-
-* Only one person can have the username, meaning there cannot be 2 people with the same name.
-
-* Mobile and Smaller screen support.
-
-* Custom domain.
-  
-* View previous messages when you join. 
 
 &copy; 2026 CrypticChat Protocol | *Stay hidden.*

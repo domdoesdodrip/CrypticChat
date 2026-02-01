@@ -9,21 +9,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #030205; --accent: #9667f4; --glass: rgba(12, 10, 18, 0.98); }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; font-size: 100%; }
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
         .glass { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
-        .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; margin-bottom: 8px; position: relative; }
+        /* Pill Button Style from image */
+        .pill-btn { width: 100%; background: #9667f4; color: white; padding: 12px; border-radius: 9999px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; transition: opacity 0.2s; }
+        .pill-btn:hover { opacity: 0.9; }
+
+        /* Message Bubble Style from image */
+        .bubble { max-width: 80%; padding: 12px 18px; border-radius: 24px; margin-bottom: 8px; position: relative; }
         .mine { background: #9667f4; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1a1825; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
-        #input-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; max-height: 120px; overflow-y: auto; }
-        .toast { background: #9667f4; color: white; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 12px; margin-bottom: 10px; cursor: pointer; pointer-events: auto; }
-        
-        .msg-btn { opacity: 0.5; transition: opacity 0.2s; }
-        .msg-btn:hover { opacity: 1; }
+        /* Text Links for Reply/Del from image */
+        .text-link { font-size: 11px; font-weight: 600; margin-left: 8px; opacity: 0.7; transition: opacity 0.2s; }
+        .text-link:hover { opacity: 1; text-decoration: underline; }
+        .del-link { color: #ff6b6b; }
+
+        #input-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; max-height: 100px; overflow-y: auto; }
         .announcement { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; width: 100%; text-align: center; border-radius: 12px; margin: 10px 0; padding: 12px; }
+        .toast { background: #9667f4; color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 12px; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -33,54 +40,54 @@
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center shadow-2xl">
+        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center">
             <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
-            <div class="flex bg-white/5 p-1 rounded-xl mb-6">
-                <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-3 rounded-lg text-xs font-black uppercase bg-white/10">Login</button>
-                <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-3 rounded-lg text-xs font-black uppercase text-white/30">Sign Up</button>
-            </div>
-            <div class="space-y-3 mb-8">
+            <div class="space-y-3 mb-6">
                 <input id="auth-user" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Username">
                 <input id="auth-pass" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Password">
             </div>
-            <button id="auth-main-btn" class="w-full bg-purple-600 py-4.5 rounded-xl font-black uppercase text-sm">Enter</button>
-            <button onclick="initGuest()" class="mt-6 text-[10px] text-white/30 uppercase font-black hover:text-white transition-colors">Ghost Access</button>
+            <button id="auth-main-btn" class="pill-btn">Enter</button>
+            <div class="mt-6 flex justify-center gap-4 text-[10px] font-black uppercase text-white/30">
+                <button onclick="toggleAuthMode(true)" id="btn-login-mode" class="text-white">Login</button>
+                <button onclick="toggleAuthMode(false)" id="btn-signup-mode">Sign Up</button>
+                <button onclick="initGuest()">Ghost</button>
+            </div>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center">
-            <h2 class="text-2xl font-black mb-6 uppercase tracking-widest">Setup</h2>
+            <h2 class="text-2xl font-black mb-6 uppercase">Setup</h2>
             <input id="alias-input" type="text" class="w-full mb-3 p-4 bg-white/5 rounded-xl outline-none" placeholder="Nickname">
-            <input id="room-input" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-xl outline-none" placeholder="Room ID (GLOBAL)">
-            <button id="join-btn" class="w-full bg-purple-600 py-4.5 rounded-xl font-black uppercase text-sm">Connect</button>
+            <input id="room-input" type="text" class="w-full mb-6 p-4 bg-white/5 rounded-xl outline-none" placeholder="Room ID (GLOBAL)">
+            <button id="join-btn" class="pill-btn">Connect</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-6 shrink-0 z-50">
             <div class="flex items-center gap-4">
-                <button onclick="window.location.reload()" class="text-white/40 hover:text-white">←</button>
+                <button onclick="window.location.reload()" class="text-white/40">←</button>
                 <div id="roomLabel" class="font-black text-purple-400 uppercase text-xs"></div>
             </div>
             <div id="admin-tag" class="hidden px-3 py-1 bg-red-600 text-[9px] font-black rounded-full uppercase">Admin</div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-5 overflow-y-auto border-r border-white/5">
+            <aside class="hidden lg:flex flex-col w-64 glass p-5 border-r border-white/5">
                 <div id="users-list" class="space-y-2"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-6 pb-36 flex flex-col overflow-y-auto"></div>
                 <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-3xl">
-                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-950 p-2.5 rounded-t-xl border-x border-t border-white/10">
-                        <span id="reply-text" class="text-[10px] font-bold truncate"></span>
+                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-900/80 p-2 rounded-t-xl border-t border-x border-white/10">
+                        <span id="reply-text" class="text-[10px] font-bold"></span>
                         <button onclick="cancelReply()">✕</button>
                     </div>
                     <div class="glass p-2.5 rounded-2xl flex items-center gap-3">
                         <div id="input-area" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 h-11 w-14 rounded-xl flex items-center justify-center shrink-0">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+                        <button id="send-btn" class="bg-purple-600 h-10 w-12 rounded-xl flex items-center justify-center shrink-0">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -96,22 +103,22 @@ import { getFirestore, doc, getDoc, setDoc, collection, addDoc, deleteDoc, onSna
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myAlias, myUID, isAdmin = false, currentRoom = "GLOBAL", replyingTo = null;
+let ably, channel, myAlias, myUID, isAdmin = false, currentRoom = "GLOBAL", replyingTo = null, isLoginMode = true;
 
-window.toggleAuth = (isL) => {
-    document.getElementById("tab-login").className = `flex-1 py-3 rounded-lg text-xs font-black uppercase ${isL ? 'bg-white/10' : 'text-white/30'}`;
-    document.getElementById("tab-signup").className = `flex-1 py-3 rounded-lg text-xs font-black uppercase ${!isL ? 'bg-white/10' : 'text-white/30'}`;
-    document.getElementById("auth-main-btn").innerText = isL ? "Enter" : "Create Account";
+window.toggleAuthMode = (mode) => {
+    isLoginMode = mode;
+    document.getElementById("btn-login-mode").classList.toggle("text-white", mode);
+    document.getElementById("btn-signup-mode").classList.toggle("text-white", !mode);
 };
 
 document.getElementById("auth-main-btn").onclick = async () => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("Fill fields");
+    if(!u || !p) return notify("Fields required");
     const userRef = doc(db, "users", u), snap = await getDoc(userRef);
-    if (document.getElementById("tab-signup").classList.contains("bg-white/10")) {
+    if (!isLoginMode) {
         if(snap.exists()) return notify("Taken");
         await setDoc(userRef, { password: p, isAdmin: false, username: u });
-        notify("Account Created");
+        notify("Created");
     } else {
         if(!snap.exists() || snap.data().password !== p) return notify("Failed");
         isAdmin = snap.data().isAdmin || false;
@@ -152,18 +159,16 @@ function renderMsg(data, id) {
     const div = document.createElement("div");
     if(data.type === "announce") {
         div.className = "announcement";
-        div.innerHTML = `<span class="text-[9px] font-black uppercase text-red-500">System Announcement</span><p class="text-sm font-bold mt-1">${data.text}</p>`;
+        div.innerHTML = `<span class="text-[9px] font-black uppercase text-red-500">System</span><p class="text-sm font-bold mt-1">${data.text}</p>`;
     } else {
         div.className = `bubble flex flex-col ${isMe ? 'mine' : 'theirs'}`;
         div.innerHTML = `
-            ${data.reply ? `<div class="text-[9px] bg-black/20 p-2 rounded-lg mb-2 border-l-2 border-white">@${data.reply.user}: ${data.reply.text}</div>` : ''}
-            <div class="flex items-center justify-between gap-4 mb-1">
-                <span class="text-[9px] font-black uppercase opacity-40">${data.alias}</span>
-                <div class="flex gap-2">
-                    <button class="msg-btn" onclick="setReply('${data.alias}', '${data.text}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
-                    ${isAdmin ? `<button class="msg-btn text-red-400" onclick="confirmDelete('${id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
-                </div>
+            <div class="flex items-center gap-1 mb-1">
+                <span class="text-[10px] font-black uppercase opacity-40">${data.alias}</span>
+                <button class="text-link" onclick="setReply('${data.alias}', '${data.text}')">Reply</button>
+                ${isAdmin ? `<button class="text-link del-link" onclick="confirmDelete('${id}')">Del</button>` : ''}
             </div>
+            ${data.reply ? `<div class="text-[9px] bg-black/20 p-2 rounded-lg mb-2 border-l-2 border-white">@${data.reply.user}: ${data.reply.text}</div>` : ''}
             <div class="text-[14px] font-medium leading-relaxed">${data.text}</div>`;
     }
     box.appendChild(div);
@@ -192,7 +197,7 @@ function updateUsers() {
 }
 
 window.confirmDelete = (id) => {
-    const t = document.createElement("div"); t.className = "toast bg-red-600";
+    const t = document.createElement("div"); t.className = "toast bg-red-600 cursor-pointer pointer-events-auto";
     t.innerText = "CONFIRM DELETE?";
     t.onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); t.remove(); };
     document.getElementById("notification-container").appendChild(t);

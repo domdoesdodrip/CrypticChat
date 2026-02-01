@@ -10,14 +10,17 @@
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
-        .glass { background: rgba(15, 12, 22, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
+        
+        /* SNOW CANVAS - Higher Z-index but behind UI */
+        #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+        #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
+
+        .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
         .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
-        #input:empty:before { content: attr(placeholder); color: #6b7280; }
         
-        /* VC & UI States */
         .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
         .mute-on { color: #ef4444 !important; }
         .deafen-on { color: #f59e0b !important; }
@@ -29,17 +32,18 @@
 </head>
 <body>
 
+<canvas id="snow-canvas"></canvas>
 <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none"></div>
 <div id="remote-audios" class="hidden"></div>
 
-<div id="app-root" class="h-full w-full relative flex flex-col">
+<div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
             <h1 class="text-4xl font-black mb-10 tracking-tighter uppercase">Login</h1>
             <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Username">
             <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Password">
             <button id="auth-main-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase text-xs">Enter</button>
-            <button onclick="enterAsGuest()" class="mt-4 text-[10px] text-white/40 uppercase font-black tracking-widest hover:text-white transition-colors">Enter as Guest</button>
+            <button onclick="initGuest()" class="mt-4 text-[10px] text-white/40 uppercase font-black tracking-widest hover:text-white transition-colors">Enter as Guest</button>
         </div>
     </div>
 
@@ -47,7 +51,7 @@
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
             <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Enter Room</h1>
             <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Alias">
-            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Room ID">
+            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Room ID (Optional)">
             <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Connect</button>
         </div>
     </div>
@@ -97,16 +101,20 @@ let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened 
 let unreadCount = 0, isFocused = true;
 const notifSound = new Audio("https://files.catbox.moe/8tz2o5.mp3");
 
-// TRACK FOCUS FOR NOTIFS
-window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
-window.onblur = () => { isFocused = false; };
-
-// AUTH
-window.enterAsGuest = () => {
+// GUEST MODE LOGIC
+window.initGuest = () => {
     isGuest = true;
+    // For guest mode, we can use the Ably API key directly if public, 
+    // but here we just simulate "connecting" to the join view.
     document.getElementById("view-auth").classList.add("hidden");
     document.getElementById("view-join").classList.remove("hidden");
+    
+    // We init Ably without credentials for guest
+    ably = new Ably.Realtime({ key: "YOUR_ABLY_KEY_HERE" }); // Replace with actual Key for Guests
 };
+
+window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
+window.onblur = () => { isFocused = false; };
 
 document.getElementById("auth-main-btn").onclick = async () => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
@@ -125,7 +133,8 @@ function initAbly(u, p) {
 }
 
 document.getElementById("join-room-btn").onclick = () => {
-    myDisplayName = (document.getElementById("display-name").value.trim() || "Phantom") + (isGuest ? " (GUEST)" : "");
+    myDisplayName = (document.getElementById("display-name").value.trim() || "Phantom");
+    if(isGuest) myDisplayName += " (GUEST)";
     currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     enterChat();
 };
@@ -145,6 +154,7 @@ function enterChat() {
     channel.subscribe("vc-signal", async (m) => {
         if(isGuest) return;
         const d = m.data; if (d.from === myDisplayName || (d.to && d.to !== myDisplayName)) return;
+        // ... (Same WebRTC logic as before)
         if (d.type === "join" && isVoiceActive) {
             const pc = createPeer(d.from);
             const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
@@ -159,7 +169,6 @@ function enterChat() {
         if (d.type === "ice") await peers[d.from].addIceCandidate(new RTCIceCandidate(d.candidate));
     });
 
-    // Firebase Messages
     const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
     onSnapshot(q, (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
@@ -168,17 +177,11 @@ function enterChat() {
             renderMsg(m.user, m.text, m.user === myDisplayName);
         });
         box.scrollTop = box.scrollHeight;
-        
-        // Handle Notifications
-        if (!isFocused) {
-            unreadCount++;
-            notifSound.play();
-            document.title = `CrypticChat (${unreadCount > 99 ? '99+' : unreadCount})`;
-        }
+        if (!isFocused) { unreadCount++; notifSound.play(); document.title = `CrypticChat (${unreadCount > 99 ? '99+' : unreadCount})`; }
     });
 }
 
-// VC ENGINE
+// VC TOOLS
 document.getElementById("vc-btn").onclick = async () => {
     if (isDeafened) return notify("CANNOT ENABLE MIC WHILE DEAFENED");
     if (!isVoiceActive) {
@@ -199,20 +202,15 @@ function setupVisualizer() {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioCtx.createMediaStreamSource(localStream);
     const analyzer = audioCtx.createAnalyser();
-    analyzer.fftSize = 512;
+    analyzer.fftSize = 256;
     source.connect(analyzer);
     const data = new Uint8Array(analyzer.frequencyBinCount);
-    
-    let lastSpeaking = false;
     const check = () => {
         if(!isVoiceActive) return;
         analyzer.getByteFrequencyData(data);
         const volume = data.reduce((a,b) => a+b) / data.length;
-        const speaking = volume > 20 && !isMuted;
-        if(speaking !== lastSpeaking) {
-            channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: speaking });
-            lastSpeaking = speaking;
-        }
+        const speaking = volume > 25 && !isMuted;
+        channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: speaking });
         requestAnimationFrame(check);
     };
     check();
@@ -241,25 +239,17 @@ function stopVC() {
     channel.presence.update({ user: myDisplayName, inCall: false, isSpeaking: false });
 }
 
-document.getElementById("mute-btn").onclick = () => {
-    isMuted = !isMuted;
-    localStream.getAudioTracks()[0].enabled = !isMuted;
-    document.getElementById("mute-btn").classList.toggle("mute-on", isMuted);
-};
-
+document.getElementById("mute-btn").onclick = () => { isMuted = !isMuted; localStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); };
 document.getElementById("deafen-btn").onclick = () => {
     isDeafened = !isDeafened;
     document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
     document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
-    if(isDeafened && isVoiceActive) {
-        isMuted = true;
-        localStream.getAudioTracks()[0].enabled = false;
-        document.getElementById("mute-btn").classList.add("mute-on");
-    }
+    if(isDeafened && isVoiceActive) { isMuted = true; localStream.getAudioTracks()[0].enabled = false; document.getElementById("mute-btn").classList.add("mute-on"); }
 };
 
 function updateUsers() {
     channel.presence.get((err, members) => {
+        if(!members) return;
         document.getElementById("users-list").innerHTML = members.map(m => `
             <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${m.data.isSpeaking ? 'speaking-pulse' : ''}">
                 <div class="status-dot"></div>
@@ -286,6 +276,22 @@ window.notify = (m) => {
     document.getElementById("notification-container").appendChild(t);
     setTimeout(() => t.remove(), 3000);
 };
+
+// SNOW EFFECT FIX
+const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.onresize = resize; resize();
+let snow = Array.from({length: 50}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 }));
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; // Brighter snow
+    snow.forEach(p => {
+        p.y += p.d; if(p.y > canvas.height) p.y = -5;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(draw);
+}
+draw();
 </script>
 </body>
 </html>

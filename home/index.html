@@ -17,7 +17,7 @@
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
-        .toast { background: rgba(239, 68, 68, 0.2); color: #ff8e8e; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: 800; margin-bottom: 5px; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: 800; margin-bottom: 5px; border: 1px solid rgba(150, 103, 244, 0.3); }
         .speaking-pulse { box-shadow: 0 0 10px #22c55e; transition: box-shadow 0.2s; }
     </style>
 </head>
@@ -28,7 +28,7 @@
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl relative">
             <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
             <div class="flex bg-white/5 p-1 rounded-xl mb-6">
                 <button onclick="toggleAuthMode(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white/10 text-white">Login</button>
@@ -53,20 +53,27 @@
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40">
             <div class="flex items-center gap-3">
-                <button onclick="location.reload()" class="text-white/40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+                <button onclick="location.reload()" class="text-white/40 hover:text-white transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
                 <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs tracking-widest"></div>
             </div>
-            <div id="conn-status" class="text-[8px] font-bold text-green-500 uppercase px-2 py-1 bg-green-500/10 rounded">Online</div>
+            <div id="conn-state" class="text-[9px] font-black uppercase text-white/20">Syncing...</div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5"><div id="users-list" class="space-y-2"></div></aside>
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
+                <div class="text-[10px] font-black uppercase text-white/20 mb-4 tracking-widest">Active Entities</div>
+                <div id="users-list" class="space-y-2"></div>
+            </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md">
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <div id="input" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                        <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
+                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white hover:bg-purple-500 transition-all">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        </button>
                     </div>
                 </div>
             </main>
@@ -76,15 +83,13 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myDisplayName, currentRoom = '', isGuest = false, isSignUp = false;
+let ably, channel, myDisplayName, currentRoom = '', isSignUp = false;
 
-// --- AUTH HANDLERS ---
 window.toggleAuthMode = (login) => {
     isSignUp = !login;
     document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${login ? 'bg-white/10 text-white' : 'text-white/40'}`;
@@ -93,78 +98,67 @@ window.toggleAuthMode = (login) => {
 };
 
 document.getElementById("auth-main-btn").onclick = async () => {
-    const u = document.getElementById("auth-user").value.trim().toLowerCase();
-    const p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("Input required");
-
+    const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
+    if(!u || !p) return notify("Missing Input");
     try {
-        const userRef = doc(db, "users", u);
-        const snap = await getDoc(userRef);
-        if(isSignUp) {
-            if(snap.exists()) return notify("User already exists");
-            await setDoc(userRef, { password: p });
-        } else {
-            if(!snap.exists() || snap.data().password !== p) return notify("Login failed");
+        const snap = await getDoc(doc(db, "users", u));
+        if(isSignUp) { 
+            if(snap.exists()) return notify("Username Taken"); 
+            await setDoc(doc(db, "users", u), { password: p }); 
+        } else { 
+            if(!snap.exists() || snap.data().password !== p) return notify("Access Denied"); 
         }
         initAbly(u);
-    } catch (e) {
-        notify("FIREWALL BLOCKED: Disable AdBlock");
-        console.error("Firestore Error:", e);
-    }
+    } catch(e) { notify("Connection Blocked by AdBlock"); }
 };
 
-window.initGuest = () => {
-    isGuest = true;
-    const gId = "Ghost_" + Math.random().toString(36).substring(7);
-    initAbly(gId);
-};
+window.initGuest = () => { initAbly("Ghost_" + Math.random().toString(36).substring(7)); };
 
-// --- ABLY CONNECTION ---
 function initAbly(clientId) {
-    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: clientId });
+    // Your Key Integrated
+    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: clientId });
     
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        if(isGuest) document.getElementById("display-name").value = clientId;
+        const status = document.getElementById("conn-state");
+        status.innerText = "Encrypted";
+        status.style.color = "#22c55e";
     });
 
-    ably.connection.on('failed', () => notify("Connection Failed"));
+    ably.connection.on('failed', (err) => {
+        notify("Ably Error: Check Key Restrictions");
+        console.error("Ably Failed:", err);
+    });
 }
 
-document.getElementById("join-room-btn").onclick = enterChat;
-
-async function enterChat() {
+document.getElementById("join-room-btn").onclick = () => {
     myDisplayName = document.getElementById("display-name").value.trim() || "Phantom";
     currentRoom = (document.getElementById("room-id").value.trim() || "LOBBY").toUpperCase();
+    enterChat();
+};
 
+async function enterChat() {
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
 
     channel = ably.channels.get("room-" + currentRoom);
+    await channel.attach();
     
-    // ATTACH & ENTER PRESENCE
-    try {
-        await channel.attach();
-        channel.presence.enter({ user: myDisplayName });
-        channel.presence.subscribe(() => updateUsers());
-        updateUsers();
-    } catch (e) {
-        notify("Ably Join Failed");
-    }
+    // Explicitly enter presence with your UID if available
+    channel.presence.enter({ user: myDisplayName, uid: 'uid-hn8whyyxhl' });
+    
+    channel.presence.subscribe(() => updateUsers());
+    updateUsers();
 
-    // FIRESTORE MESSAGES
     const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
     onSnapshot(q, (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
-        s.forEach(d => {
-            const m = d.data();
-            renderMsg(m.user, m.text, m.user === myDisplayName);
-        });
+        s.forEach(d => { renderMsg(d.data().user, d.data().text, d.data().user === myDisplayName); });
         box.scrollTop = box.scrollHeight;
     }, (err) => {
-        if(err.message.includes("BLOCKED")) notify("ADBLOCKER DETECTED - DISABLE TO CHAT");
+        if(err.message.includes("blocked")) notify("Disable AdBlock to See Messages");
     });
 }
 
@@ -172,9 +166,9 @@ function updateUsers() {
     channel.presence.get((err, members) => {
         if(err) return;
         document.getElementById("users-list").innerHTML = members.map(m => `
-            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/10">
+            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5">
                 <div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]"></div>
-                <span class="text-[10px] font-bold uppercase truncate text-white/70">${m.data?.user || m.clientId}</span>
+                <span class="text-[10px] font-bold uppercase truncate text-white/80">${m.data?.user || m.clientId}</span>
             </div>`).join("");
     });
 }
@@ -182,7 +176,7 @@ function updateUsers() {
 function renderMsg(u, t, me) {
     const box = document.getElementById("messages"), div = document.createElement("div");
     div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${u}</div><span class="text-sm">${t}</span>`;
+    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${u}</div><span class="text-sm font-medium">${t}</span>`;
     box.appendChild(div);
 }
 
@@ -195,9 +189,7 @@ document.getElementById("send-btn").onclick = async () => {
             timestamp: serverTimestamp() 
         });
         i.innerHTML = "";
-    } catch (e) {
-        notify("Send failed. Check AdBlock.");
-    }
+    } catch(e) { notify("Message Failed to Send"); }
 };
 
 window.notify = (m) => {

@@ -3,67 +3,65 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CrypticChat | Maintenance</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;800&display=swap" rel="stylesheet">
+    <title>Cryptic | Offline</title>
     <style>
-        :root { --bg: #050307; --accent: #9667f4; }
         body { 
-            background: var(--bg); 
-            color: white; 
-            font-family: 'Manrope', sans-serif; 
-            height: 100vh; 
+            background-color: #050307; 
+            color: #9667f4; 
+            font-family: 'Courier New', Courier, monospace; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
+            height: 100vh; 
             margin: 0;
-            overflow: hidden;
+            text-align: center;
         }
-        .glass { 
-            background: rgba(15, 12, 22, 0.85); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid rgba(150, 103, 244, 0.15); 
-        }
-        .glow {
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: var(--accent);
-            filter: blur(150px);
-            opacity: 0.1;
-            z-index: 0;
-            border-radius: 50%;
+        .container {
+            max-width: 90%;
+            padding: 20px;
         }
         .separator {
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            margin: 24px 0;
+            color: rgba(150, 103, 244, 0.3);
+            margin: 15px 0;
+            user-select: none;
+            word-break: break-all;
+        }
+        h1 {
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        p {
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        .thanks {
+            color: #9667f4;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 0.8rem;
         }
     </style>
 </head>
 <body>
 
-    <div class="glow"></div>
-
-    <div class="glass p-12 rounded-[3rem] max-w-lg w-full text-center relative z-10 mx-4">
-        <h1 class="text-xl font-black uppercase tracking-tight text-white/90">
-            Sorry! The site is currently down 😞
-        </h1>
+    <div class="container">
+        <div class="separator">-----------------------------------------------------------------------------------------</div>
         
-        <div class="separator"></div>
+        <h1>- Sorry! The site is currently down 😞</h1>
         
-        <p class="text-white/60 text-sm font-bold leading-relaxed">
-            Once the site is up, it will be back and better than ever!
-        </p>
-
-        <div class="separator"></div>
-
-        <div class="text-purple-500 text-[11px] font-black uppercase tracking-[0.2em]">
-            Thanks for your patience
-        </div>
+        <div class="separator">-----------------------------------------------------------------------------------------</div>
         
-        <div class="separator"></div>
+        <p>- Once the site is up, it will be back and better than ever!</p>
+
+        <div class="separator">-----------------------------------------------------------------------------------------</div>
+
+        <div class="thanks">- Thanks for your patience</div>
+        
+        <div class="separator">-----------------------------------------------------------------------------------------</div>
     </div>
 
 </body>

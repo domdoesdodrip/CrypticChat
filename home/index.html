@@ -9,27 +9,26 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #030205; --accent: #9667f4; --glass: rgba(12, 10, 18, 0.98); }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; font-size: 100%; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
         .glass { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
-        /* Pill Button Style from image */
+        /* Pill Button Style */
         .pill-btn { width: 100%; background: #9667f4; color: white; padding: 12px; border-radius: 9999px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; transition: opacity 0.2s; }
         .pill-btn:hover { opacity: 0.9; }
 
-        /* Message Bubble Style from image */
+        /* Message Style */
         .bubble { max-width: 80%; padding: 12px 18px; border-radius: 24px; margin-bottom: 8px; position: relative; }
         .mine { background: #9667f4; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1a1825; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
-        /* Text Links for Reply/Del from image */
+        /* Text Links */
         .text-link { font-size: 11px; font-weight: 600; margin-left: 8px; opacity: 0.7; transition: opacity 0.2s; }
         .text-link:hover { opacity: 1; text-decoration: underline; }
         .del-link { color: #ff6b6b; }
 
         #input-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; max-height: 100px; overflow-y: auto; }
-        .announcement { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; width: 100%; text-align: center; border-radius: 12px; margin: 10px 0; padding: 12px; }
         .toast { background: #9667f4; color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 12px; margin-bottom: 8px; }
     </style>
 </head>
@@ -40,34 +39,35 @@
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center">
+        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center shadow-2xl">
             <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
             <div class="space-y-3 mb-6">
-                <input id="auth-user" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Username">
-                <input id="auth-pass" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Password">
+                <input id="auth-user" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 text-sm" placeholder="Username">
+                <input id="auth-pass" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 text-sm" placeholder="Password">
             </div>
             <button id="auth-main-btn" class="pill-btn">Enter</button>
-            <div class="mt-6 flex justify-center gap-4 text-[10px] font-black uppercase text-white/30">
+            <div class="mt-6 flex justify-center gap-6 text-[10px] font-black uppercase text-white/30">
                 <button onclick="toggleAuthMode(true)" id="btn-login-mode" class="text-white">Login</button>
                 <button onclick="toggleAuthMode(false)" id="btn-signup-mode">Sign Up</button>
-                <button onclick="initGuest()">Ghost</button>
+                <button onclick="initGuest()" class="hover:text-white transition-colors">Ghost</button>
             </div>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center">
-            <h2 class="text-2xl font-black mb-6 uppercase">Setup</h2>
+            <h2 class="text-2xl font-black mb-6 uppercase tracking-widest">Setup</h2>
             <input id="alias-input" type="text" class="w-full mb-3 p-4 bg-white/5 rounded-xl outline-none" placeholder="Nickname">
             <input id="room-input" type="text" class="w-full mb-6 p-4 bg-white/5 rounded-xl outline-none" placeholder="Room ID (GLOBAL)">
             <button id="join-btn" class="pill-btn">Connect</button>
+            <button onclick="goBackToAuth()" class="mt-6 text-[10px] text-white/30 uppercase font-black hover:text-white transition-colors">← Back</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-6 shrink-0 z-50">
             <div class="flex items-center gap-4">
-                <button onclick="window.location.reload()" class="text-white/40">←</button>
+                <button onclick="window.location.reload()" class="text-white/40 hover:text-white">←</button>
                 <div id="roomLabel" class="font-black text-purple-400 uppercase text-xs"></div>
             </div>
             <div id="admin-tag" class="hidden px-3 py-1 bg-red-600 text-[9px] font-black rounded-full uppercase">Admin</div>
@@ -98,7 +98,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy, limit, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
@@ -127,8 +127,22 @@ document.getElementById("auth-main-btn").onclick = async () => {
     showJoin();
 };
 
-window.initGuest = () => { myUID = "Ghost_" + Math.random().toString(36).substring(7); showJoin(); };
-function showJoin() { document.getElementById("view-auth").classList.add("hidden"); document.getElementById("view-join").classList.remove("hidden"); }
+window.initGuest = () => { 
+    myUID = "Ghost_" + Math.random().toString(36).substring(7); 
+    isAdmin = false;
+    document.getElementById("admin-tag").classList.add("hidden");
+    showJoin(); 
+};
+
+window.goBackToAuth = () => {
+    document.getElementById("view-join").classList.add("hidden");
+    document.getElementById("view-auth").classList.remove("hidden");
+};
+
+function showJoin() { 
+    document.getElementById("view-auth").classList.add("hidden"); 
+    document.getElementById("view-join").classList.remove("hidden"); 
+}
 
 document.getElementById("join-btn").onclick = () => {
     myAlias = document.getElementById("alias-input").value.trim() || myUID;

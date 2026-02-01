@@ -10,42 +10,44 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; transition: background 0.3s ease; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
 
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; border: 1px solid transparent; }
+        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
         #input:empty:before { content: attr(placeholder); color: #4b5563; }
         
-        /* High-Energy Disco */
-        @keyframes discoPulse {
-            0% { background-color: #ff000022; }
-            20% { background-color: #00ff0022; }
-            40% { background-color: #0000ff22; }
-            60% { background-color: #ffff0022; }
-            80% { background-color: #ff00ff22; }
-            100% { background-color: #ff000022; }
+        /* Smooth RGB Disco Overlay */
+        #disco-overlay { 
+            position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 1s ease;
         }
-        .disco-active { animation: discoPulse 0.4s linear infinite; }
-        .disco-active .glass { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+        .disco-active #disco-overlay { 
+            opacity: 1; 
+            animation: rgbFade 6s linear infinite; 
+        }
+        @keyframes rgbFade {
+            0% { background: rgba(255, 0, 0, 0.15); }
+            33% { background: rgba(0, 255, 0, 0.15); }
+            66% { background: rgba(0, 0, 255, 0.15); }
+            100% { background: rgba(255, 0, 0, 0.15); }
+        }
 
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
-        .msg-tools { opacity: 0; transition: 0.2s; position: absolute; top: -14px; right: 10px; display: flex; gap: 4px; z-index: 10; }
-        .bubble:hover .msg-tools { opacity: 1; }
-        .tool-btn { background: #000; padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; text-transform: uppercase; }
+        .btn-danger { color: #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; border-color: rgba(239, 68, 68, 0.2) !important; }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
         .toast { background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 5px; animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
-<body>
+<body id="main-body">
 
+<div id="disco-overlay"></div>
 <canvas id="snow-canvas"></canvas>
 <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
 
@@ -53,15 +55,15 @@
     <div class="glass p-8 rounded-[2rem] max-w-sm w-full">
         <h2 class="text-xl font-black mb-6 uppercase text-purple-500">Root Terminal</h2>
         <div class="space-y-4">
-            <input id="admin-ann-text" type="text" class="w-full p-4 bg-white/5 rounded-xl text-xs outline-none" placeholder="Alert Message...">
+            <input id="admin-ann-text" type="text" class="w-full p-4 bg-white/5 rounded-xl text-xs outline-none" placeholder="Announcement...">
             <button onclick="broadcast()" class="w-full bg-purple-600 py-4 rounded-xl font-black text-[10px] uppercase">Broadcast</button>
-            <select id="admin-user-select" class="w-full p-4 bg-white/5 rounded-xl text-xs outline-none appearance-none font-bold text-white"></select>
+            <select id="admin-user-select" class="w-full p-4 bg-white/5 rounded-xl text-xs outline-none font-bold text-white"></select>
             <button onclick="kickUser()" class="w-full border border-red-500/40 py-4 rounded-xl font-black text-[10px] uppercase text-red-500">Kick User</button>
             <div class="flex gap-2">
                 <button onclick="triggerDisco()" class="flex-1 bg-white/5 py-4 rounded-xl font-black text-[10px] uppercase">Disco</button>
-                <button onclick="openPurge()" class="flex-1 bg-red-600/20 py-4 rounded-xl font-black text-[10px] uppercase text-red-500">Purge</button>
+                <button onclick="openPurge()" class="flex-1 bg-red-600/20 py-4 rounded-xl font-black text-[10px] uppercase text-red-500 text-xs">Purge</button>
             </div>
-            <button onclick="toggleAdminMenu()" class="w-full mt-4 text-white/20 font-black text-[10px] uppercase tracking-widest">Close</button>
+            <button onclick="toggleAdminMenu()" class="w-full mt-4 text-white/20 font-black text-[10px] uppercase">Close</button>
         </div>
     </div>
 </div>
@@ -82,47 +84,45 @@
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
-            <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Enter Room</h1>
+            <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter text-purple-500">Establishing...</h1>
             <input id="display-name" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="Alias">
             <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-center" placeholder="Room ID">
-            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Connect</button>
+            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Join</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40 border-b border-white/5">
             <div class="flex items-center gap-3">
-                <button onclick="location.reload()" class="text-white/40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-                <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs tracking-widest"></div>
+                <button onclick="location.reload()" class="text-white/40"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m15 18-6-6 6-6"/></svg></button>
+                <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs"></div>
             </div>
-            <div id="header-controls" class="flex items-center gap-2 transition-all">
-                <button id="admin-btn" class="hidden bg-white/5 text-purple-400 p-2.5 rounded-xl border border-white/10" onclick="toggleAdminMenu()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </button>
-                <div id="vc-status-container" class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-                    <button id="vc-btn" class="px-4 py-2 text-[9px] font-black uppercase text-white/40">VC OFF</button>
-                    <button id="mute-btn" class="hidden p-2 text-white/20"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/></svg></button>
+            
+            <div class="flex items-center gap-2">
+                <div id="vc-cluster" class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 transition-all">
+                    <button id="vc-main-btn" class="px-3 py-1.5 text-[9px] font-black uppercase text-white/40 hover:text-white">Join VC</button>
+                    <div id="vc-active-tools" class="hidden flex items-center border-l border-white/10 ml-1 pl-1">
+                        <button id="mute-btn" class="p-2 text-white/20 hover:text-white"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></button>
+                        <button id="deafen-btn" class="p-2 text-white/20 hover:text-white"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="19" r="2"/></svg></button>
+                    </div>
                 </div>
+
+                <button id="admin-btn" class="hidden bg-purple-600/20 text-purple-500 p-2.5 rounded-xl border border-purple-500/20" onclick="toggleAdminMenu()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="m19 5-2.3 2.3"/><path d="m5 19 2.3-2.3"/><path d="m5 5 2.3 2.3"/><path d="m19 19-2.3-2.3"/></svg>
+                </button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
             <aside class="hidden lg:flex flex-col w-64 glass p-4 border-r border-white/5">
-                <div class="text-[10px] font-black uppercase text-white/20 mb-4 tracking-widest">Active Nodes</div>
                 <div id="users-list" class="space-y-2 overflow-y-auto"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
-                
-                <div id="reply-preview" class="hidden absolute bottom-20 left-4 right-4 p-3 glass rounded-xl border border-purple-500/30 flex justify-between items-center z-50">
-                    <div class="text-[10px]"><span class="text-purple-500 font-black uppercase">Link:</span> <span id="reply-text" class="opacity-60 italic text-white ml-2"></span></div>
-                    <button onclick="cancelReply()" class="text-white/20 font-black text-[10px]">X</button>
-                </div>
-
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 border-t border-white/5 backdrop-blur-md">
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
                         <div id="input" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white active:scale-95 transition-all"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
                     </div>
                 </div>
             </main>
@@ -137,10 +137,9 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDo
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myDisplayName, currentRoom = '', isAdmin = false, currentUsername = '', replyData = null;
-let isVoiceActive = false, localStream = null, isMuted = false;
+let ably, channel, myDisplayName, currentRoom = '', isAdmin = false, isVoiceActive = false, localStream = null, isMuted = false, isDeafened = false;
 
-// SYSTEM CONTROLS
+// SYSTEM
 window.toggleAdminMenu = () => document.getElementById("admin-menu").classList.toggle("hidden");
 window.triggerDisco = () => { toggleAdminMenu(); channel.publish("admin-cmd", { type: "disco" }); };
 window.broadcast = () => {
@@ -154,41 +153,27 @@ window.kickUser = () => {
     if(target) channel.publish("admin-cmd", { type: "kick", target });
     toggleAdminMenu();
 };
-window.deleteMsg = async (id) => await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
-window.replyTo = (user, text) => {
-    replyData = { user, text };
-    document.getElementById("reply-text").innerText = `${user}: "${text.substring(0, 20)}..."`;
-    document.getElementById("reply-preview").classList.remove("hidden");
-    document.getElementById("input").focus();
-};
-window.cancelReply = () => { replyData = null; document.getElementById("reply-preview").classList.add("hidden"); };
 
-// AUTH LOGIC
+// AUTH
 window.handleAuth = async (type) => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase();
     const p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("EMPTY FIELDS");
-    
+    if(!u || !p) return notify("MISSING DATA");
     const ref = doc(db, "users", u);
     const snap = await getDoc(ref);
-
     if (type === 'signup') {
-        if (snap.exists()) return notify("USER EXISTS");
+        if (snap.exists()) return notify("EXISTS");
         await setDoc(ref, { password: p, isAdmin: false });
-        notify("REGISTERED");
+        notify("CREATED");
     } else {
-        if (!snap.exists() || snap.data().password !== p) return notify("AUTH FAILED");
+        if (!snap.exists() || snap.data().password !== p) return notify("FAILED");
         isAdmin = snap.data().isAdmin || false;
-        currentUsername = u;
         if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
         initAbly(u, p);
     }
 };
 
-document.getElementById("guest-btn").onclick = () => {
-    currentUsername = "GUEST_" + Math.random().toString(36).substring(7);
-    initAbly(currentUsername, "tmp");
-};
+document.getElementById("guest-btn").onclick = () => initAbly("GUEST_" + Math.random().toString(36).substring(7), "tmp");
 
 function initAbly(u, p) {
     ably = new Ably.Realtime({ authUrl: '/api/ably-token', authParams: { username: u, password: p } });
@@ -199,7 +184,7 @@ function initAbly(u, p) {
 }
 
 document.getElementById("join-room-btn").onclick = () => {
-    myDisplayName = document.getElementById("display-name").value.trim() || "Ghost";
+    myDisplayName = document.getElementById("display-name").value.trim() || "User";
     currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     enterChat();
 };
@@ -208,36 +193,26 @@ function enterChat() {
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
-
     channel = ably.channels.get("room-" + currentRoom);
     channel.presence.enter({ user: myDisplayName, isAdmin });
-    channel.presence.subscribe(() => updateUsers());
+    channel.presence.subscribe(updateUsers);
 
     channel.subscribe("admin-cmd", (m) => {
         if (m.data.type === "kick" && m.data.target === myDisplayName) location.reload();
         if (m.data.type === "disco") {
-            document.body.classList.add("disco-active");
-            setTimeout(() => document.body.classList.remove("disco-active"), 10000);
+            document.getElementById("main-body").classList.add("disco-active");
+            setTimeout(() => document.getElementById("main-body").classList.remove("disco-active"), 15000);
         }
-        if (m.data.type === "announce") notify(`[SERVER] ${m.data.text}`);
+        if (m.data.type === "announce") notify(`ALERT: ${m.data.text}`);
     });
 
-    onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(60)), (s) => {
+    onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50)), (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
         s.forEach(d => {
-            const m = d.data(), id = d.id;
-            const isMine = m.user === myDisplayName;
+            const m = d.data();
             const div = document.createElement("div"); 
-            div.className = `bubble flex flex-col ${isMine?'mine':'theirs'}`;
-            div.innerHTML = `
-                <div class="msg-tools">
-                    <div class="tool-btn" onclick="replyTo('${m.user}', '${m.text.replace(/'/g, "\\'")}')">Reply</div>
-                    ${(isMine || isAdmin) ? `<div class="tool-btn text-red-500" onclick="deleteMsg('${id}')">Del</div>` : ''}
-                </div>
-                ${m.replyTo ? `<div class="text-[9px] opacity-30 italic mb-1 border-l-2 border-white/20 pl-2">@${m.replyTo.user}: ${m.replyTo.text.substring(0,15)}...</div>` : ''}
-                <div class="text-[9px] opacity-40 uppercase font-black mb-1 flex items-center gap-1">${m.user} ${m.isAdmin?'<span class="text-purple-400">◆</span>':''}</div>
-                <span class="text-sm">${m.text}</span>
-            `;
+            div.className = `bubble flex flex-col ${m.user === myDisplayName?'mine':'theirs'}`;
+            div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${m.user}</div><span class="text-sm">${m.text}</span>`;
             box.appendChild(div);
         });
         box.scrollTop = box.scrollHeight;
@@ -245,23 +220,24 @@ function enterChat() {
 }
 
 // VC SYSTEM
-document.getElementById("vc-btn").onclick = async () => {
-    const btn = document.getElementById("vc-btn");
+document.getElementById("vc-main-btn").onclick = async () => {
+    const btn = document.getElementById("vc-main-btn");
+    const tools = document.getElementById("vc-active-tools");
     if (!isVoiceActive) {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             isVoiceActive = true;
-            btn.innerText = "VC ON";
-            btn.classList.replace("text-white/40", "text-green-500");
-            document.getElementById("mute-btn").classList.remove("hidden");
-            notify("MICROPHONE LINKED");
-        } catch (e) { notify("MIC DENIED"); }
+            btn.innerText = "VC ACTIVE";
+            btn.classList.replace("text-white/40", "text-green-400");
+            tools.classList.remove("hidden");
+            notify("MIC CONNECTED");
+        } catch (e) { notify("MIC ERROR"); }
     } else {
         localStream.getTracks().forEach(t => t.stop());
         isVoiceActive = false;
-        btn.innerText = "VC OFF";
-        btn.classList.replace("text-green-500", "text-white/40");
-        document.getElementById("mute-btn").classList.add("hidden");
+        btn.innerText = "JOIN VC";
+        btn.classList.replace("text-green-400", "text-white/40");
+        tools.classList.add("hidden");
     }
 };
 
@@ -269,15 +245,21 @@ document.getElementById("mute-btn").onclick = () => {
     isMuted = !isMuted;
     localStream.getAudioTracks()[0].enabled = !isMuted;
     document.getElementById("mute-btn").classList.toggle("text-red-500", isMuted);
+    notify(isMuted ? "MUTED" : "UNMUTED");
+};
+
+document.getElementById("deafen-btn").onclick = () => {
+    isDeafened = !isDeafened;
+    // Logic to silence incoming audio elements would go here
+    document.getElementById("deafen-btn").classList.toggle("text-red-500", isDeafened);
+    notify(isDeafened ? "DEAFENED" : "UNDEAFENED");
 };
 
 async function sendMessage() {
     const i = document.getElementById("input"), text = i.innerText.trim();
     if (!text) return;
-    const msg = { user: myDisplayName, text, timestamp: serverTimestamp(), isAdmin };
-    if (replyData) { msg.replyTo = replyData; cancelReply(); }
     i.innerHTML = "";
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), msg);
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text, timestamp: serverTimestamp() });
 }
 
 document.getElementById("input").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
@@ -289,11 +271,11 @@ function updateUsers() {
         const list = document.getElementById("users-list");
         const select = document.getElementById("admin-user-select");
         list.innerHTML = "";
-        select.innerHTML = '<option value="">Select Target...</option>';
+        select.innerHTML = '';
         members.forEach(m => {
-            list.innerHTML += `<div class="bg-white/5 p-3 rounded-xl flex items-center gap-3">
+            list.innerHTML += `<div class="bg-white/5 p-3 rounded-xl flex items-center gap-3 border border-white/5">
                 <div class="status-dot"></div><span class="text-[10px] font-bold uppercase text-white/40">${m.data.user}</span>
-                ${m.data.isAdmin ? '<span class="text-[8px] text-purple-500 font-black ml-auto border border-purple-500/30 px-2 py-0.5 rounded">ADMIN</span>' : ''}</div>`;
+                ${m.data.isAdmin ? '<span class="text-[8px] text-purple-500 font-black ml-auto">ADMIN</span>' : ''}</div>`;
             if(m.data.user !== myDisplayName) select.innerHTML += `<option value="${m.data.user}">${m.data.user}</option>`;
         });
     });
@@ -309,9 +291,9 @@ window.notify = (m) => {
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
-let snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5+0.5, d: Math.random()*0.5+0.1, s: Math.random()*0.2-0.1 }));
+let snow = Array.from({length: 30}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5, d: Math.random()*0.3+0.1, s: Math.random()*0.1-0.05 }));
 function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.1)";
     snow.forEach(p => {
         p.y += p.d; p.x += p.s; if(p.y > canvas.height) p.y = -5; if(p.x > canvas.width) p.x = 0; if(p.x < 0) p.x = canvas.width;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();

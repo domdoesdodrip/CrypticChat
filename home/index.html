@@ -21,14 +21,15 @@
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
         #input:empty:before { content: attr(placeholder); color: #4b5563; }
         
+        /* STATUS & VC HIGHLIGHTS */
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; flex-shrink: 0; }
-        .user-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; }
-        .speaking-active { border-color: #22c55e !important; box-shadow: inset 0 0 10px rgba(34, 197, 94, 0.2); animation: pulse 1s infinite; }
+        .user-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; position: relative; }
+        .speaking-active { border-color: #22c55e !important; box-shadow: inset 0 0 15px rgba(34, 197, 94, 0.15); animation: pulse 1s infinite; }
         
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
         .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
-        .toast { background: rgba(239, 68, 68, 0.9); color: white; padding: 12px 20px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; }
-        .admin-tag { color: #9667f4; font-size: 8px; font-weight: 900; border: 1px solid rgba(150, 103, 244, 0.3); padding: 1px 4px; border-radius: 4px; margin-left: 4px; }
+        .toast { background: rgba(150, 103, 244, 0.9); color: white; padding: 12px 20px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; }
+        .admin-tag { color: #9667f4; font-size: 8px; font-weight: 900; border: 1px solid rgba(150, 103, 244, 0.4); padding: 1px 5px; border-radius: 4px; margin-left: auto; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -50,7 +51,9 @@
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center relative">
-            <button onclick="location.reload()" class="absolute top-6 left-6 text-white/20 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button onclick="location.reload()" class="absolute top-8 left-8 text-white/20 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
             <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Enter Room</h1>
             <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="Alias">
             <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-center" placeholder="Room ID (Optional)">
@@ -96,38 +99,41 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDo
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-// ADMIN CREDENTIALS
-const ADMIN_UID = 'uid-hn8whyyxhl';
-let isAdmin = false;
-
-let ably, channel, myDisplayName, currentRoom = '', isGuest = false, guestDocID = null;
+let ably, channel, myDisplayName, currentRoom = '', isGuest = false, guestDocID = null, isAdmin = false, currentUsername = '';
 let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
 let unreadCount = 0, isFocused = true;
 const notifUrl = "https://files.catbox.moe/8tz2o5.mp3";
 
 function playAlert() { new Audio(notifUrl).play().catch(()=>{}); }
 
+// AUTH: GUEST
 document.getElementById("guest-btn").onclick = async () => {
     isGuest = true; isAdmin = false;
     guestDocID = "guest_" + Math.random().toString(36).substr(2, 5);
-    await setDoc(doc(db, "users", guestDocID), { password: "tmp", isGuest: true });
+    currentUsername = guestDocID;
+    await setDoc(doc(db, "users", guestDocID), { password: "tmp", isGuest: true, isAdmin: false });
     document.getElementById("display-name").value = guestDocID.toUpperCase();
     initAbly(guestDocID, "tmp");
 };
 
-window.onbeforeunload = () => { if(isGuest && guestDocID) deleteDoc(doc(db, "users", guestDocID)); };
-
+// AUTH: MAIN
 document.getElementById("auth-main-btn").onclick = async () => {
-    const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
+    const u = document.getElementById("auth-user").value.trim().toLowerCase();
+    const p = document.getElementById("auth-pass").value;
     if(!u || !p) return;
-    const snap = await getDoc(doc(db, "users", u));
+
+    const userRef = doc(db, "users", u);
+    const snap = await getDoc(userRef);
+
     if (!snap.exists()) {
-        await setDoc(doc(db, "users", u), { password: p });
-    } else if (snap.data().password !== p) return notify("WRONG PASSWORD");
+        await setDoc(userRef, { password: p, isAdmin: false });
+        isAdmin = false;
+    } else {
+        if (snap.data().password !== p) return notify("WRONG PASSWORD");
+        isAdmin = snap.data().isAdmin || false;
+    }
     
-    // Check for specific Admin UID fingerprint (simulated via username here, but matches your requirement)
-    if (u === 'admin' || u.includes('1680_1050_24')) isAdmin = true; // Added admin identification logic
-    
+    currentUsername = u;
     initAbly(u, p);
 };
 
@@ -139,17 +145,22 @@ function initAbly(u, p) {
     });
 }
 
+// JOIN ROOM
 document.getElementById("join-room-btn").onclick = () => {
     const alias = (document.getElementById("display-name").value.trim() || "Phantom");
     const room = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
+    
     ably.channels.get("room-" + room).presence.get((err, members) => {
         if (members && members.some(m => m.data.user.toLowerCase() === alias.toLowerCase())) return notify("NAME TAKEN");
         myDisplayName = alias; currentRoom = room; enterChat();
     });
 };
 
+// ADMIN: PURGE
 async function purgeRoom() {
-    if (!isAdmin) return notify("UNAUTHORIZED");
+    const snapCheck = await getDoc(doc(db, "users", currentUsername));
+    if (!snapCheck.exists() || !snapCheck.data().isAdmin) return notify("ADMIN ONLY COMMAND");
+
     const q = query(collection(db, "rooms", currentRoom, "messages"));
     const snap = await getDocs(q);
     const batch = writeBatch(db);
@@ -184,14 +195,7 @@ function enterChat() {
 async function sendMessage() {
     const i = document.getElementById("input"), text = i.innerText.trim();
     if (!text) return; 
-    
-    // COMMAND CHECK
-    if (text === "/purge") {
-        i.innerHTML = "";
-        await purgeRoom();
-        return;
-    }
-
+    if (text === "/purge") { i.innerHTML = ""; await purgeRoom(); return; }
     i.innerHTML = "";
     await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text, timestamp: serverTimestamp() });
 }
@@ -199,7 +203,7 @@ async function sendMessage() {
 document.getElementById("input").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 document.getElementById("send-btn").onclick = sendMessage;
 
-// VC TOOLS (Standard logic as per previous turn)
+// VC SYSTEM
 document.getElementById("vc-btn").onclick = async () => {
     if (isDeafened) return notify("UNDEAFEN FIRST");
     if (!isVoiceActive) {
@@ -208,7 +212,7 @@ document.getElementById("vc-btn").onclick = async () => {
             isVoiceActive = true;
             document.getElementById("vc-btn").classList.add("vc-on");
             document.querySelectorAll("#mute-btn, #deafen-btn").forEach(b => b.classList.remove("hidden"));
-            channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: false, isAdmin: isAdmin });
+            channel.presence.update({ user: myDisplayName, inCall: true, isAdmin: isAdmin });
             setupVisualizer();
         } catch (e) { notify("MIC DENIED"); }
     } else stopVC();
@@ -236,7 +240,8 @@ function updateUsers() {
         document.getElementById("users-list").innerHTML = members.map(m => `
             <div class="user-card bg-white/5 p-3 rounded-xl flex items-center gap-3 ${m.data.isSpeaking ? 'speaking-active' : ''}">
                 <div class="status-dot"></div>
-                <span class="text-[10px] font-bold uppercase ${m.data.inCall ? 'text-green-400' : 'text-white/40'}">${m.data.user} ${m.data.isAdmin ? '<span class="admin-tag">ADMIN</span>' : ''}</span>
+                <span class="text-[10px] font-bold uppercase ${m.data.inCall ? 'text-green-400' : 'text-white/40'}">${m.data.user}</span>
+                ${m.data.isAdmin ? '<span class="admin-tag">ADMIN</span>' : ''}
             </div>`).join("");
     });
 }
@@ -252,6 +257,10 @@ function stopVC() {
 document.getElementById("mute-btn").onclick = () => { isMuted = !isMuted; localStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); };
 document.getElementById("deafen-btn").onclick = () => { isDeafened = !isDeafened; document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened); };
 
+// MISC
+window.onbeforeunload = () => { if(isGuest && guestDocID) deleteDoc(doc(db, "users", guestDocID)); };
+window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
+window.onblur = () => { isFocused = false; };
 window.notify = (m) => {
     const t = document.createElement("div"); t.className = "toast"; t.innerText = m;
     document.getElementById("notification-container").appendChild(t);

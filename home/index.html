@@ -10,25 +10,18 @@
     <style>
         :root { --bg: #050307; --accent: #9667f4; --glass: rgba(15, 12, 22, 0.85); }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
-        
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
-
         .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
         .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; word-wrap: break-word; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
-        
-        .status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e; }
-        .speaking-pulse { outline: 2px solid #22c55e; outline-offset: -2px; animation: pulse 0.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 8px 16px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-bottom: 5px; }
-        
-        .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
+        .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; border-color: #22c55e44 !important; }
         .mute-on { color: #ef4444 !important; }
-        .deafen-on { color: #f59e0b !important; }
+        .speaking-pulse { outline: 2px solid #22c55e; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { outline-alpha: 1; } 50% { outline-color: transparent; } 100% { outline-alpha: 1; } }
+        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 8px 16px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-bottom: 5px; border: 1px solid rgba(150, 103, 244, 0.3); }
     </style>
 </head>
 <body>
@@ -40,35 +33,37 @@
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-            <h1 class="text-4xl font-black mb-10 tracking-tighter uppercase">Cryptic</h1>
-            <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500/30 transition-all" placeholder="Username">
-            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none border border-white/5 focus:border-purple-500/30 transition-all" placeholder="Password">
-            <button id="auth-main-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-extrabold uppercase text-xs transition-all shadow-lg shadow-purple-900/20">Enter System</button>
-            <button onclick="initGuest()" class="mt-4 text-[10px] text-white/40 uppercase font-black tracking-widest hover:text-white transition-colors">Enter as Ghost</button>
+            <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
+            <div class="flex bg-white/5 p-1 rounded-xl mb-6">
+                <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white/10">Login</button>
+                <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all text-white/40">Sign Up</button>
+            </div>
+            <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Username">
+            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Password">
+            <button id="auth-main-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase text-xs">Enter System</button>
+            <button onclick="initGuest()" class="mt-4 text-[10px] text-white/40 uppercase font-black hover:text-white transition-colors">Enter as Ghost</button>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
             <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Connection</h1>
-            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Display Name">
-            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Room ID (Default: GLOBAL)">
-            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase shadow-lg shadow-purple-900/20">Connect</button>
+            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Alias">
+            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Room ID (GLOBAL)">
+            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Connect</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40">
             <div class="flex items-center gap-3">
-                <button onclick="location.reload()" class="text-white/40 hover:text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-                <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs tracking-widest"></div>
+                <button onclick="location.reload()" class="text-white/40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+                <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs"></div>
             </div>
-            <div class="flex items-center gap-1">
-                <button id="deafen-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="14" y1="10" x2="10" y2="14"/></svg></button>
-                <button id="mute-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2V15H6L11 19V5Z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></button>
-                <button id="vc-btn" class="text-white/20 p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5">
-                    <span class="text-[9px] font-black uppercase tracking-tighter">Join VC</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            <div class="flex items-center gap-2">
+                <button id="mute-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></button>
+                <button id="vc-btn" class="text-white/20 p-2 px-4 rounded-xl flex items-center gap-2 border border-white/10">
+                    <span class="text-[9px] font-black uppercase">Join VC</span>
                 </button>
             </div>
         </header>
@@ -79,8 +74,8 @@
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md">
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <div id="input" contenteditable="true" placeholder="Type message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white shadow-lg shadow-purple-900/20"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                        <div id="input" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
+                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
                     </div>
                 </div>
             </main>
@@ -95,32 +90,39 @@ import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, quer
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myDisplayName, currentRoom = '', isGuest = false;
-let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
+let ably, channel, myDisplayName, currentRoom = '', isSignUp = false;
+let localStream, peers = {}, isVoiceActive = false, isMuted = false;
 
-// AUTH & ABLY INIT
+// --- AUTH ---
+window.toggleAuth = (l) => {
+    isSignUp = !l;
+    document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${l?'bg-white/10':'text-white/40'}`;
+    document.getElementById("tab-signup").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!l?'bg-white/10':'text-white/40'}`;
+    document.getElementById("auth-main-btn").innerText = l ? "Enter System" : "Create Identity";
+};
+
 document.getElementById("auth-main-btn").onclick = async () => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("Input credentials");
+    if(!u || !p) return notify("Missing fields");
     const snap = await getDoc(doc(db, "users", u));
-    if (!snap.exists()) await setDoc(doc(db, "users", u), { password: p });
-    else if (snap.data().password !== p) return notify("Access Denied");
+    if(isSignUp) { if(snap.exists()) return notify("Taken"); await setDoc(doc(db, "users", u), { password: p }); }
+    else { if(!snap.exists() || snap.data().password !== p) return notify("Failed"); }
     initAbly(u);
 };
 
-window.initGuest = () => { isGuest = true; initAbly("Ghost_" + Math.random().toString(36).substring(7)); };
+window.initGuest = () => initAbly("Ghost_" + Math.random().toString(36).substring(7));
 
-function initAbly(clientId) {
-    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: clientId });
+function initAbly(cid) {
+    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: cid });
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        if(isGuest) document.getElementById("display-name").value = clientId;
     });
 }
 
+// --- CHAT LOGIC ---
 document.getElementById("join-room-btn").onclick = () => {
-    myDisplayName = document.getElementById("display-name").value.trim() || (isGuest ? "Ghost" : "Phantom");
+    myDisplayName = document.getElementById("display-name").value.trim() || "Phantom";
     currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     enterChat();
 };
@@ -134,53 +136,120 @@ async function enterChat() {
     await channel.attach();
     channel.presence.enter({ user: myDisplayName, inCall: false });
     channel.presence.subscribe(() => updateUsers());
-    updateUsers();
 
-    // Firebase Messages
-    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
-    onSnapshot(q, (s) => {
+    // VC Signaling
+    channel.subscribe("vc-signal", async (msg) => {
+        const d = msg.data; if(d.from === myDisplayName || (d.to && d.to !== myDisplayName)) return;
+        if(d.type === "join" && isVoiceActive) {
+            const pc = createPeer(d.from);
+            const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+            channel.publish("vc-signal", { type: "offer", offer, to: d.from, from: myDisplayName });
+        }
+        if(d.type === "offer") {
+            const pc = createPeer(d.from); await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
+            const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
+            channel.publish("vc-signal", { type: "answer", answer: ans, to: d.from, from: myDisplayName });
+        }
+        if(d.type === "answer") peers[d.from].setRemoteDescription(new RTCSessionDescription(d.answer));
+        if(d.type === "ice") peers[d.from].addIceCandidate(new RTCIceCandidate(d.candidate));
+    });
+
+    onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50)), (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
-        s.forEach(d => { renderMsg(d.data().user, d.data().text, d.data().user === myDisplayName); });
+        s.forEach(d => renderMsg(d.data().user, d.data().text, d.data().user === myDisplayName));
         box.scrollTop = box.scrollHeight;
     });
 }
 
-// UI HELPERS
+// --- ENTER TO SEND ---
+document.getElementById("input").onkeydown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById("send-btn").click();
+    }
+};
+
+document.getElementById("send-btn").onclick = async () => {
+    const i = document.getElementById("input"); if(!i.innerText.trim()) return;
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text: i.innerText, timestamp: serverTimestamp() });
+    i.innerHTML = "";
+};
+
+// --- VC FIX ---
+document.getElementById("vc-btn").onclick = async () => {
+    if(!isVoiceActive) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            isVoiceActive = true;
+            document.getElementById("vc-btn").classList.add("vc-on");
+            document.getElementById("mute-btn").classList.remove("hidden");
+            channel.presence.update({ user: myDisplayName, inCall: true });
+            channel.publish("vc-signal", { type: "join", from: myDisplayName });
+            notify("VC Active");
+        } catch(e) { notify("Mic access denied"); }
+    } else {
+        stopVC();
+    }
+};
+
+function createPeer(target) {
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    peers[target] = pc;
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    pc.ontrack = (e) => {
+        let aud = document.getElementById(`aud-${target}`);
+        if(!aud) { aud = document.createElement('audio'); aud.id = `aud-${target}`; aud.autoplay = true; document.getElementById("remote-audios").appendChild(aud); }
+        aud.srcObject = e.streams[0];
+    };
+    pc.onicecandidate = (e) => { if(e.candidate) channel.publish("vc-signal", { type: "ice", candidate: e.candidate, to: target, from: myDisplayName }); };
+    return pc;
+}
+
+function stopVC() {
+    isVoiceActive = false;
+    if(localStream) localStream.getTracks().forEach(t => t.stop());
+    Object.values(peers).forEach(p => p.close());
+    peers = {};
+    document.getElementById("vc-btn").classList.remove("vc-on");
+    document.getElementById("mute-btn").classList.add("hidden");
+    channel.presence.update({ user: myDisplayName, inCall: false });
+}
+
+document.getElementById("mute-btn").onclick = () => {
+    isMuted = !isMuted;
+    localStream.getAudioTracks()[0].enabled = !isMuted;
+    document.getElementById("mute-btn").classList.toggle("mute-on", isMuted);
+};
+
+// --- UTILS ---
 function updateUsers() {
-    channel.presence.get((err, members) => {
-        if(err) return;
-        document.getElementById("users-list").innerHTML = members.map(m => `
-            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${m.data?.isSpeaking ? 'speaking-pulse' : ''}">
-                <div class="status-dot"></div>
-                <span class="text-[10px] font-bold uppercase truncate ${m.data?.inCall ? 'text-green-400' : 'text-white/40'}">${m.data?.user || m.clientId}</span>
+    channel.presence.get((err, m) => {
+        if(m) document.getElementById("users-list").innerHTML = m.map(u => `
+            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${u.data.inCall?'speaking-pulse':''}">
+                <div class="w-2 h-2 rounded-full ${u.data.inCall?'bg-green-500':'bg-white/20'}"></div>
+                <span class="text-[10px] font-bold uppercase truncate">${u.data.user}</span>
             </div>`).join("");
     });
 }
 
 function renderMsg(u, t, me) {
-    const box = document.getElementById("messages"), div = document.createElement("div");
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${u}</div><span class="text-sm font-medium">${t}</span>`;
-    box.appendChild(div);
+    const box = document.getElementById("messages"), d = document.createElement("div");
+    d.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
+    d.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${u}</div><span class="text-sm">${t}</span>`;
+    box.appendChild(d);
 }
 
-document.getElementById("send-btn").onclick = async () => {
-    const i = document.getElementById("input"); if (!i.innerText.trim()) return;
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text: i.innerText, timestamp: serverTimestamp() });
-    i.innerHTML = "";
-};
-
 window.notify = (m) => {
-    const t = document.createElement("div"); t.className = "toast shadow-xl shadow-purple-900/40"; t.innerText = m;
+    const t = document.createElement("div"); t.className = "toast"; t.innerText = m;
     document.getElementById("notification-container").appendChild(t);
     setTimeout(() => t.remove(), 3000);
 };
 
-// SNOW CANVAS
+// SNOW
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
-let snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.8+0.5, d: Math.random()*0.5+0.1 }));
+let snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5, d: Math.random()*0.5+0.1 }));
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.15)";
     snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); });

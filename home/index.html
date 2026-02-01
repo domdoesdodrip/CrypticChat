@@ -10,116 +10,72 @@
     <style>
         :root { --bg: #050307; --accent: #9667f4; --glass: rgba(15, 12, 22, 0.9); --glass-border: rgba(150, 103, 244, 0.15); }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
-        
-        /* LAYERS */
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
-
-        /* COMPONENTS */
         .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); }
         .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; word-wrap: break-word; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .system-msg { align-self: center; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 11px; padding: 4px 12px; margin: 8px 0; text-transform: uppercase; letter-spacing: 1px; }
-        
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
-        
-        /* STATES */
-        .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.15) !important; border: 1px solid rgba(34, 197, 94, 0.3); }
-        .mute-on { color: #ef4444 !important; background: rgba(239, 68, 68, 0.1); }
-        .deafen-on { color: #f59e0b !important; background: rgba(245, 158, 11, 0.1); }
-        .speaking-pulse { box-shadow: 0 0 0 2px #22c55e; animation: pulse 1s infinite; }
-        
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
-        .toast { background: #1e1b29; border: 1px solid #9667f4; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; margin-bottom: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
-        /* SCROLLBAR */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
+        .speaking-pulse { box-shadow: 0 0 8px #22c55e; }
+        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: 800; margin-bottom: 5px; border: 1px solid rgba(150, 103, 244, 0.3); }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
-<div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center pointer-events-none"></div>
+<div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
 <div id="remote-audios" class="hidden"></div>
-
-<div id="admin-panel" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-    <div class="glass w-96 p-6 rounded-3xl relative mx-4">
-        <button onclick="toggleAdminPanel()" class="absolute top-4 right-4 text-white/50 hover:text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-        <h2 class="text-xl font-black uppercase text-purple-400 mb-6">Admin Tools</h2>
-        <div class="grid grid-cols-2 gap-3">
-            <button onclick="adminAction('purge')" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-4 rounded-xl font-bold uppercase text-xs border border-red-500/20 transition-all">Purge Chat</button>
-            <input id="kick-target" placeholder="User to Kick" class="col-span-1 bg-white/5 p-3 rounded-xl text-xs outline-none border border-white/10">
-            <button onclick="adminAction('kick')" class="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 p-3 rounded-xl font-bold uppercase text-xs border border-orange-500/20">Kick</button>
-        </div>
-    </div>
-</div>
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
-            
-            <h1 class="text-4xl font-black mb-2 tracking-tighter uppercase text-white">CrypticChat</h1>
-            <p class="text-xs font-bold text-purple-400 mb-8 uppercase tracking-widest">Secure Channels</p>
-            
+            <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
             <div class="flex bg-white/5 p-1 rounded-xl mb-6">
                 <button onclick="toggleAuthMode(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white/10 text-white">Login</button>
-                <button onclick="toggleAuthMode(false)" id="tab-signup" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all text-white/40 hover:text-white">Sign Up</button>
+                <button onclick="toggleAuthMode(false)" id="tab-signup" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all text-white/40">Sign Up</button>
             </div>
-
-            <input id="auth-user" type="text" class="w-full mb-3 p-4 bg-white/5 rounded-2xl outline-none text-sm font-semibold border border-transparent focus:border-purple-500/50 transition-all" placeholder="Username">
-            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-sm font-semibold border border-transparent focus:border-purple-500/50 transition-all" placeholder="Password">
-            
-            <button id="auth-main-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-extrabold uppercase text-xs tracking-wider transition-all shadow-lg shadow-purple-900/20">Enter System</button>
-            <button onclick="initGuest()" class="mt-6 text-[10px] text-white/30 uppercase font-bold tracking-widest hover:text-white transition-colors">Enter as Ghost</button>
+            <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Username">
+            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Password">
+            <button id="auth-main-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase text-xs">Enter System</button>
+            <button onclick="initGuest()" class="mt-4 text-[10px] text-white/40 uppercase font-black hover:text-white transition-colors">Enter as Ghost</button>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
-            <h1 class="text-3xl font-black uppercase tracking-tighter mb-8">Connection</h1>
-            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-sm font-bold" placeholder="Alias">
-            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-sm font-bold" placeholder="Room ID (e.g. LOBBY)">
-            <button id="join-room-btn" class="w-full bg-white text-black hover:bg-gray-200 py-5 rounded-2xl font-extrabold text-xs uppercase tracking-wider transition-all">Establish Link</button>
+            <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Connection</h1>
+            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Alias">
+            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Room ID (LOBBY)">
+            <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Connect</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
-        <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40 relative">
-            <div class="flex items-center gap-3 overflow-hidden">
-                <button onclick="location.reload()" class="text-white/30 hover:text-white transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-                <div class="min-w-0">
-                    <div id="roomLabel" class="font-black text-white uppercase text-sm tracking-tight leading-none truncate"></div>
-                </div>
+        <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40">
+            <div class="flex items-center gap-3">
+                <button onclick="location.reload()" class="text-white/40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+                <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs tracking-widest"></div>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-                <button id="admin-btn" onclick="toggleAdminPanel()" class="hidden text-yellow-400 p-2 hover:bg-yellow-400/10 rounded-xl transition-all"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-                <div class="h-6 w-px bg-white/10 mx-1"></div>
-                <button id="deafen-btn" class="hidden text-white/30 hover:text-white p-2.5 rounded-xl transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="14" y1="10" x2="10" y2="14"/></svg></button>
-                <button id="mute-btn" class="hidden text-white/30 hover:text-white p-2.5 rounded-xl transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
-                <button id="vc-btn" class="bg-white/5 hover:bg-white/10 text-white p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5 shrink-0">
-                    <span class="text-[9px] font-black uppercase tracking-tighter">Join VC</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            <div class="flex items-center gap-1">
+                <button id="deafen-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="14" y1="10" x2="10" y2="14"/></svg></button>
+                <button id="mute-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2V15H6L11 19V5Z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></button>
+                <button id="vc-btn" class="text-white/20 p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5">
+                    <span class="text-[9px] font-black uppercase">Join VC</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
                 </button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
-                <div class="text-[10px] font-black uppercase text-white/20 mb-3 tracking-widest">Active Operatives</div>
-                <div id="users-list" class="space-y-2"></div>
-            </aside>
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto"><div id="users-list" class="space-y-2"></div></aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent">
-                    <div class="flex gap-2 max-w-4xl mx-auto items-end">
-                        <div id="input" contenteditable="true" placeholder="Encrypted Message..." spellcheck="false" class="shadow-xl"></div>
-                        <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3.5 rounded-xl text-white shadow-lg shadow-purple-900/40 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md">
+                    <div class="flex gap-2 max-w-4xl mx-auto items-center">
+                        <div id="input" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
+                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl text-white"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
                     </div>
                 </div>
             </main>
@@ -129,258 +85,107 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// YOUR FIREBASE CONFIG
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myDisplayName, currentRoom = '', isGuest = false, isAdmin = false;
+let ably, channel, myDisplayName, currentRoom = '', isGuest = false, isSignUp = false;
 let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
-let unreadCount = 0, isFocused = true, isSignUp = false;
-const notifSound = new Audio("https://files.catbox.moe/8tz2o5.mp3");
 
-// --- AUTH LOGIC ---
-
-window.toggleAuthMode = (mode) => {
-    isSignUp = !mode;
-    document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!isSignUp ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`;
-    document.getElementById("tab-signup").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${isSignUp ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`;
-    document.getElementById("auth-main-btn").innerText = isSignUp ? "Create Identity" : "Enter System";
+// UI TOGGLES
+window.toggleAuthMode = (login) => {
+    isSignUp = !login;
+    document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${login ? 'bg-white/10 text-white' : 'text-white/40'}`;
+    document.getElementById("tab-signup").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!login ? 'bg-white/10 text-white' : 'text-white/40'}`;
+    document.getElementById("auth-main-btn").innerText = login ? "Enter System" : "Create Identity";
 };
 
 document.getElementById("auth-main-btn").onclick = async () => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase();
     const p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("Fields cannot be empty");
+    if(!u || !p) return notify("Missing credentials");
 
-    const userRef = doc(db, "users", u);
-    
-    try {
-        const snap = await getDoc(userRef);
-
-        if (isSignUp) {
-            if (snap.exists()) return notify("Identity already claimed");
-            await setDoc(userRef, { password: p, isAdmin: false });
-            notify("Identity Created. Logging in...");
-            isAdmin = false;
-        } else {
-            if (!snap.exists()) return notify("User not found");
-            if (snap.data().password !== p) return notify("Invalid Credentials");
-            
-            // CHECK ADMIN STATUS
-            isAdmin = snap.data().isAdmin === true;
-            if(isAdmin) {
-                notify("Operator Access Granted.");
-                document.getElementById("admin-btn").classList.remove("hidden");
-            }
-        }
-        initAbly(u, null); // Pass username as ClientID
-    } catch(e) {
-        notify("Connection Error: " + e.message);
+    const snap = await getDoc(doc(db, "users", u));
+    if(isSignUp) {
+        if(snap.exists()) return notify("User exists");
+        await setDoc(doc(db, "users", u), { password: p });
+    } else {
+        if(!snap.exists() || snap.data().password !== p) return notify("Invalid login");
     }
+    initAbly(u);
 };
 
 window.initGuest = () => {
     isGuest = true;
-    isAdmin = false;
-    const guestId = "Ghost-" + Math.floor(Math.random()*10000);
-    myDisplayName = guestId;
-    initAbly(guestId, null);
+    const gId = "Ghost_" + Math.random().toString(36).substring(7);
+    initAbly(gId);
 };
 
-function initAbly(clientId, token) {
-    // USING DEMO KEY SO IT WORKS WITHOUT BACKEND
-    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: clientId });
-    
+function initAbly(id) {
+    // Note: clientId is MANDATORY for presence to show you in the list correctly
+    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: id });
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        if(isGuest) document.getElementById("display-name").value = clientId;
+        if(isGuest) document.getElementById("display-name").value = id;
     });
 }
 
-// --- ROOM LOGIC ---
+document.getElementById("join-room-btn").onclick = () => {
+    myDisplayName = document.getElementById("display-name").value.trim() || "Phantom";
+    currentRoom = (document.getElementById("room-id").value.trim() || "LOBBY").toUpperCase();
+    enterChat();
+};
 
-document.getElementById("join-room-btn").onclick = enterChat;
-
-function enterChat() {
-    const aliasInput = document.getElementById("display-name").value.trim();
-    if(!isGuest) myDisplayName = aliasInput || "Phantom";
-    
-    currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
-
+async function enterChat() {
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
-    if(isGuest) document.getElementById("vc-btn").classList.add("hidden");
 
     channel = ably.channels.get("room-" + currentRoom);
     
-    // Explicitly passing isAdmin in presence data
-    channel.presence.enter({ user: myDisplayName, inCall: false, isSpeaking: false, isAdmin: isAdmin });
+    // ATTACH AND ENTER
+    await channel.attach();
+    channel.presence.enter({ user: myDisplayName, inCall: false });
+    
+    // SUBSCRIBE TO ALL PRESENCE EVENTS
     channel.presence.subscribe(() => updateUsers());
+    updateUsers();
 
-    // --- MESSAGING ---
+    // MESSAGE LISTENER
     const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
     onSnapshot(q, (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
         s.forEach(d => {
             const m = d.data();
-            renderMsg(m.user, m.text, m.user === myDisplayName, m.type);
+            renderMsg(m.user, m.text, m.user === myDisplayName);
         });
         box.scrollTop = box.scrollHeight;
     });
-
-    // --- SIGNALS (VC & ADMIN) ---
-    channel.subscribe("signal", async (m) => {
-        const d = m.data;
-        if (d.target && d.target !== myDisplayName) return; 
-
-        // ADMIN SIGNALS
-        if (d.type === "kick") { alert("You have been kicked."); location.reload(); }
-        if (d.type === "announce") { notify("📢 SYSTEM: " + d.text); renderMsg("SYSTEM", d.text, false, "system"); }
-
-        // VC SIGNALS
-        if (isGuest || !isVoiceActive) return;
-        if (d.from === myDisplayName) return;
-
-        if (d.type === "join-call") initiatePeer(d.from, true);
-        if (d.type === "offer") {
-            const pc = initiatePeer(d.from, false);
-            await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
-            const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
-            channel.publish("signal", { type: "answer", answer: ans, target: d.from, from: myDisplayName });
-        }
-        if (d.type === "answer") await peers[d.from].setRemoteDescription(new RTCSessionDescription(d.answer));
-        if (d.type === "ice") await peers[d.from].addIceCandidate(new RTCIceCandidate(d.candidate));
-    });
 }
-
-// --- ADMIN ---
-window.toggleAdminPanel = () => {
-    if(!isAdmin) return;
-    document.getElementById("admin-panel").classList.toggle("hidden");
-};
-window.adminAction = async (act) => {
-    if (!isAdmin) return;
-    const kickUser = document.getElementById("kick-target").value;
-    if (act === "purge") {
-        if(!confirm("Purge?")) return;
-        const q = query(collection(db, "rooms", currentRoom, "messages"), limit(50));
-        const snap = await getDocs(q); const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(d.ref)); await batch.commit();
-        notify("Purged.");
-    }
-    if (act === "kick") channel.publish("signal", { type: "kick", target: kickUser });
-};
-
-// --- VC LOGIC ---
-document.getElementById("vc-btn").onclick = async () => {
-    if (isDeafened) return notify("Cannot join while deafened");
-    if (!isVoiceActive) {
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            isVoiceActive = true;
-            document.getElementById("vc-btn").classList.add("vc-on");
-            document.getElementById("vc-btn").innerHTML = `<span class="text-[9px] font-black uppercase">Leave</span>`;
-            document.getElementById("mute-btn").classList.remove("hidden");
-            document.getElementById("deafen-btn").classList.remove("hidden");
-            channel.presence.update({ user: myDisplayName, inCall: true, isAdmin: isAdmin });
-            channel.publish("signal", { type: "join-call", from: myDisplayName });
-            setupVisualizer();
-        } catch (e) { notify("Microphone Denied"); }
-    } else stopVC();
-};
-
-function initiatePeer(target, initiator) {
-    if(peers[target]) return peers[target];
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-    peers[target] = pc;
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    pc.ontrack = (e) => {
-        let el = document.getElementById(`aud-${target}`);
-        if (!el) { el = document.createElement('audio'); el.id = `aud-${target}`; el.autoplay = true; document.getElementById("remote-audios").appendChild(el); }
-        el.srcObject = e.streams[0]; el.muted = isDeafened;
-    };
-    pc.onicecandidate = (e) => { if (e.candidate) channel.publish("signal", { type: "ice", candidate: e.candidate, target: target, from: myDisplayName }); };
-    if (initiator) {
-        pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => {
-            channel.publish("signal", { type: "offer", offer: pc.localDescription, target: target, from: myDisplayName });
-        });
-    }
-    return pc;
-}
-
-function stopVC() {
-    if (localStream) localStream.getTracks().forEach(t => t.stop());
-    Object.values(peers).forEach(p => p.close());
-    peers = {}; isVoiceActive = false;
-    document.getElementById("vc-btn").classList.remove("vc-on");
-    document.getElementById("vc-btn").innerHTML = `<span class="text-[9px] font-black uppercase">Join VC</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
-    document.getElementById("mute-btn").classList.add("hidden");
-    document.getElementById("deafen-btn").classList.add("hidden");
-    channel.presence.update({ user: myDisplayName, inCall: false, isSpeaking: false, isAdmin: isAdmin });
-}
-
-function setupVisualizer() {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioCtx.createMediaStreamSource(localStream);
-    const analyzer = audioCtx.createAnalyser();
-    analyzer.fftSize = 256;
-    source.connect(analyzer);
-    const data = new Uint8Array(analyzer.frequencyBinCount);
-    const check = () => {
-        if(!isVoiceActive) return;
-        analyzer.getByteFrequencyData(data);
-        const speaking = (data.reduce((a,b) => a+b) / data.length) > 20 && !isMuted;
-        channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: speaking, isAdmin: isAdmin });
-        requestAnimationFrame(check);
-    };
-    check();
-}
-
-// --- UTILS ---
-document.getElementById("mute-btn").onclick = () => { isMuted = !isMuted; localStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); };
-document.getElementById("deafen-btn").onclick = () => {
-    isDeafened = !isDeafened;
-    document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
-    document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
-};
 
 function updateUsers() {
     channel.presence.get((err, members) => {
-        if(!members) return;
-        document.getElementById("users-list").innerHTML = members.map(m => {
-            const d = m.data || {};
-            const adminBadge = d.isAdmin ? '<span class="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded ml-1">OP</span>' : '';
-            return `
-            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${d.isSpeaking ? 'speaking-pulse' : ''}">
-                <div class="w-2 h-2 rounded-full ${d.inCall ? 'bg-green-500' : 'bg-white/20'}"></div>
-                <div class="flex-1 min-w-0 flex items-center">
-                    <span class="text-[11px] uppercase truncate ${d.inCall ? 'text-green-400' : 'text-white/40'}">${d.user || m.clientId}</span>
-                    ${adminBadge}
-                </div>
-            </div>`
-        }).join("");
+        if(err) return console.error(err);
+        document.getElementById("users-list").innerHTML = members.map(m => `
+            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${m.data?.isSpeaking ? 'speaking-pulse' : ''}">
+                <div class="w-2 h-2 rounded-full ${m.data?.inCall ? 'bg-green-500' : 'bg-white/20'}"></div>
+                <span class="text-[10px] font-bold uppercase truncate">${m.data?.user || m.clientId}</span>
+            </div>`).join("");
     });
 }
 
-function renderMsg(u, t, me, type) {
-    const box = document.getElementById("messages");
-    const div = document.createElement("div");
-    if (type === "system") {
-        div.className = "system-msg text-yellow-400 border border-yellow-500/30"; div.innerText = t;
-    } else {
-        div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-        div.innerHTML = `<div class="text-[9px] ${me?'text-white/50':'text-purple-300'} font-bold uppercase mb-1">${u}</div><span class="text-sm leading-relaxed">${t}</span>`;
-    }
+function renderMsg(u, t, me) {
+    const box = document.getElementById("messages"), div = document.createElement("div");
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
+    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black">${u}</div><span class="text-sm">${t}</span>`;
     box.appendChild(div);
 }
 
 document.getElementById("send-btn").onclick = async () => {
     const i = document.getElementById("input"); if (!i.innerText.trim()) return;
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text: i.innerText, timestamp: serverTimestamp(), type: "chat" });
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text: i.innerText, timestamp: serverTimestamp() });
     i.innerHTML = "";
 };
 
@@ -390,11 +195,11 @@ window.notify = (m) => {
     setTimeout(() => t.remove(), 3000);
 };
 
-// --- SNOW ---
+// SNOW EFFECT
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
-let snow = Array.from({length: 50}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 }));
+let snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 }));
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.1)";
     snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); });

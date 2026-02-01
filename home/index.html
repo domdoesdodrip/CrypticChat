@@ -17,20 +17,18 @@
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
-        .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
-        .speaking-pulse { box-shadow: 0 0 8px #22c55e; }
-        .toast { background: rgba(150, 103, 244, 0.2); color: #c0a0ff; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: 800; margin-bottom: 5px; border: 1px solid rgba(150, 103, 244, 0.3); }
+        .toast { background: rgba(239, 68, 68, 0.2); color: #ff8e8e; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: 800; margin-bottom: 5px; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .speaking-pulse { box-shadow: 0 0 10px #22c55e; transition: box-shadow 0.2s; }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
 <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
-<div id="remote-audios" class="hidden"></div>
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl relative overflow-hidden">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
             <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
             <div class="flex bg-white/5 p-1 rounded-xl mb-6">
                 <button onclick="toggleAuthMode(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white/10 text-white">Login</button>
@@ -58,18 +56,11 @@
                 <button onclick="location.reload()" class="text-white/40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
                 <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs tracking-widest"></div>
             </div>
-            <div class="flex items-center gap-1">
-                <button id="deafen-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="14" y1="10" x2="10" y2="14"/></svg></button>
-                <button id="mute-btn" class="hidden text-white/20 p-2.5 rounded-xl"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2V15H6L11 19V5Z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></button>
-                <button id="vc-btn" class="text-white/20 p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5">
-                    <span class="text-[9px] font-black uppercase">Join VC</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-                </button>
-            </div>
+            <div id="conn-status" class="text-[8px] font-bold text-green-500 uppercase px-2 py-1 bg-green-500/10 rounded">Online</div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto"><div id="users-list" class="space-y-2"></div></aside>
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5"><div id="users-list" class="space-y-2"></div></aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md">
@@ -85,15 +76,15 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
-const db = getFirestore(initializeApp(firebaseConfig));
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 let ably, channel, myDisplayName, currentRoom = '', isGuest = false, isSignUp = false;
-let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
 
-// UI TOGGLES
+// --- AUTH HANDLERS ---
 window.toggleAuthMode = (login) => {
     isSignUp = !login;
     document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${login ? 'bg-white/10 text-white' : 'text-white/40'}`;
@@ -104,16 +95,22 @@ window.toggleAuthMode = (login) => {
 document.getElementById("auth-main-btn").onclick = async () => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase();
     const p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("Missing credentials");
+    if(!u || !p) return notify("Input required");
 
-    const snap = await getDoc(doc(db, "users", u));
-    if(isSignUp) {
-        if(snap.exists()) return notify("User exists");
-        await setDoc(doc(db, "users", u), { password: p });
-    } else {
-        if(!snap.exists() || snap.data().password !== p) return notify("Invalid login");
+    try {
+        const userRef = doc(db, "users", u);
+        const snap = await getDoc(userRef);
+        if(isSignUp) {
+            if(snap.exists()) return notify("User already exists");
+            await setDoc(userRef, { password: p });
+        } else {
+            if(!snap.exists() || snap.data().password !== p) return notify("Login failed");
+        }
+        initAbly(u);
+    } catch (e) {
+        notify("FIREWALL BLOCKED: Disable AdBlock");
+        console.error("Firestore Error:", e);
     }
-    initAbly(u);
 };
 
 window.initGuest = () => {
@@ -122,38 +119,42 @@ window.initGuest = () => {
     initAbly(gId);
 };
 
-function initAbly(id) {
-    // Note: clientId is MANDATORY for presence to show you in the list correctly
-    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: id });
+// --- ABLY CONNECTION ---
+function initAbly(clientId) {
+    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: clientId });
+    
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        if(isGuest) document.getElementById("display-name").value = id;
+        if(isGuest) document.getElementById("display-name").value = clientId;
     });
+
+    ably.connection.on('failed', () => notify("Connection Failed"));
 }
 
-document.getElementById("join-room-btn").onclick = () => {
-    myDisplayName = document.getElementById("display-name").value.trim() || "Phantom";
-    currentRoom = (document.getElementById("room-id").value.trim() || "LOBBY").toUpperCase();
-    enterChat();
-};
+document.getElementById("join-room-btn").onclick = enterChat;
 
 async function enterChat() {
+    myDisplayName = document.getElementById("display-name").value.trim() || "Phantom";
+    currentRoom = (document.getElementById("room-id").value.trim() || "LOBBY").toUpperCase();
+
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
 
     channel = ably.channels.get("room-" + currentRoom);
     
-    // ATTACH AND ENTER
-    await channel.attach();
-    channel.presence.enter({ user: myDisplayName, inCall: false });
-    
-    // SUBSCRIBE TO ALL PRESENCE EVENTS
-    channel.presence.subscribe(() => updateUsers());
-    updateUsers();
+    // ATTACH & ENTER PRESENCE
+    try {
+        await channel.attach();
+        channel.presence.enter({ user: myDisplayName });
+        channel.presence.subscribe(() => updateUsers());
+        updateUsers();
+    } catch (e) {
+        notify("Ably Join Failed");
+    }
 
-    // MESSAGE LISTENER
+    // FIRESTORE MESSAGES
     const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
     onSnapshot(q, (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
@@ -162,16 +163,18 @@ async function enterChat() {
             renderMsg(m.user, m.text, m.user === myDisplayName);
         });
         box.scrollTop = box.scrollHeight;
+    }, (err) => {
+        if(err.message.includes("BLOCKED")) notify("ADBLOCKER DETECTED - DISABLE TO CHAT");
     });
 }
 
 function updateUsers() {
     channel.presence.get((err, members) => {
-        if(err) return console.error(err);
+        if(err) return;
         document.getElementById("users-list").innerHTML = members.map(m => `
-            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${m.data?.isSpeaking ? 'speaking-pulse' : ''}">
-                <div class="w-2 h-2 rounded-full ${m.data?.inCall ? 'bg-green-500' : 'bg-white/20'}"></div>
-                <span class="text-[10px] font-bold uppercase truncate">${m.data?.user || m.clientId}</span>
+            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/10">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]"></div>
+                <span class="text-[10px] font-bold uppercase truncate text-white/70">${m.data?.user || m.clientId}</span>
             </div>`).join("");
     });
 }
@@ -179,27 +182,35 @@ function updateUsers() {
 function renderMsg(u, t, me) {
     const box = document.getElementById("messages"), div = document.createElement("div");
     div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black">${u}</div><span class="text-sm">${t}</span>`;
+    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${u}</div><span class="text-sm">${t}</span>`;
     box.appendChild(div);
 }
 
 document.getElementById("send-btn").onclick = async () => {
     const i = document.getElementById("input"); if (!i.innerText.trim()) return;
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text: i.innerText, timestamp: serverTimestamp() });
-    i.innerHTML = "";
+    try {
+        await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
+            user: myDisplayName, 
+            text: i.innerText, 
+            timestamp: serverTimestamp() 
+        });
+        i.innerHTML = "";
+    } catch (e) {
+        notify("Send failed. Check AdBlock.");
+    }
 };
 
 window.notify = (m) => {
     const t = document.createElement("div"); t.className = "toast"; t.innerText = m;
     document.getElementById("notification-container").appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    setTimeout(() => t.remove(), 4000);
 };
 
 // SNOW EFFECT
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
-let snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 }));
+let snow = Array.from({length: 30}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5+0.5, d: Math.random()*0.4+0.1 }));
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.1)";
     snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); });

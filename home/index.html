@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #050307; --accent: #9667f4; --glass: rgba(15, 12, 22, 0.85); --glass-border: rgba(150, 103, 244, 0.15); }
+        :root { --bg: #050307; --accent: #9667f4; --glass: rgba(15, 12, 22, 0.9); --glass-border: rgba(150, 103, 244, 0.15); }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
         
         /* LAYERS */
@@ -57,7 +57,7 @@
 <div id="remote-audios" class="hidden"></div>
 
 <div id="admin-panel" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-    <div class="glass w-96 p-6 rounded-3xl relative">
+    <div class="glass w-96 p-6 rounded-3xl relative mx-4">
         <button onclick="toggleAdminPanel()" class="absolute top-4 right-4 text-white/50 hover:text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         <h2 class="text-xl font-black uppercase text-purple-400 mb-6 flex items-center gap-2">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
@@ -110,19 +110,18 @@
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40 relative">
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 overflow-hidden">
                 <button onclick="leaveRoom()" class="text-white/30 hover:text-white transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-                <div>
-                    <div id="roomLabel" class="font-black text-white uppercase text-sm tracking-tight leading-none"></div>
-                    <div class="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Encrypted</div>
+                <div class="min-w-0">
+                    <div id="roomLabel" class="font-black text-white uppercase text-sm tracking-tight leading-none truncate"></div>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
                 <button id="admin-btn" onclick="toggleAdminPanel()" class="hidden text-yellow-400 p-2 hover:bg-yellow-400/10 rounded-xl transition-all"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                 <div class="h-6 w-px bg-white/10 mx-1"></div>
                 <button id="deafen-btn" class="hidden text-white/30 hover:text-white p-2.5 rounded-xl transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="14" y1="10" x2="10" y2="14"/></svg></button>
                 <button id="mute-btn" class="hidden text-white/30 hover:text-white p-2.5 rounded-xl transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
-                <button id="vc-btn" class="bg-white/5 hover:bg-white/10 text-white p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5">
+                <button id="vc-btn" class="bg-white/5 hover:bg-white/10 text-white p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5 shrink-0">
                     <span class="text-[9px] font-black uppercase tracking-tighter">Join VC</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </button>
@@ -162,22 +161,26 @@ const notifSound = new Audio("https://files.catbox.moe/8tz2o5.mp3");
 // --- INITIALIZATION & PERSISTENCE ---
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // Check local storage for persistent session
+    // Hide Admin panel by default just in case
+    document.getElementById("admin-btn").classList.add("hidden");
+
     const savedUser = localStorage.getItem("cc_user");
     const savedRoom = localStorage.getItem("cc_room");
     
     if (savedUser) {
-        const u = JSON.parse(savedUser);
-        // Quick verify
-        const snap = await getDoc(doc(db, "users", u.name));
-        if (snap.exists() && snap.data().password === u.pass) {
-            isAdmin = snap.data().isAdmin || false; // DB CHECK FOR ADMIN
-            if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
-            initAbly(u.name, u.pass, savedRoom);
-            return;
-        }
+        try {
+            const u = JSON.parse(savedUser);
+            // Verify against DB to ensure they are still valid and check Admin status
+            const snap = await getDoc(doc(db, "users", u.name));
+            if (snap.exists() && snap.data().password === u.pass) {
+                isAdmin = snap.data().isAdmin === true;
+                if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
+                initAbly(u.name, savedRoom);
+                return;
+            }
+        } catch(e) { console.error("Auto-login failed", e); }
     }
-    document.getElementById("view-auth").classList.remove("hidden"); // Show login if no session
+    document.getElementById("view-auth").classList.remove("hidden");
 });
 
 // --- AUTH LOGIC ---
@@ -195,43 +198,59 @@ document.getElementById("auth-main-btn").onclick = async () => {
     if(!u || !p) return notify("Fields cannot be empty");
 
     const userRef = doc(db, "users", u);
-    const snap = await getDoc(userRef);
+    
+    try {
+        const snap = await getDoc(userRef);
 
-    if (isSignUp) {
-        if (snap.exists()) return notify("Identity already claimed");
-        await setDoc(userRef, { password: p, isAdmin: false, created: serverTimestamp() });
-        notify("Identity Created. Logging in...");
-    } else {
-        if (!snap.exists() || snap.data().password !== p) return notify("Invalid Credentials");
-        isAdmin = snap.data().isAdmin || false; // DB CHECK
+        if (isSignUp) {
+            if (snap.exists()) return notify("Identity already claimed");
+            await setDoc(userRef, { password: p, isAdmin: false, created: serverTimestamp() });
+            notify("Identity Created. Logging in...");
+            isAdmin = false;
+        } else {
+            if (!snap.exists()) return notify("User not found");
+            if (snap.data().password !== p) return notify("Invalid Credentials");
+            
+            // CORRECTLY SET ADMIN STATUS
+            isAdmin = snap.data().isAdmin === true;
+            if(isAdmin) {
+                notify("Welcome back, Operator.");
+                document.getElementById("admin-btn").classList.remove("hidden");
+            }
+        }
+
+        localStorage.setItem("cc_user", JSON.stringify({name: u, pass: p}));
+        initAbly(u, null);
+    } catch(e) {
+        notify("Connection Error: " + e.message);
     }
-
-    // Save session
-    localStorage.setItem("cc_user", JSON.stringify({name: u, pass: p}));
-    initAbly(u, p);
 };
 
 window.initGuest = () => {
     isGuest = true;
-    myDisplayName = "Ghost-" + Math.floor(Math.random()*1000);
+    isAdmin = false;
+    // Generate a unique Client ID for Guests so Ably Presence works correctly
+    const guestId = "Ghost-" + Math.floor(Math.random()*10000);
+    myDisplayName = guestId;
+    
     document.getElementById("view-auth").classList.add("hidden");
     document.getElementById("view-join").classList.remove("hidden");
-    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l" }); // Public key for demo/guest
-    // Warning: Public keys should be restricted in prod. Ideally use authUrl even for guests.
+    document.getElementById("admin-btn").classList.add("hidden"); // Ensure hidden
+    
+    // Initialize Ably with the guest ID as client
+    initAbly(guestId, null);
 };
 
-function initAbly(u, p, autoRoom) {
-    if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
-    // For this demo we use the key directly or authUrl if you have a server. 
-    // Reusing the key for simplicity in this artifact.
-    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: u }); 
+function initAbly(clientId, autoRoom) {
+    // We must pass clientId to Ably for Presence to work reliably
+    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: clientId });
     
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
         if(autoRoom) {
             document.getElementById("room-id").value = autoRoom;
-            document.getElementById("display-name").value = u; // Auto fill username
+            if(!isGuest) document.getElementById("display-name").value = clientId;
             enterChat();
         }
     });
@@ -252,11 +271,20 @@ window.leaveRoom = () => {
 }
 
 function enterChat() {
-    myDisplayName = (document.getElementById("display-name").value.trim() || "Phantom");
-    if(isGuest) myDisplayName += " (GUEST)";
+    const aliasInput = document.getElementById("display-name").value.trim();
+    
+    // If not guest, use input alias, otherwise use the generated Ghost ID
+    if(!isGuest) {
+        myDisplayName = aliasInput || "Phantom";
+    } 
+    // If guest, keep the generated ID (so we don't break Ably clientId match) but append " (GUEST)" for display if you want, 
+    // BUT for Ably presence to match, it's safer to keep the user string matching the clientID or handle it carefully.
+    // simpler:
+    if(isGuest) myDisplayName = ably.auth.clientId + " (GUEST)";
+
     currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     
-    localStorage.setItem("cc_room", currentRoom); // Save room
+    localStorage.setItem("cc_room", currentRoom);
 
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
@@ -264,6 +292,8 @@ function enterChat() {
     if(isGuest) document.getElementById("vc-btn").classList.add("hidden");
 
     channel = ably.channels.get("room-" + currentRoom);
+    
+    // Explicitly passing isAdmin in presence data
     channel.presence.enter({ user: myDisplayName, inCall: false, isSpeaking: false, isAdmin: isAdmin });
     channel.presence.subscribe(() => updateUsers());
 
@@ -282,7 +312,7 @@ function enterChat() {
     // --- SIGNALS (VC & ADMIN) ---
     channel.subscribe("signal", async (m) => {
         const d = m.data;
-        if (d.target && d.target !== myDisplayName) return; // Msg not for me
+        if (d.target && d.target !== myDisplayName) return; 
 
         // ADMIN SIGNALS
         if (d.type === "kick") {
@@ -305,7 +335,6 @@ function enterChat() {
         if (d.from === myDisplayName) return;
 
         if (d.type === "join-call") {
-            // Initiate connection to new joiner
             initiatePeer(d.from, true);
         }
         if (d.type === "offer") {
@@ -323,6 +352,7 @@ function enterChat() {
 // --- ADMIN PANEL ---
 
 window.toggleAdminPanel = () => {
+    if(!isAdmin) return; // Double security check
     const p = document.getElementById("admin-panel");
     p.classList.toggle("hidden");
 };
@@ -335,8 +365,6 @@ window.adminAction = async (act) => {
     switch(act) {
         case "purge":
             if(!confirm("Delete last 50 messages?")) return;
-            // 1. Visual Clear via signal (optional, but good UX)
-            // 2. DB Clear
             const q = query(collection(db, "rooms", currentRoom, "messages"), limit(50));
             const snap = await getDocs(q);
             const batch = writeBatch(db);
@@ -369,7 +397,6 @@ document.getElementById("vc-btn").onclick = async () => {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             isVoiceActive = true;
             
-            // UI Update
             const btn = document.getElementById("vc-btn");
             btn.classList.add("vc-on");
             btn.innerHTML = `<span class="text-[9px] font-black uppercase">Leave</span>`;
@@ -377,7 +404,7 @@ document.getElementById("vc-btn").onclick = async () => {
             document.getElementById("deafen-btn").classList.remove("hidden");
             
             channel.presence.update({ user: myDisplayName, inCall: true, isAdmin: isAdmin });
-            channel.publish("signal", { type: "join-call", from: myDisplayName }); // Announce entry
+            channel.publish("signal", { type: "join-call", from: myDisplayName });
             setupVisualizer();
         } catch (e) { console.error(e); notify("Microphone Access Denied"); }
     } else stopVC();
@@ -452,23 +479,26 @@ document.getElementById("deafen-btn").onclick = () => {
     isDeafened = !isDeafened;
     document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
     document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
-    if(isDeafened && isVoiceActive && !isMuted) { document.getElementById("mute-btn").click(); } // Auto mute if deafen
+    if(isDeafened && isVoiceActive && !isMuted) { document.getElementById("mute-btn").click(); } 
 };
 
 function updateUsers() {
     channel.presence.get((err, members) => {
         if(!members) return;
         document.getElementById("users-list").innerHTML = members.map(m => {
-            const d = m.data;
+            const d = m.data || {}; // Safety check for empty data
             const inVcStyle = d.inCall ? 'text-green-400 font-bold' : 'text-white/40';
             const vcBadge = d.inCall ? '<span class="text-[8px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded ml-2">IN VC</span>' : '';
             const adminBadge = d.isAdmin ? '<span class="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded ml-1">OP</span>' : '';
+            // Determine name safely
+            const uName = d.user || m.clientId || "Unknown";
+
             return `
             <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${d.isSpeaking ? 'speaking-pulse' : ''}">
                 <div class="w-2 h-2 rounded-full ${d.inCall ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-white/20'}"></div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center">
-                        <span class="text-[11px] uppercase truncate ${inVcStyle}">${d.user}</span>
+                        <span class="text-[11px] uppercase truncate ${inVcStyle}">${uName}</span>
                         ${adminBadge}
                     </div>
                     ${vcBadge}

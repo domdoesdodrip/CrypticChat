@@ -9,81 +9,77 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #030205; --accent: #9667f4; --glass: rgba(12, 10, 18, 0.98); }
-        /* Scale adjusted down ~5% from previous version */
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; font-size: 105%; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
         .glass { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
-        .bubble { max-width: 82%; padding: 12px 18px; border-radius: 20px; margin-bottom: 8px; position: relative; }
+        .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; margin-bottom: 8px; position: relative; }
         .mine { background: #9667f4; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1a1825; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
-        .announcement { background: rgba(239, 68, 68, 0.12); border: 2px solid #ef4444; width: 100%; text-align: center; border-radius: 14px; margin: 12px 0; padding: 12px; }
-
-        #input-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; max-height: 130px; overflow-y: auto; font-size: 1.05rem; }
-        .toast { background: #9667f4; color: white; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 13px; margin-bottom: 10px; cursor: pointer; pointer-events: auto; }
+        #input-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; max-height: 120px; overflow-y: auto; }
+        .toast { background: #9667f4; color: white; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 12px; margin-bottom: 10px; cursor: pointer; pointer-events: auto; }
         
-        .msg-btn { opacity: 0.4; transition: opacity 0.2s; transform: scale(1.1); }
+        .msg-btn { opacity: 0.5; transition: opacity 0.2s; }
         .msg-btn:hover { opacity: 1; }
+        .announcement { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; width: 100%; text-align: center; border-radius: 12px; margin: 10px 0; padding: 12px; }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
-<div id="notification-container" class="fixed top-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
+<div id="notification-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-sm p-9 rounded-[2.8rem] text-center shadow-2xl">
-            <h1 class="text-4xl font-black mb-9 tracking-tighter uppercase">Cryptic</h1>
-            <div class="flex bg-white/5 p-1.5 rounded-2xl mb-7">
-                <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-3 rounded-xl text-xs font-black uppercase bg-white/10">Login</button>
-                <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-3 rounded-xl text-xs font-black uppercase text-white/30">Sign Up</button>
+        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center shadow-2xl">
+            <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
+            <div class="flex bg-white/5 p-1 rounded-xl mb-6">
+                <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-3 rounded-lg text-xs font-black uppercase bg-white/10">Login</button>
+                <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-3 rounded-lg text-xs font-black uppercase text-white/30">Sign Up</button>
             </div>
-            <div class="space-y-4 mb-9">
-                <input id="auth-user" type="text" class="w-full p-4.5 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Username">
-                <input id="auth-pass" type="password" class="w-full p-4.5 bg-white/5 rounded-2xl outline-none border border-white/5" placeholder="Password">
+            <div class="space-y-3 mb-8">
+                <input id="auth-user" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Username">
+                <input id="auth-pass" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5" placeholder="Password">
             </div>
-            <button id="auth-main-btn" class="w-full bg-purple-600 py-4.5 rounded-2xl font-black uppercase text-sm tracking-widest">Enter</button>
+            <button id="auth-main-btn" class="w-full bg-purple-600 py-4.5 rounded-xl font-black uppercase text-sm">Enter</button>
             <button onclick="initGuest()" class="mt-6 text-[10px] text-white/30 uppercase font-black hover:text-white transition-colors">Ghost Access</button>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-sm p-9 rounded-[2.8rem] text-center">
-            <h2 class="text-2xl font-black mb-7 uppercase">Setup</h2>
-            <input id="alias-input" type="text" class="w-full mb-4 p-4.5 bg-white/5 rounded-2xl outline-none" placeholder="Nickname">
-            <input id="room-input" type="text" class="w-full mb-9 p-4.5 bg-white/5 rounded-2xl outline-none" placeholder="Room ID (GLOBAL)">
-            <button id="join-btn" class="w-full bg-purple-600 py-4.5 rounded-2xl font-black uppercase text-sm">Connect</button>
+        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center">
+            <h2 class="text-2xl font-black mb-6 uppercase tracking-widest">Setup</h2>
+            <input id="alias-input" type="text" class="w-full mb-3 p-4 bg-white/5 rounded-xl outline-none" placeholder="Nickname">
+            <input id="room-input" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-xl outline-none" placeholder="Room ID (GLOBAL)">
+            <button id="join-btn" class="w-full bg-purple-600 py-4.5 rounded-xl font-black uppercase text-sm">Connect</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
-        <header class="glass h-20 flex items-center justify-between px-7 shrink-0 z-50">
+        <header class="glass h-16 flex items-center justify-between px-6 shrink-0 z-50">
             <div class="flex items-center gap-4">
-                <button onclick="window.location.reload()" class="text-white/40 hover:text-white text-lg">←</button>
-                <div id="roomLabel" class="font-black text-purple-400 uppercase text-md"></div>
+                <button onclick="window.location.reload()" class="text-white/40 hover:text-white">←</button>
+                <div id="roomLabel" class="font-black text-purple-400 uppercase text-xs"></div>
             </div>
-            <div id="admin-tag" class="hidden px-4 py-2 bg-red-600 text-[10px] font-black rounded-full uppercase">Admin</div>
+            <div id="admin-tag" class="hidden px-3 py-1 bg-red-600 text-[9px] font-black rounded-full uppercase">Admin</div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-72 glass p-5 overflow-y-auto border-r border-white/5">
-                <div id="users-list" class="space-y-2.5"></div>
+            <aside class="hidden lg:flex flex-col w-64 glass p-5 overflow-y-auto border-r border-white/5">
+                <div id="users-list" class="space-y-2"></div>
             </aside>
-
             <main class="flex-1 flex flex-col relative">
-                <div id="messages" class="flex-1 p-7 pb-36 flex flex-col overflow-y-auto"></div>
-                
+                <div id="messages" class="flex-1 p-6 pb-36 flex flex-col overflow-y-auto"></div>
                 <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-3xl">
-                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-950 p-2.5 rounded-t-2xl border-x border-t border-white/10">
-                        <span id="reply-text" class="text-[11px] font-bold truncate"></span>
+                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-950 p-2.5 rounded-t-xl border-x border-t border-white/10">
+                        <span id="reply-text" class="text-[10px] font-bold truncate"></span>
                         <button onclick="cancelReply()">✕</button>
                     </div>
-                    <div class="glass p-2.5 rounded-[1.8rem] flex items-center gap-3">
+                    <div class="glass p-2.5 rounded-2xl flex items-center gap-3">
                         <div id="input-area" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 h-12 w-14 rounded-xl flex items-center justify-center shrink-0">
+                        <button id="send-btn" class="bg-purple-600 h-11 w-14 rounded-xl flex items-center justify-center shrink-0">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
                         </button>
                     </div>
@@ -103,8 +99,8 @@ const db = getFirestore(initializeApp(firebaseConfig));
 let ably, channel, myAlias, myUID, isAdmin = false, currentRoom = "GLOBAL", replyingTo = null;
 
 window.toggleAuth = (isL) => {
-    document.getElementById("tab-login").className = `flex-1 py-3 rounded-xl text-xs font-black uppercase ${isL ? 'bg-white/10' : 'text-white/30'}`;
-    document.getElementById("tab-signup").className = `flex-1 py-3 rounded-xl text-xs font-black uppercase ${!isL ? 'bg-white/10' : 'text-white/30'}`;
+    document.getElementById("tab-login").className = `flex-1 py-3 rounded-lg text-xs font-black uppercase ${isL ? 'bg-white/10' : 'text-white/30'}`;
+    document.getElementById("tab-signup").className = `flex-1 py-3 rounded-lg text-xs font-black uppercase ${!isL ? 'bg-white/10' : 'text-white/30'}`;
     document.getElementById("auth-main-btn").innerText = isL ? "Enter" : "Create Account";
 };
 
@@ -113,7 +109,7 @@ document.getElementById("auth-main-btn").onclick = async () => {
     if(!u || !p) return notify("Fill fields");
     const userRef = doc(db, "users", u), snap = await getDoc(userRef);
     if (document.getElementById("tab-signup").classList.contains("bg-white/10")) {
-        if(snap.exists()) return notify("Username Taken");
+        if(snap.exists()) return notify("Taken");
         await setDoc(userRef, { password: p, isAdmin: false, username: u });
         notify("Account Created");
     } else {
@@ -127,24 +123,14 @@ document.getElementById("auth-main-btn").onclick = async () => {
 window.initGuest = () => { myUID = "Ghost_" + Math.random().toString(36).substring(7); showJoin(); };
 function showJoin() { document.getElementById("view-auth").classList.add("hidden"); document.getElementById("view-join").classList.remove("hidden"); }
 
-document.getElementById("join-btn").onclick = async () => {
-    const inputAlias = document.getElementById("alias-input").value.trim() || myUID;
+document.getElementById("join-btn").onclick = () => {
+    myAlias = document.getElementById("alias-input").value.trim() || myUID;
     currentRoom = (document.getElementById("room-input").value.trim() || "GLOBAL").toUpperCase();
-    
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myUID });
-    const tempChannel = ably.channels.get("room-" + currentRoom);
-    
-    // FIX: Added optional chaining to prevent undefined toLowerCase() error
-    tempChannel.presence.get((err, members) => {
-        if (members && members.some(m => m.data?.alias?.toLowerCase() === inputAlias.toLowerCase())) {
-            notify("Name taken in this room!");
-            ably.close();
-        } else {
-            myAlias = inputAlias;
-            document.getElementById("view-join").classList.add("hidden");
-            document.getElementById("view-chat").classList.remove("hidden");
-            initChat();
-        }
+    ably.connection.on('connected', () => {
+        document.getElementById("view-join").classList.add("hidden");
+        document.getElementById("view-chat").classList.remove("hidden");
+        initChat();
     });
 };
 
@@ -166,19 +152,19 @@ function renderMsg(data, id) {
     const div = document.createElement("div");
     if(data.type === "announce") {
         div.className = "announcement";
-        div.innerHTML = `<span class="text-[10px] font-black uppercase tracking-widest text-red-500">Announcement</span><p class="text-md font-bold mt-1.5">${data.text}</p>`;
+        div.innerHTML = `<span class="text-[9px] font-black uppercase text-red-500">System Announcement</span><p class="text-sm font-bold mt-1">${data.text}</p>`;
     } else {
         div.className = `bubble flex flex-col ${isMe ? 'mine' : 'theirs'}`;
         div.innerHTML = `
-            ${data.reply ? `<div class="text-[10px] bg-black/20 p-2 rounded-lg mb-2.5 border-l-4 border-white">@${data.reply.user}: ${data.reply.text}</div>` : ''}
-            <div class="flex items-center justify-between gap-5 mb-1">
-                <span class="text-[10px] font-black uppercase opacity-40">${data.alias}</span>
-                <div class="flex gap-3">
-                    <button class="msg-btn" onclick="setReply('${data.alias}', '${data.text}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
-                    ${isAdmin ? `<button class="msg-btn text-red-400" onclick="confirmDelete('${id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
+            ${data.reply ? `<div class="text-[9px] bg-black/20 p-2 rounded-lg mb-2 border-l-2 border-white">@${data.reply.user}: ${data.reply.text}</div>` : ''}
+            <div class="flex items-center justify-between gap-4 mb-1">
+                <span class="text-[9px] font-black uppercase opacity-40">${data.alias}</span>
+                <div class="flex gap-2">
+                    <button class="msg-btn" onclick="setReply('${data.alias}', '${data.text}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    ${isAdmin ? `<button class="msg-btn text-red-400" onclick="confirmDelete('${id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
                 </div>
             </div>
-            <div class="text-[15px] font-medium leading-relaxed">${data.text}</div>`;
+            <div class="text-[14px] font-medium leading-relaxed">${data.text}</div>`;
     }
     box.appendChild(div);
 }
@@ -189,16 +175,9 @@ document.getElementById("send-btn").onclick = sendMessage;
 async function sendMessage() {
     const input = document.getElementById("input-area"), val = input.innerText.trim();
     if(!val) return;
-    if(isAdmin) {
-        if(val === "/purge") {
-            const q = await getDocs(collection(db, "rooms", currentRoom, "messages"));
-            const batch = writeBatch(db); q.forEach(d => batch.delete(d.ref));
-            await batch.commit(); input.innerHTML = ''; return;
-        }
-        if(val.startsWith("/announce ")) {
-            await addDoc(collection(db, "rooms", currentRoom, "messages"), { type: "announce", text: val.replace("/announce ", ""), timestamp: serverTimestamp() });
-            input.innerHTML = ''; return;
-        }
+    if(isAdmin && val.startsWith("/announce ")) {
+        await addDoc(collection(db, "rooms", currentRoom, "messages"), { type: "announce", text: val.replace("/announce ", ""), timestamp: serverTimestamp() });
+        input.innerHTML = ''; return;
     }
     const msg = { alias: myAlias, uid: myUID, text: val, timestamp: serverTimestamp() };
     if(replyingTo) msg.reply = replyingTo;
@@ -208,13 +187,13 @@ async function sendMessage() {
 
 function updateUsers() {
     channel.presence.get((err, m) => {
-        if(!err) document.getElementById("users-list").innerHTML = m.map(u => `<div class="bg-white/5 p-3.5 rounded-2xl flex items-center justify-between"><span class="text-xs font-bold">${u.data?.alias || 'Unknown'}</span></div>`).join("");
+        if(!err) document.getElementById("users-list").innerHTML = m.map(u => `<div class="bg-white/5 p-3 rounded-xl"><span class="text-xs font-bold">${u.data?.alias || '...'}</span></div>`).join("");
     });
 }
 
 window.confirmDelete = (id) => {
     const t = document.createElement("div"); t.className = "toast bg-red-600";
-    t.innerText = "CONFIRM DELETE? (CLICK)";
+    t.innerText = "CONFIRM DELETE?";
     t.onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); t.remove(); };
     document.getElementById("notification-container").appendChild(t);
     setTimeout(() => t.remove(), 4000);
@@ -228,7 +207,7 @@ window.notify = (m) => { const t = document.createElement("div"); t.className = 
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = res; res();
-let snow = Array.from({length: 80}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2.5, d: Math.random()*1.1+0.5 }));
+let snow = Array.from({length: 80}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2, d: Math.random()*1+0.5 }));
 function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.7)";
     snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); });

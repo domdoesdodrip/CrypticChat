@@ -3,80 +3,89 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>CrypticChat | Elite</title>
+    <title>Cryptic | Secure Messaging</title>
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #030205; --accent: #9667f4; --glass: rgba(10, 8, 15, 0.98); }
+        :root { --bg: #030205; --accent: #9667f4; --glass: rgba(12, 10, 18, 0.98); }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
-        .glass { background: var(--glass); backdrop-filter: blur(30px); border: 1px solid rgba(150, 103, 244, 0.2); }
         
-        /* Messages */
-        .bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; margin-bottom: 4px; position: relative; }
-        .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
-        .theirs { background: #1a1825; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .announcement { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; width: 100%; text-align: center; border-radius: 12px; margin: 10px 0; }
+        .glass { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
-        /* Controls */
-        .vc-on { background: #22c55e !important; color: white !important; }
-        .deafen-on { color: #f59e0b !important; border-color: #f59e0b !important; }
-        .mute-on { color: #ef4444 !important; border-color: #ef4444 !important; }
-        .speaking-pulse { box-shadow: 0 0 0 2px #22c55e; animation: pulse 0.6s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0.7); } 100% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } }
+        /* Message Bubbles */
+        .bubble { max-width: 80%; padding: 12px 16px; border-radius: 20px; margin-bottom: 8px; position: relative; animation: slideUp 0.3s ease-out; }
+        .mine { background: linear-gradient(135deg, #9667f4, #7c4dff); align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(150, 103, 244, 0.3); }
+        .theirs { background: #1a1825; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
-        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; }
-        .toast { background: #9667f4; color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; font-size: 12px; margin-bottom: 8px; cursor: pointer; }
+        .reply-node { font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 10px; margin-bottom: 6px; border-left: 3px solid #fff; opacity: 0.7; }
+        
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #input-area { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 14px; border-radius: 16px; width: 100%; max-height: 120px; overflow-y: auto; transition: border 0.2s; }
+        #input-area:focus { border-color: var(--accent); }
+        
+        .toast { background: var(--accent); color: white; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 12px; margin-bottom: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .admin-tag { background: #ef4444; color: white; font-size: 8px; padding: 1px 5px; border-radius: 4px; font-weight: 900; text-transform: uppercase; margin-left: 6px; }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
-<div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
-<div id="remote-audios" class="hidden"></div>
+<div id="notification-container" class="fixed top-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
 
 <div id="app-root">
-    <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
-            <h1 class="text-4xl font-black mb-8 uppercase tracking-tighter">Cryptic</h1>
-            <div class="flex bg-white/5 p-1 rounded-xl mb-6">
-                <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase bg-white/10">Login</button>
-                <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase text-white/40">Sign Up</button>
+    <div id="view-auth" class="flex-1 flex items-center justify-center p-6">
+        <div class="glass w-full max-w-sm p-10 rounded-[3rem] text-center shadow-2xl">
+            <h1 class="text-5xl font-black mb-10 tracking-tighter uppercase italic bg-gradient-to-b from-white to-purple-500 bg-clip-text text-transparent">Cryptic</h1>
+            
+            <div class="flex bg-white/5 p-1 rounded-2xl mb-6">
+                <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all bg-white/10">Login</button>
+                <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all text-white/30">Sign Up</button>
             </div>
-            <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Username">
-            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Password">
-            <button id="auth-main-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase text-xs">Enter</button>
+
+            <div class="space-y-4 mb-8">
+                <input id="auth-user" type="text" class="w-full p-4 bg-white/5 rounded-2xl outline-none border border-transparent focus:border-purple-500/50 transition-all" placeholder="Username">
+                <input id="auth-pass" type="password" class="w-full p-4 bg-white/5 rounded-2xl outline-none border border-transparent focus:border-purple-500/50 transition-all" placeholder="Password">
+            </div>
+            
+            <button id="auth-main-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-purple-500 transition-all">Establish Link</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
-        <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40">
-            <div class="flex items-center gap-3">
-                <button onclick="window.location.reload()" class="text-white/40">←</button>
-                <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs"></div>
-                <div id="admin-indicator" class="hidden px-2 py-0.5 bg-red-600 text-[8px] font-black rounded uppercase">Admin</div>
+        <header class="glass h-20 flex items-center justify-between px-6 shrink-0 z-50">
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.reload()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10">←</button>
+                <div>
+                    <div id="roomLabel" class="font-black text-purple-400 uppercase text-xs tracking-tighter">Connecting...</div>
+                    <div id="user-status" class="text-[10px] text-white/40 font-bold uppercase">System Online</div>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button id="deafen-btn" class="hidden border border-white/10 p-2 rounded-xl">Deafen</button>
-                <button id="mute-btn" class="hidden border border-white/10 p-2 rounded-xl">Mute</button>
-                <button id="vc-btn" class="bg-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Join VC</button>
-            </div>
+            <div id="admin-header-tag" class="hidden px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 text-[9px] font-black rounded-full uppercase">Terminal Admin</div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto"><div id="users-list" class="space-y-2"></div></aside>
-            <main class="flex-1 flex flex-col relative">
-                <div id="messages" class="flex-1 p-4 pb-32 flex flex-col overflow-y-auto"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/90">
-                    <div id="reply-bar" class="hidden flex justify-between bg-white/5 p-2 rounded-t-xl text-[10px]">
-                        <span id="reply-text"></span>
-                        <button onclick="cancelReply()">✕</button>
+            <aside class="hidden lg:flex flex-col w-72 glass p-6 overflow-y-auto border-r border-white/5">
+                <h2 class="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-6">Active Identities</h2>
+                <div id="users-list" class="space-y-3"></div>
+            </aside>
+
+            <main class="flex-1 flex flex-col relative bg-black/20">
+                <div id="messages" class="flex-1 p-6 pb-36 flex flex-col overflow-y-auto"></div>
+                
+                <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl">
+                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-900/40 backdrop-blur-md p-3 rounded-t-2xl border-x border-t border-purple-500/30">
+                        <span id="reply-text" class="text-[10px] font-bold truncate pr-4"></span>
+                        <button onclick="cancelReply()" class="text-white/40 hover:text-white">✕</button>
                     </div>
-                    <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <div id="input" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 p-3.5 rounded-xl">Send</button>
+                    <div class="glass p-3 rounded-2xl flex items-center gap-3 shadow-2xl">
+                        <div id="input-area" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
+                        <button id="send-btn" class="bg-purple-600 h-12 w-14 rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        </button>
                     </div>
                 </div>
             </main>
@@ -88,175 +97,180 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy, limit, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
+const firebaseConfig = { 
+    apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", 
+    authDomain: "crypticchat-2265e.firebaseapp.com", 
+    projectId: "crypticchat-2265e", 
+    storageBucket: "crypticchat-2265e.firebasestorage.app", 
+    messagingSenderId: "684175124793", 
+    appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" 
+};
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myDisplayName, currentRoom = '', isAdmin = false;
-let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
+let ably, channel, myUID, isAdmin = false, currentRoom = "GLOBAL";
 let replyingTo = null;
 
-// Clean Disconnect on Close
-window.onbeforeunload = () => { if(channel) channel.presence.leave(); };
-
-// --- AUTH & LOGIN ---
-window.toggleAuth = (l) => {
-    document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase ${l?'bg-white/10':'text-white/40'}`;
-    document.getElementById("tab-signup").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase ${!l?'bg-white/10':'text-white/40'}`;
+// --- AUTH LOGIC ---
+window.toggleAuth = (isLogin) => {
+    document.getElementById("tab-login").className = `flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${isLogin ? 'bg-white/10' : 'text-white/30'}`;
+    document.getElementById("tab-signup").className = `flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${!isLogin ? 'bg-white/10' : 'text-white/30'}`;
 };
 
 document.getElementById("auth-main-btn").onclick = async () => {
-    const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
-    const snap = await getDoc(doc(db, "users", u));
-    if(snap.exists() && snap.data().password === p) {
+    const u = document.getElementById("auth-user").value.trim().toLowerCase();
+    const p = document.getElementById("auth-pass").value;
+    if(!u || !p) return notify("Fields required");
+
+    const userRef = doc(db, "users", u);
+    const snap = await getDoc(userRef);
+
+    if (document.getElementById("tab-signup").classList.contains("bg-white/10")) {
+        if(snap.exists()) return notify("Identity already exists");
+        await setDoc(userRef, { password: p, isAdmin: false });
+        notify("Identity Registered");
+    } else {
+        if(!snap.exists() || snap.data().password !== p) return notify("Access Denied");
         isAdmin = snap.data().isAdmin || false;
-        if(isAdmin) document.getElementById("admin-indicator").classList.remove("hidden");
-        initAbly(u);
-    } else notify("Access Denied");
+    }
+    
+    myUID = u;
+    if(isAdmin) document.getElementById("admin-header-tag").classList.remove("hidden");
+    startSession();
 };
 
-function initAbly(cid) {
-    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: cid });
+function startSession() {
+    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myUID });
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-chat").classList.remove("hidden");
-        myDisplayName = cid; // Simplified for flow
-        currentRoom = "GLOBAL";
-        enterChat();
+        initChat();
     });
 }
 
-async function enterChat() {
+async function initChat() {
     document.getElementById("roomLabel").innerText = currentRoom;
     channel = ably.channels.get("room-" + currentRoom);
-    await channel.attach();
     
-    // Kick Listener
-    channel.subscribe("kick-event", (msg) => {
-        if(msg.data.target === myDisplayName) {
-            alert("You have been kicked by an administrator.");
+    // Presence
+    await channel.presence.enter({ user: myUID });
+    channel.presence.subscribe(() => updateUsers());
+    updateUsers();
+
+    // Kick/Global Events
+    channel.subscribe("system-event", (msg) => {
+        if(msg.data.type === "kick" && msg.data.target === myUID) {
+            alert("Disconnected: Kicked by Admin");
             window.location.reload();
         }
     });
 
-    channel.presence.enter({ user: myDisplayName, inCall: false });
-    channel.presence.subscribe(() => updateUsers());
-
-    onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50)), (s) => {
-        const box = document.getElementById("messages"); box.innerHTML = '';
+    // Firestore Sync
+    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(70));
+    onSnapshot(q, (s) => {
+        const box = document.getElementById("messages");
+        box.innerHTML = '';
         s.forEach(d => renderMsg(d.data(), d.id));
         box.scrollTop = box.scrollHeight;
     });
 }
 
-// --- VC LOGIC (FIXED) ---
-document.getElementById("vc-btn").onclick = async () => {
-    if(!isVoiceActive) {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        isVoiceActive = true;
-        document.getElementById("vc-btn").classList.add("vc-on");
-        document.getElementById("mute-btn").classList.remove("hidden");
-        document.getElementById("deafen-btn").classList.remove("hidden");
-        channel.presence.update({ user: myDisplayName, inCall: true });
-    } else stopVC();
-};
-
-document.getElementById("deafen-btn").onclick = () => {
-    isDeafened = !isDeafened;
-    document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
-    document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
-};
-
-document.getElementById("mute-btn").onclick = () => {
-    isMuted = !isMuted;
-    if(localStream) localStream.getAudioTracks()[0].enabled = !isMuted;
-    document.getElementById("mute-btn").classList.toggle("mute-on", isMuted);
-};
-
-function stopVC() {
-    isVoiceActive = false;
-    if(localStream) localStream.getTracks().forEach(t => t.stop());
-    document.getElementById("vc-btn").classList.remove("vc-on");
-    document.getElementById("mute-btn").classList.add("hidden");
-    document.getElementById("deafen-btn").classList.add("hidden");
-    channel.presence.update({ user: myDisplayName, inCall: false });
+// --- MESSAGING ---
+function renderMsg(data, id) {
+    const box = document.getElementById("messages");
+    const isMe = data.user === myUID;
+    const div = document.createElement("div");
+    div.className = `bubble flex flex-col ${isMe ? 'mine' : 'theirs'}`;
+    
+    let content = '';
+    if(data.reply) content += `<div class="reply-node">@${data.reply.user}: ${data.reply.text}</div>`;
+    
+    content += `
+        <div class="flex items-center justify-between gap-6 mb-1">
+            <span class="text-[9px] font-black uppercase opacity-60">${data.user}</span>
+            <div class="flex gap-2 opacity-0 hover:opacity-100 transition-opacity">
+                <button onclick="setReply('${data.user}', '${data.text}')" class="text-[8px] font-black">REPLY</button>
+                ${isAdmin ? `<button onclick="deleteMsg('${id}')" class="text-[8px] font-black text-red-400">DEL</button>` : ''}
+            </div>
+        </div>
+        <div class="text-sm font-medium leading-relaxed">${data.text}</div>
+    `;
+    
+    div.innerHTML = content;
+    box.appendChild(div);
 }
 
-// --- ADMIN COMMANDS & MESSAGING ---
-document.getElementById("send-btn").onclick = async () => {
-    const i = document.getElementById("input");
-    const val = i.innerText.trim();
+document.getElementById("input-area").onkeydown = (e) => {
+    if(e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+};
+
+document.getElementById("send-btn").onclick = sendMessage;
+
+async function sendMessage() {
+    const input = document.getElementById("input-area");
+    const val = input.innerText.trim();
     if(!val) return;
 
-    if(isAdmin && val.startsWith("/")) {
+    // Admin Commands
+    if(isAdmin) {
         if(val === "/purge") {
             const q = await getDocs(collection(db, "rooms", currentRoom, "messages"));
             const batch = writeBatch(db);
             q.forEach(d => batch.delete(d.ref));
             await batch.commit();
-            i.innerHTML = "";
+            input.innerHTML = '';
             return;
         }
         if(val.startsWith("/announce ")) {
-            await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: "SYSTEM", text: val.replace("/announce ", ""), type: "announcement", timestamp: serverTimestamp() });
-            i.innerHTML = "";
+            await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
+                user: "SYSTEM", text: val.replace("/announce ", "").toUpperCase(), 
+                timestamp: serverTimestamp() 
+            });
+            input.innerHTML = '';
             return;
         }
     }
 
-    const msg = { user: myDisplayName, text: val, timestamp: serverTimestamp() };
-    if(replyingTo) msg.replyTo = replyingTo;
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), msg);
-    i.innerHTML = ""; cancelReply();
-};
+    const payload = { user: myUID, text: val, timestamp: serverTimestamp() };
+    if(replyingTo) payload.reply = replyingTo;
 
-function renderMsg(data, id) {
-    const box = document.getElementById("messages"), d = document.createElement("div");
-    if(data.type === "announcement") {
-        d.className = "announcement p-3 text-xs font-black uppercase";
-        d.innerHTML = `⚠️ ${data.text}`;
-    } else {
-        const me = data.user === myDisplayName;
-        d.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-        d.innerHTML = `
-            ${data.replyTo ? `<div class="text-[9px] opacity-50 italic">Replying to ${data.replyTo.user}</div>` : ''}
-            <div class="text-[9px] font-black uppercase flex justify-between items-center gap-4">
-                ${data.user}
-                <div class="flex gap-2">
-                    <button onclick="setReply('${data.user}', '${data.text}')" class="hover:text-white">REPLY</button>
-                    ${isAdmin ? `<button onclick="deleteMsg('${id}')" class="text-red-400">DEL</button>` : ''}
-                </div>
-            </div>
-            <span class="text-sm mt-1">${data.text}</span>`;
-    }
-    box.appendChild(d);
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), payload);
+    input.innerHTML = '';
+    cancelReply();
 }
 
-window.deleteMsg = async (id) => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); };
-window.setReply = (u, t) => { replyingTo = {user:u, text:t}; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-text").innerText = "Replying to " + u; };
-window.cancelReply = () => { replyingTo = null; document.getElementById("reply-bar").classList.add("hidden"); };
-
-// --- USERS & KICK ---
+// --- UTILS ---
 function updateUsers() {
-    channel.presence.get((err, m) => {
-        if(!m) return;
-        document.getElementById("users-list").innerHTML = m.map(u => `
-            <div class="bg-white/5 p-3 rounded-xl flex items-center justify-between border border-white/5 ${u.data.inCall?'speaking-pulse':''}">
-                <div class="flex items-center gap-2">
-                    <div class="w-1.5 h-1.5 rounded-full ${u.data.inCall?'bg-green-500':'bg-white/20'}"></div>
-                    <span class="text-[10px] font-bold uppercase truncate">${u.data.user}</span>
+    channel.presence.get((err, members) => {
+        if(err) return;
+        document.getElementById("users-list").innerHTML = members.map(m => `
+            <div class="bg-white/5 p-4 rounded-2xl flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                    <span class="text-xs font-bold uppercase tracking-wider">${m.clientId}</span>
                 </div>
-                <div class="flex gap-1">
-                    ${u.data.inCall ? '<span class="text-[8px] text-green-400 font-black">VC</span>' : ''}
-                    ${isAdmin && u.clientId !== myDisplayName ? `<button onclick="confirmKick('${u.clientId}')" class="text-[8px] bg-red-500/20 px-1 rounded text-red-500">KICK</button>` : ''}
-                </div>
-            </div>`).join("");
+                ${isAdmin && m.clientId !== myUID ? `<button onclick="kickUser('${m.clientId}')" class="hidden group-hover:block text-[8px] font-black text-red-500">KICK</button>` : ''}
+            </div>
+        `).join("");
     });
 }
 
-window.confirmKick = (target) => {
+window.setReply = (u, t) => {
+    replyingTo = { user: u, text: t };
+    document.getElementById("reply-bar").classList.remove("hidden");
+    document.getElementById("reply-text").innerText = `Replying to @${u}: ${t}`;
+};
+
+window.cancelReply = () => { replyingTo = null; document.getElementById("reply-bar").classList.add("hidden"); };
+
+window.deleteMsg = async (id) => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); };
+
+window.kickUser = (target) => {
     const t = document.createElement("div"); t.className = "toast";
-    t.innerHTML = `KICK ${target}? (Click to Confirm)`;
-    t.onclick = () => { channel.publish("kick-event", { target }); t.remove(); };
+    t.innerText = `CONFIRM KICK: ${target}`;
+    t.onclick = () => { channel.publish("system-event", { type: "kick", target }); t.remove(); };
     document.getElementById("notification-container").appendChild(t);
     setTimeout(() => t.remove(), 4000);
 };
@@ -267,13 +281,13 @@ window.notify = (m) => {
     setTimeout(() => t.remove(), 3000);
 };
 
-// SNOW (Heavy)
+// SNOW (Heavy Blizzard)
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
-let snow = Array.from({length: 100}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*3+1, d: Math.random()*1.5+0.5 }));
+let snow = Array.from({length: 120}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2.5+1, d: Math.random()*1.2+0.5 }));
 function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.7)";
     snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); });
     requestAnimationFrame(draw);
 }

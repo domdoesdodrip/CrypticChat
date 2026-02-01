@@ -13,7 +13,6 @@
         
         /* LAYERS */
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-        #disco-layer { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 0.5s; mix-blend-mode: overlay; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
 
         /* COMPONENTS */
@@ -31,14 +30,7 @@
         .deafen-on { color: #f59e0b !important; background: rgba(245, 158, 11, 0.1); }
         .speaking-pulse { box-shadow: 0 0 0 2px #22c55e; animation: pulse 1s infinite; }
         
-        /* ANIMATIONS */
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        @keyframes disco-flash { 
-            0% { background: rgba(255,0,0,0.4); } 20% { background: rgba(255,255,0,0.4); } 
-            40% { background: rgba(0,255,0,0.4); } 60% { background: rgba(0,255,255,0.4); } 
-            80% { background: rgba(0,0,255,0.4); } 100% { background: rgba(255,0,255,0.4); } 
-        }
-        .disco-active { animation: disco-flash 0.5s infinite; opacity: 1 !important; }
 
         .toast { background: #1e1b29; border: 1px solid #9667f4; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; margin-bottom: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -52,24 +44,17 @@
 <body>
 
 <canvas id="snow-canvas"></canvas>
-<div id="disco-layer"></div>
 <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center pointer-events-none"></div>
 <div id="remote-audios" class="hidden"></div>
 
 <div id="admin-panel" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
     <div class="glass w-96 p-6 rounded-3xl relative mx-4">
         <button onclick="toggleAdminPanel()" class="absolute top-4 right-4 text-white/50 hover:text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-        <h2 class="text-xl font-black uppercase text-purple-400 mb-6 flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-            Admin Tools
-        </h2>
+        <h2 class="text-xl font-black uppercase text-purple-400 mb-6">Admin Tools</h2>
         <div class="grid grid-cols-2 gap-3">
             <button onclick="adminAction('purge')" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-4 rounded-xl font-bold uppercase text-xs border border-red-500/20 transition-all">Purge Chat</button>
-            <button onclick="adminAction('disco')" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-4 rounded-xl font-bold uppercase text-xs border border-purple-500/20 transition-all">Disco Mode</button>
             <input id="kick-target" placeholder="User to Kick" class="col-span-1 bg-white/5 p-3 rounded-xl text-xs outline-none border border-white/10">
-            <button onclick="adminAction('kick')" class="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 p-3 rounded-xl font-bold uppercase text-xs border border-orange-500/20">Kick User</button>
-            <input id="announce-text" placeholder="System Announcement" class="col-span-2 bg-white/5 p-3 rounded-xl text-xs outline-none border border-white/10">
-            <button onclick="adminAction('announce')" class="col-span-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 p-3 rounded-xl font-bold uppercase text-xs border border-blue-500/20">Broadcast</button>
+            <button onclick="adminAction('kick')" class="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 p-3 rounded-xl font-bold uppercase text-xs border border-orange-500/20">Kick</button>
         </div>
     </div>
 </div>
@@ -79,8 +64,8 @@
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
             
-            <h1 id="auth-title" class="text-4xl font-black mb-2 tracking-tighter uppercase text-white">CrypticChat</h1>
-            <p id="auth-subtitle" class="text-xs font-bold text-purple-400 mb-8 uppercase tracking-widest">Secure Channels</p>
+            <h1 class="text-4xl font-black mb-2 tracking-tighter uppercase text-white">CrypticChat</h1>
+            <p class="text-xs font-bold text-purple-400 mb-8 uppercase tracking-widest">Secure Channels</p>
             
             <div class="flex bg-white/5 p-1 rounded-xl mb-6">
                 <button onclick="toggleAuthMode(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white/10 text-white">Login</button>
@@ -97,21 +82,17 @@
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
-            <div class="mb-8">
-                <div class="w-16 h-16 bg-purple-600 mx-auto rounded-2xl flex items-center justify-center mb-4 text-2xl">⚡</div>
-                <h1 class="text-3xl font-black uppercase tracking-tighter">Connection</h1>
-            </div>
+            <h1 class="text-3xl font-black uppercase tracking-tighter mb-8">Connection</h1>
             <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-sm font-bold" placeholder="Alias">
             <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-sm font-bold" placeholder="Room ID (e.g. LOBBY)">
             <button id="join-room-btn" class="w-full bg-white text-black hover:bg-gray-200 py-5 rounded-2xl font-extrabold text-xs uppercase tracking-wider transition-all">Establish Link</button>
-            <button onclick="logout()" class="mt-6 text-[10px] text-red-400 uppercase font-bold tracking-widest hover:text-red-300">Disconnect User</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40 relative">
             <div class="flex items-center gap-3 overflow-hidden">
-                <button onclick="leaveRoom()" class="text-white/30 hover:text-white transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                <button onclick="location.reload()" class="text-white/30 hover:text-white transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
                 <div class="min-w-0">
                     <div id="roomLabel" class="font-black text-white uppercase text-sm tracking-tight leading-none truncate"></div>
                 </div>
@@ -150,6 +131,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// YOUR FIREBASE CONFIG
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
@@ -157,31 +139,6 @@ let ably, channel, myDisplayName, currentRoom = '', isGuest = false, isAdmin = f
 let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
 let unreadCount = 0, isFocused = true, isSignUp = false;
 const notifSound = new Audio("https://files.catbox.moe/8tz2o5.mp3");
-
-// --- INITIALIZATION & PERSISTENCE ---
-
-document.addEventListener("DOMContentLoaded", async () => {
-    // Hide Admin panel by default just in case
-    document.getElementById("admin-btn").classList.add("hidden");
-
-    const savedUser = localStorage.getItem("cc_user");
-    const savedRoom = localStorage.getItem("cc_room");
-    
-    if (savedUser) {
-        try {
-            const u = JSON.parse(savedUser);
-            // Verify against DB to ensure they are still valid and check Admin status
-            const snap = await getDoc(doc(db, "users", u.name));
-            if (snap.exists() && snap.data().password === u.pass) {
-                isAdmin = snap.data().isAdmin === true;
-                if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
-                initAbly(u.name, savedRoom);
-                return;
-            }
-        } catch(e) { console.error("Auto-login failed", e); }
-    }
-    document.getElementById("view-auth").classList.remove("hidden");
-});
 
 // --- AUTH LOGIC ---
 
@@ -204,23 +161,21 @@ document.getElementById("auth-main-btn").onclick = async () => {
 
         if (isSignUp) {
             if (snap.exists()) return notify("Identity already claimed");
-            await setDoc(userRef, { password: p, isAdmin: false, created: serverTimestamp() });
+            await setDoc(userRef, { password: p, isAdmin: false });
             notify("Identity Created. Logging in...");
             isAdmin = false;
         } else {
             if (!snap.exists()) return notify("User not found");
             if (snap.data().password !== p) return notify("Invalid Credentials");
             
-            // CORRECTLY SET ADMIN STATUS
+            // CHECK ADMIN STATUS
             isAdmin = snap.data().isAdmin === true;
             if(isAdmin) {
-                notify("Welcome back, Operator.");
+                notify("Operator Access Granted.");
                 document.getElementById("admin-btn").classList.remove("hidden");
             }
         }
-
-        localStorage.setItem("cc_user", JSON.stringify({name: u, pass: p}));
-        initAbly(u, null);
+        initAbly(u, null); // Pass username as ClientID
     } catch(e) {
         notify("Connection Error: " + e.message);
     }
@@ -229,62 +184,31 @@ document.getElementById("auth-main-btn").onclick = async () => {
 window.initGuest = () => {
     isGuest = true;
     isAdmin = false;
-    // Generate a unique Client ID for Guests so Ably Presence works correctly
     const guestId = "Ghost-" + Math.floor(Math.random()*10000);
     myDisplayName = guestId;
-    
-    document.getElementById("view-auth").classList.add("hidden");
-    document.getElementById("view-join").classList.remove("hidden");
-    document.getElementById("admin-btn").classList.add("hidden"); // Ensure hidden
-    
-    // Initialize Ably with the guest ID as client
     initAbly(guestId, null);
 };
 
-function initAbly(clientId, autoRoom) {
-    // We must pass clientId to Ably for Presence to work reliably
+function initAbly(clientId, token) {
+    // USING DEMO KEY SO IT WORKS WITHOUT BACKEND
     ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: clientId });
     
     ably.connection.on('connected', () => {
         document.getElementById("view-auth").classList.add("hidden");
         document.getElementById("view-join").classList.remove("hidden");
-        if(autoRoom) {
-            document.getElementById("room-id").value = autoRoom;
-            if(!isGuest) document.getElementById("display-name").value = clientId;
-            enterChat();
-        }
+        if(isGuest) document.getElementById("display-name").value = clientId;
     });
-}
-
-window.logout = () => {
-    localStorage.removeItem("cc_user");
-    localStorage.removeItem("cc_room");
-    location.reload();
 }
 
 // --- ROOM LOGIC ---
 
 document.getElementById("join-room-btn").onclick = enterChat;
-window.leaveRoom = () => {
-    localStorage.removeItem("cc_room");
-    location.reload();
-}
 
 function enterChat() {
     const aliasInput = document.getElementById("display-name").value.trim();
+    if(!isGuest) myDisplayName = aliasInput || "Phantom";
     
-    // If not guest, use input alias, otherwise use the generated Ghost ID
-    if(!isGuest) {
-        myDisplayName = aliasInput || "Phantom";
-    } 
-    // If guest, keep the generated ID (so we don't break Ably clientId match) but append " (GUEST)" for display if you want, 
-    // BUT for Ably presence to match, it's safer to keep the user string matching the clientID or handle it carefully.
-    // simpler:
-    if(isGuest) myDisplayName = ably.auth.clientId + " (GUEST)";
-
     currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
-    
-    localStorage.setItem("cc_room", currentRoom);
 
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
@@ -306,7 +230,6 @@ function enterChat() {
             renderMsg(m.user, m.text, m.user === myDisplayName, m.type);
         });
         box.scrollTop = box.scrollHeight;
-        if (!isFocused) { unreadCount++; notifSound.play(); document.title = `(${unreadCount}) CrypticChat`; }
     });
 
     // --- SIGNALS (VC & ADMIN) ---
@@ -315,33 +238,18 @@ function enterChat() {
         if (d.target && d.target !== myDisplayName) return; 
 
         // ADMIN SIGNALS
-        if (d.type === "kick") {
-            alert("You have been kicked by an Admin.");
-            logout();
-        }
-        if (d.type === "disco") {
-            const l = document.getElementById("disco-layer");
-            l.classList.add("disco-active");
-            notify("🕺 DISCO PROTOCOL INITIATED 🕺");
-            setTimeout(() => l.classList.remove("disco-active"), 15000);
-        }
-        if (d.type === "announce") {
-            notify("📢 SYSTEM: " + d.text);
-            renderMsg("SYSTEM", d.text, false, "system");
-        }
+        if (d.type === "kick") { alert("You have been kicked."); location.reload(); }
+        if (d.type === "announce") { notify("📢 SYSTEM: " + d.text); renderMsg("SYSTEM", d.text, false, "system"); }
 
         // VC SIGNALS
         if (isGuest || !isVoiceActive) return;
         if (d.from === myDisplayName) return;
 
-        if (d.type === "join-call") {
-            initiatePeer(d.from, true);
-        }
+        if (d.type === "join-call") initiatePeer(d.from, true);
         if (d.type === "offer") {
             const pc = initiatePeer(d.from, false);
             await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
-            const ans = await pc.createAnswer();
-            await pc.setLocalDescription(ans);
+            const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
             channel.publish("signal", { type: "answer", answer: ans, target: d.from, from: myDisplayName });
         }
         if (d.type === "answer") await peers[d.from].setRemoteDescription(new RTCSessionDescription(d.answer));
@@ -349,84 +257,53 @@ function enterChat() {
     });
 }
 
-// --- ADMIN PANEL ---
-
+// --- ADMIN ---
 window.toggleAdminPanel = () => {
-    if(!isAdmin) return; // Double security check
-    const p = document.getElementById("admin-panel");
-    p.classList.toggle("hidden");
+    if(!isAdmin) return;
+    document.getElementById("admin-panel").classList.toggle("hidden");
 };
-
 window.adminAction = async (act) => {
     if (!isAdmin) return;
     const kickUser = document.getElementById("kick-target").value;
-    const announceText = document.getElementById("announce-text").value;
-
-    switch(act) {
-        case "purge":
-            if(!confirm("Delete last 50 messages?")) return;
-            const q = query(collection(db, "rooms", currentRoom, "messages"), limit(50));
-            const snap = await getDocs(q);
-            const batch = writeBatch(db);
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            notify("Purge Complete");
-            break;
-        case "kick":
-            if(!kickUser) return notify("Enter user to kick");
-            channel.publish("signal", { type: "kick", target: kickUser });
-            notify(`Kicked ${kickUser}`);
-            break;
-        case "disco":
-            channel.publish("signal", { type: "disco" });
-            break;
-        case "announce":
-            if(!announceText) return;
-            channel.publish("signal", { type: "announce", text: announceText });
-            document.getElementById("announce-text").value = "";
-            break;
+    if (act === "purge") {
+        if(!confirm("Purge?")) return;
+        const q = query(collection(db, "rooms", currentRoom, "messages"), limit(50));
+        const snap = await getDocs(q); const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref)); await batch.commit();
+        notify("Purged.");
     }
+    if (act === "kick") channel.publish("signal", { type: "kick", target: kickUser });
 };
 
 // --- VC LOGIC ---
-
 document.getElementById("vc-btn").onclick = async () => {
     if (isDeafened) return notify("Cannot join while deafened");
     if (!isVoiceActive) {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             isVoiceActive = true;
-            
-            const btn = document.getElementById("vc-btn");
-            btn.classList.add("vc-on");
-            btn.innerHTML = `<span class="text-[9px] font-black uppercase">Leave</span>`;
+            document.getElementById("vc-btn").classList.add("vc-on");
+            document.getElementById("vc-btn").innerHTML = `<span class="text-[9px] font-black uppercase">Leave</span>`;
             document.getElementById("mute-btn").classList.remove("hidden");
             document.getElementById("deafen-btn").classList.remove("hidden");
-            
             channel.presence.update({ user: myDisplayName, inCall: true, isAdmin: isAdmin });
             channel.publish("signal", { type: "join-call", from: myDisplayName });
             setupVisualizer();
-        } catch (e) { console.error(e); notify("Microphone Access Denied"); }
+        } catch (e) { notify("Microphone Denied"); }
     } else stopVC();
 };
 
 function initiatePeer(target, initiator) {
     if(peers[target]) return peers[target];
-    
     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
     peers[target] = pc;
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
     pc.ontrack = (e) => {
         let el = document.getElementById(`aud-${target}`);
         if (!el) { el = document.createElement('audio'); el.id = `aud-${target}`; el.autoplay = true; document.getElementById("remote-audios").appendChild(el); }
         el.srcObject = e.streams[0]; el.muted = isDeafened;
     };
-
-    pc.onicecandidate = (e) => { 
-        if (e.candidate) channel.publish("signal", { type: "ice", candidate: e.candidate, target: target, from: myDisplayName }); 
-    };
-
+    pc.onicecandidate = (e) => { if (e.candidate) channel.publish("signal", { type: "ice", candidate: e.candidate, target: target, from: myDisplayName }); };
     if (initiator) {
         pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => {
             channel.publish("signal", { type: "offer", offer: pc.localDescription, target: target, from: myDisplayName });
@@ -439,11 +316,8 @@ function stopVC() {
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     Object.values(peers).forEach(p => p.close());
     peers = {}; isVoiceActive = false;
-    
-    const btn = document.getElementById("vc-btn");
-    btn.classList.remove("vc-on");
-    btn.innerHTML = `<span class="text-[9px] font-black uppercase">Join VC</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
-    
+    document.getElementById("vc-btn").classList.remove("vc-on");
+    document.getElementById("vc-btn").innerHTML = `<span class="text-[9px] font-black uppercase">Join VC</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
     document.getElementById("mute-btn").classList.add("hidden");
     document.getElementById("deafen-btn").classList.add("hidden");
     channel.presence.update({ user: myDisplayName, inCall: false, isSpeaking: false, isAdmin: isAdmin });
@@ -459,49 +333,33 @@ function setupVisualizer() {
     const check = () => {
         if(!isVoiceActive) return;
         analyzer.getByteFrequencyData(data);
-        const volume = data.reduce((a,b) => a+b) / data.length;
-        const speaking = volume > 20 && !isMuted;
+        const speaking = (data.reduce((a,b) => a+b) / data.length) > 20 && !isMuted;
         channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: speaking, isAdmin: isAdmin });
         requestAnimationFrame(check);
     };
     check();
 }
 
-// --- UTILS & UI UPDATE ---
-
-document.getElementById("mute-btn").onclick = () => { 
-    isMuted = !isMuted; 
-    localStream.getAudioTracks()[0].enabled = !isMuted; 
-    document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); 
-};
-
+// --- UTILS ---
+document.getElementById("mute-btn").onclick = () => { isMuted = !isMuted; localStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); };
 document.getElementById("deafen-btn").onclick = () => {
     isDeafened = !isDeafened;
     document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
     document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
-    if(isDeafened && isVoiceActive && !isMuted) { document.getElementById("mute-btn").click(); } 
 };
 
 function updateUsers() {
     channel.presence.get((err, members) => {
         if(!members) return;
         document.getElementById("users-list").innerHTML = members.map(m => {
-            const d = m.data || {}; // Safety check for empty data
-            const inVcStyle = d.inCall ? 'text-green-400 font-bold' : 'text-white/40';
-            const vcBadge = d.inCall ? '<span class="text-[8px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded ml-2">IN VC</span>' : '';
+            const d = m.data || {};
             const adminBadge = d.isAdmin ? '<span class="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded ml-1">OP</span>' : '';
-            // Determine name safely
-            const uName = d.user || m.clientId || "Unknown";
-
             return `
             <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${d.isSpeaking ? 'speaking-pulse' : ''}">
-                <div class="w-2 h-2 rounded-full ${d.inCall ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-white/20'}"></div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center">
-                        <span class="text-[11px] uppercase truncate ${inVcStyle}">${uName}</span>
-                        ${adminBadge}
-                    </div>
-                    ${vcBadge}
+                <div class="w-2 h-2 rounded-full ${d.inCall ? 'bg-green-500' : 'bg-white/20'}"></div>
+                <div class="flex-1 min-w-0 flex items-center">
+                    <span class="text-[11px] uppercase truncate ${d.inCall ? 'text-green-400' : 'text-white/40'}">${d.user || m.clientId}</span>
+                    ${adminBadge}
                 </div>
             </div>`
         }).join("");
@@ -511,24 +369,18 @@ function updateUsers() {
 function renderMsg(u, t, me, type) {
     const box = document.getElementById("messages");
     const div = document.createElement("div");
-    
     if (type === "system") {
-        div.className = "system-msg text-yellow-400 border border-yellow-500/30";
-        div.innerText = t;
+        div.className = "system-msg text-yellow-400 border border-yellow-500/30"; div.innerText = t;
     } else {
         div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-        const nameColor = me ? 'text-white/50' : 'text-purple-300';
-        div.innerHTML = `<div class="text-[9px] ${nameColor} font-bold uppercase mb-1">${u}</div><span class="text-sm leading-relaxed">${t}</span>`;
+        div.innerHTML = `<div class="text-[9px] ${me?'text-white/50':'text-purple-300'} font-bold uppercase mb-1">${u}</div><span class="text-sm leading-relaxed">${t}</span>`;
     }
     box.appendChild(div);
 }
 
 document.getElementById("send-btn").onclick = async () => {
-    const i = document.getElementById("input"); 
-    if (!i.innerText.trim()) return;
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
-        user: myDisplayName, text: i.innerText, timestamp: serverTimestamp(), type: "chat" 
-    });
+    const i = document.getElementById("input"); if (!i.innerText.trim()) return;
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text: i.innerText, timestamp: serverTimestamp(), type: "chat" });
     i.innerHTML = "";
 };
 
@@ -538,21 +390,14 @@ window.notify = (m) => {
     setTimeout(() => t.remove(), 3000);
 };
 
-window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
-window.onblur = () => { isFocused = false; };
-
-// --- VISUALS ---
+// --- SNOW ---
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
 let snow = Array.from({length: 50}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 }));
 function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "rgba(255,255,255,0.1)";
-    snow.forEach(p => {
-        p.y += p.d; if(p.y > canvas.height) p.y = -5;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-    });
+    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.1)";
+    snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); });
     requestAnimationFrame(draw);
 }
 draw();

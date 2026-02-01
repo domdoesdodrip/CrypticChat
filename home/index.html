@@ -10,103 +10,80 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; transition: background 0.1s ease; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; transition: background 0.3s ease; }
         #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
 
         .glass { background: rgba(15, 12, 22, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; }
+        .bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; border: 1px solid transparent; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
+        
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
         #input:empty:before { content: attr(placeholder); color: #4b5563; }
         
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; flex-shrink: 0; }
-        .btn-active { color: #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; border-color: rgba(239, 68, 68, 0.2) !important; }
-        
-        .toast { background: rgba(150, 103, 244, 0.9); color: white; padding: 12px 20px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; animation: slideIn 0.3s ease; }
-        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .admin-tag { color: #9667f4; font-size: 8px; font-weight: 900; border: 1px solid rgba(150, 103, 244, 0.4); padding: 1px 5px; border-radius: 4px; margin-left: auto; }
-        
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
-        
-        /* Rainbow Disco Overlay */
-        #disco-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 0.5s; background: linear-gradient(45deg, #ff000033, #ff7f0033, #ffff0033, #00ff0033, #0000ff33, #4b008233, #8b00ff33); background-size: 400% 400%; }
-        .disco-active #disco-overlay { opacity: 1; animation: rainbow 2s linear infinite; }
-        @keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        /* High-Energy Disco */
+        @keyframes discoPulse {
+            0% { background-color: #ff000022; }
+            20% { background-color: #00ff0022; }
+            40% { background-color: #0000ff22; }
+            60% { background-color: #ffff0022; }
+            80% { background-color: #ff00ff22; }
+            100% { background-color: #ff000022; }
+        }
+        .disco-active { animation: discoPulse 0.4s linear infinite; }
+        .disco-active .glass { border-color: rgba(255,255,255,0.4); box-shadow: 0 0 20px rgba(255,255,255,0.1); }
 
-        /* Tools */
-        .msg-tools { opacity: 0; transition: 0.2s; position: absolute; top: -12px; right: 10px; display: flex; gap: 4px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        .msg-tools { opacity: 0; transition: 0.2s; position: absolute; top: -14px; right: 10px; display: flex; gap: 4px; z-index: 10; }
         .bubble:hover .msg-tools { opacity: 1; }
         .tool-btn { background: #000; padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; text-transform: uppercase; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .toast { background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 5px; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div id="disco-overlay"></div>
 <canvas id="snow-canvas"></canvas>
 <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none flex flex-col items-center"></div>
 
 <div id="admin-menu" class="modal-overlay hidden">
     <div class="glass p-8 rounded-[2rem] max-w-sm w-full">
-        <h2 class="text-xl font-black mb-6 uppercase text-purple-500 tracking-tighter">Admin Terminal</h2>
-        
+        <h2 class="text-xl font-black mb-6 uppercase text-purple-500">Root Terminal</h2>
         <div class="space-y-4">
-            <div>
-                <label class="text-[9px] font-black uppercase text-white/30 ml-2">Broadcasting</label>
-                <input id="admin-ann-text" type="text" class="w-full mt-1 p-3 bg-white/5 rounded-xl text-xs outline-none" placeholder="Announcement message...">
-                <button onclick="broadcast()" class="w-full mt-2 bg-purple-600 py-3 rounded-xl font-black text-[10px] uppercase">Send Broadcast</button>
+            <input id="admin-ann-text" type="text" class="w-full p-4 bg-white/5 rounded-xl text-xs outline-none" placeholder="Alert Message...">
+            <button onclick="broadcast()" class="w-full bg-purple-600 py-4 rounded-xl font-black text-[10px] uppercase">Broadcast</button>
+            <select id="admin-user-select" class="w-full p-4 bg-white/5 rounded-xl text-xs outline-none appearance-none font-bold text-white"></select>
+            <button onclick="kickUser()" class="w-full border border-red-500/40 py-4 rounded-xl font-black text-[10px] uppercase text-red-500">Kick User</button>
+            <div class="flex gap-2">
+                <button onclick="triggerDisco()" class="flex-1 bg-white/5 py-4 rounded-xl font-black text-[10px] uppercase">Disco</button>
+                <button onclick="openPurge()" class="flex-1 bg-red-600/20 py-4 rounded-xl font-black text-[10px] uppercase text-red-500">Purge</button>
             </div>
-
-            <div>
-                <label class="text-[9px] font-black uppercase text-white/30 ml-2">User Control</label>
-                <select id="admin-user-select" class="w-full mt-1 p-3 bg-white/5 rounded-xl text-xs outline-none appearance-none">
-                    <option value="">Select User...</option>
-                </select>
-                <button onclick="kickUser()" class="w-full mt-2 bg-red-600/20 border border-red-600/30 py-3 rounded-xl font-black text-[10px] uppercase text-red-500">Kick Selected</button>
-            </div>
-
-            <div class="flex gap-2 pt-4">
-                <button onclick="triggerDisco()" class="flex-1 bg-white/5 py-3 rounded-xl font-black text-[10px] uppercase border border-white/10">Disco</button>
-                <button onclick="openPurge()" class="flex-1 bg-white/5 py-3 rounded-xl font-black text-[10px] uppercase border border-white/10 text-red-400">Purge</button>
-            </div>
-            
-            <button onclick="toggleAdminMenu()" class="w-full mt-4 text-white/20 font-black text-[10px] uppercase">Close Menu</button>
-        </div>
-    </div>
-</div>
-
-<div id="purge-modal" class="modal-overlay hidden">
-    <div class="glass p-8 rounded-[2rem] max-w-sm w-full text-center">
-        <h2 class="text-xl font-black mb-4 uppercase">Confirm Purge?</h2>
-        <p class="text-white/40 text-xs mb-8">All messages will be wiped from the database.</p>
-        <div class="flex gap-4">
-            <button onclick="closePurge()" class="flex-1 py-4 rounded-xl bg-white/5 font-bold text-xs uppercase">Cancel</button>
-            <button onclick="confirmPurge()" class="flex-1 py-4 rounded-xl bg-red-600 font-bold text-xs uppercase">Confirm</button>
+            <button onclick="toggleAdminMenu()" class="w-full mt-4 text-white/20 font-black text-[10px] uppercase tracking-widest">Close</button>
         </div>
     </div>
 </div>
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-            <h1 id="auth-title" class="text-4xl font-black mb-10 tracking-tighter uppercase">Login</h1>
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
+            <h1 class="text-4xl font-black mb-10 tracking-tighter uppercase">Cryptic</h1>
             <input id="auth-user" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Username">
             <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none" placeholder="Password">
-            
-            <div class="flex flex-col gap-3">
-                <button id="auth-login-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold uppercase text-xs">Login</button>
-                <button id="auth-signup-btn" class="w-full bg-white/5 border border-white/10 py-5 rounded-2xl font-extrabold uppercase text-xs hover:bg-white/10">Sign Up</button>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="handleAuth('login')" class="bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs">Login</button>
+                <button onclick="handleAuth('signup')" class="bg-white/5 border border-white/10 py-5 rounded-2xl font-black uppercase text-xs">Sign Up</button>
             </div>
-            
-            <button id="guest-btn" class="mt-6 text-[10px] text-white/40 uppercase font-black tracking-widest hover:text-white">Enter as Guest</button>
+            <button id="guest-btn" class="text-[10px] text-white/20 uppercase font-black tracking-widest hover:text-white">Guest Entry</button>
         </div>
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
-            <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Establish Link</h1>
-            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="Alias">
+            <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Enter Room</h1>
+            <input id="display-name" type="text" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="Alias">
             <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-center" placeholder="Room ID">
             <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Connect</button>
         </div>
@@ -118,28 +95,28 @@
                 <button onclick="location.reload()" class="text-white/40"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
                 <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs tracking-widest"></div>
             </div>
-            <div class="flex items-center gap-2">
-                <button id="admin-panel-trigger" class="hidden bg-purple-600/20 text-purple-500 p-2.5 rounded-xl border border-purple-500/20 hover:bg-purple-600 hover:text-white" onclick="toggleAdminMenu()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14v2"/><path d="M12 8h.01"/></svg>
+            <div id="header-controls" class="flex items-center gap-2 transition-all">
+                <button id="admin-btn" class="hidden bg-white/5 text-purple-400 p-2.5 rounded-xl border border-white/10" onclick="toggleAdminMenu()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
-                <button id="vc-btn" class="text-white/20 p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 hover:bg-white/5">
-                    <span class="text-[9px] font-black uppercase tracking-tighter">VC</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-                </button>
+                <div id="vc-status-container" class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+                    <button id="vc-btn" class="px-4 py-2 text-[9px] font-black uppercase text-white/40">VC OFF</button>
+                    <button id="mute-btn" class="hidden p-2 text-white/20"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/></svg></button>
+                </div>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 border-r border-white/5">
                 <div class="text-[10px] font-black uppercase text-white/20 mb-4 tracking-widest">Active Nodes</div>
-                <div id="users-list" class="space-y-2"></div>
+                <div id="users-list" class="space-y-2 overflow-y-auto"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
                 
                 <div id="reply-preview" class="hidden absolute bottom-20 left-4 right-4 p-3 glass rounded-xl border border-purple-500/30 flex justify-between items-center z-50">
-                    <div class="text-[10px]"><span class="text-purple-500 font-black uppercase">Replying to:</span> <span id="reply-text" class="opacity-60 italic text-white"></span></div>
-                    <button onclick="cancelReply()" class="text-white/20 hover:text-white font-black text-[10px]">X</button>
+                    <div class="text-[10px]"><span class="text-purple-500 font-black uppercase">Link:</span> <span id="reply-text" class="opacity-60 italic text-white ml-2"></span></div>
+                    <button onclick="cancelReply()" class="text-white/20 font-black text-[10px]">X</button>
                 </div>
 
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 border-t border-white/5 backdrop-blur-md">
@@ -161,18 +138,10 @@ const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", auth
 const db = getFirestore(initializeApp(firebaseConfig));
 
 let ably, channel, myDisplayName, currentRoom = '', isAdmin = false, currentUsername = '', replyData = null;
+let isVoiceActive = false, localStream = null, isMuted = false;
 
-// ADMIN FUNCTIONS
+// SYSTEM CONTROLS
 window.toggleAdminMenu = () => document.getElementById("admin-menu").classList.toggle("hidden");
-window.openPurge = () => { toggleAdminMenu(); document.getElementById("purge-modal").classList.remove("hidden"); };
-window.closePurge = () => document.getElementById("purge-modal").classList.add("hidden");
-window.confirmPurge = async () => {
-    closePurge();
-    const snap = await getDocs(collection(db, "rooms", currentRoom, "messages"));
-    const batch = writeBatch(db);
-    snap.forEach(d => batch.delete(d.ref));
-    await batch.commit();
-};
 window.triggerDisco = () => { toggleAdminMenu(); channel.publish("admin-cmd", { type: "disco" }); };
 window.broadcast = () => {
     const t = document.getElementById("admin-ann-text").value;
@@ -185,40 +154,37 @@ window.kickUser = () => {
     if(target) channel.publish("admin-cmd", { type: "kick", target });
     toggleAdminMenu();
 };
-
-// ACTIONS
-window.deleteMsg = async (id) => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); };
+window.deleteMsg = async (id) => await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
 window.replyTo = (user, text) => {
     replyData = { user, text };
-    document.getElementById("reply-text").innerText = `"${text.substring(0, 30)}..."`;
+    document.getElementById("reply-text").innerText = `${user}: "${text.substring(0, 20)}..."`;
     document.getElementById("reply-preview").classList.remove("hidden");
     document.getElementById("input").focus();
 };
 window.cancelReply = () => { replyData = null; document.getElementById("reply-preview").classList.add("hidden"); };
 
-// AUTH
-async function handleAuth(type) {
+// AUTH LOGIC
+window.handleAuth = async (type) => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase();
     const p = document.getElementById("auth-pass").value;
-    if(!u || !p) return notify("FILL ALL FIELDS");
+    if(!u || !p) return notify("EMPTY FIELDS");
     
-    const userRef = doc(db, "users", u);
-    const snap = await getDoc(userRef);
+    const ref = doc(db, "users", u);
+    const snap = await getDoc(ref);
 
     if (type === 'signup') {
         if (snap.exists()) return notify("USER EXISTS");
-        await setDoc(userRef, { password: p, isAdmin: false });
-        notify("ACCOUNT CREATED");
+        await setDoc(ref, { password: p, isAdmin: false });
+        notify("REGISTERED");
     } else {
-        if (!snap.exists() || snap.data().password !== p) return notify("INVALID LOGIN");
+        if (!snap.exists() || snap.data().password !== p) return notify("AUTH FAILED");
         isAdmin = snap.data().isAdmin || false;
         currentUsername = u;
-        if(isAdmin) document.getElementById("admin-panel-trigger").classList.remove("hidden");
+        if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
         initAbly(u, p);
     }
-}
-document.getElementById("auth-login-btn").onclick = () => handleAuth('login');
-document.getElementById("auth-signup-btn").onclick = () => handleAuth('signup');
+};
+
 document.getElementById("guest-btn").onclick = () => {
     currentUsername = "GUEST_" + Math.random().toString(36).substring(7);
     initAbly(currentUsername, "tmp");
@@ -233,7 +199,7 @@ function initAbly(u, p) {
 }
 
 document.getElementById("join-room-btn").onclick = () => {
-    myDisplayName = document.getElementById("display-name").value.trim() || "Phantom";
+    myDisplayName = document.getElementById("display-name").value.trim() || "Ghost";
     currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     enterChat();
 };
@@ -244,17 +210,16 @@ function enterChat() {
     document.getElementById("roomLabel").innerText = currentRoom;
 
     channel = ably.channels.get("room-" + currentRoom);
-    channel.presence.enter({ user: myDisplayName, isAdmin: isAdmin });
+    channel.presence.enter({ user: myDisplayName, isAdmin });
     channel.presence.subscribe(() => updateUsers());
 
     channel.subscribe("admin-cmd", (m) => {
-        const d = m.data;
-        if (d.type === "kick" && d.target === myDisplayName) location.reload();
-        if (d.type === "disco") {
+        if (m.data.type === "kick" && m.data.target === myDisplayName) location.reload();
+        if (m.data.type === "disco") {
             document.body.classList.add("disco-active");
-            setTimeout(() => document.body.classList.remove("disco-active"), 8000);
+            setTimeout(() => document.body.classList.remove("disco-active"), 10000);
         }
-        if (d.type === "announce") notify(`[SERVER]: ${d.text}`);
+        if (m.data.type === "announce") notify(`[SERVER] ${m.data.text}`);
     });
 
     onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(60)), (s) => {
@@ -269,8 +234,8 @@ function enterChat() {
                     <div class="tool-btn" onclick="replyTo('${m.user}', '${m.text.replace(/'/g, "\\'")}')">Reply</div>
                     ${(isMine || isAdmin) ? `<div class="tool-btn text-red-500" onclick="deleteMsg('${id}')">Del</div>` : ''}
                 </div>
-                ${m.replyTo ? `<div class="text-[9px] opacity-30 italic mb-1 border-l-2 border-white/20 pl-2">Replying to @${m.replyTo.user}</div>` : ''}
-                <div class="text-[9px] opacity-40 uppercase font-black mb-1 flex items-center gap-1">${m.user} ${m.isAdmin?'<span class="text-purple-500">◆</span>':''}</div>
+                ${m.replyTo ? `<div class="text-[9px] opacity-30 italic mb-1 border-l-2 border-white/20 pl-2">@${m.replyTo.user}: ${m.replyTo.text.substring(0,15)}...</div>` : ''}
+                <div class="text-[9px] opacity-40 uppercase font-black mb-1 flex items-center gap-1">${m.user} ${m.isAdmin?'<span class="text-purple-400">◆</span>':''}</div>
                 <span class="text-sm">${m.text}</span>
             `;
             box.appendChild(div);
@@ -279,10 +244,37 @@ function enterChat() {
     });
 }
 
+// VC SYSTEM
+document.getElementById("vc-btn").onclick = async () => {
+    const btn = document.getElementById("vc-btn");
+    if (!isVoiceActive) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            isVoiceActive = true;
+            btn.innerText = "VC ON";
+            btn.classList.replace("text-white/40", "text-green-500");
+            document.getElementById("mute-btn").classList.remove("hidden");
+            notify("MICROPHONE LINKED");
+        } catch (e) { notify("MIC DENIED"); }
+    } else {
+        localStream.getTracks().forEach(t => t.stop());
+        isVoiceActive = false;
+        btn.innerText = "VC OFF";
+        btn.classList.replace("text-green-500", "text-white/40");
+        document.getElementById("mute-btn").classList.add("hidden");
+    }
+};
+
+document.getElementById("mute-btn").onclick = () => {
+    isMuted = !isMuted;
+    localStream.getAudioTracks()[0].enabled = !isMuted;
+    document.getElementById("mute-btn").classList.toggle("text-red-500", isMuted);
+};
+
 async function sendMessage() {
     const i = document.getElementById("input"), text = i.innerText.trim();
     if (!text) return;
-    const msg = { user: myDisplayName, text, timestamp: serverTimestamp(), isAdmin: isAdmin };
+    const msg = { user: myDisplayName, text, timestamp: serverTimestamp(), isAdmin };
     if (replyData) { msg.replyTo = replyData; cancelReply(); }
     i.innerHTML = "";
     await addDoc(collection(db, "rooms", currentRoom, "messages"), msg);
@@ -297,12 +289,11 @@ function updateUsers() {
         const list = document.getElementById("users-list");
         const select = document.getElementById("admin-user-select");
         list.innerHTML = "";
-        select.innerHTML = '<option value="">Select User...</option>';
-        
+        select.innerHTML = '<option value="">Select Target...</option>';
         members.forEach(m => {
-            list.innerHTML += `<div class="bg-white/5 p-3 rounded-xl flex items-center gap-3 border border-white/5">
+            list.innerHTML += `<div class="bg-white/5 p-3 rounded-xl flex items-center gap-3">
                 <div class="status-dot"></div><span class="text-[10px] font-bold uppercase text-white/40">${m.data.user}</span>
-                ${m.data.isAdmin ? '<span class="admin-tag">ADMIN</span>' : ''}</div>`;
+                ${m.data.isAdmin ? '<span class="text-[8px] text-purple-500 font-black ml-auto border border-purple-500/30 px-2 py-0.5 rounded">ADMIN</span>' : ''}</div>`;
             if(m.data.user !== myDisplayName) select.innerHTML += `<option value="${m.data.user}">${m.data.user}</option>`;
         });
     });
@@ -311,16 +302,16 @@ function updateUsers() {
 window.notify = (m) => {
     const t = document.createElement("div"); t.className = "toast"; t.innerText = m;
     document.getElementById("notification-container").appendChild(t);
-    setTimeout(() => t.remove(), 5000);
+    setTimeout(() => t.remove(), 4000);
 };
 
-// Snow Render
+// Snow
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
-let snow = Array.from({length: 45}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5+0.5, d: Math.random()*0.4+0.1, s: Math.random()*0.2-0.1 }));
+let snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5+0.5, d: Math.random()*0.5+0.1, s: Math.random()*0.2-0.1 }));
 function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.15)";
     snow.forEach(p => {
         p.y += p.d; p.x += p.s; if(p.y > canvas.height) p.y = -5; if(p.x > canvas.width) p.x = 0; if(p.x < 0) p.x = canvas.width;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();

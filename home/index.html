@@ -24,19 +24,21 @@
             backdrop-filter: blur(20px); 
             border: 1px solid rgba(150, 103, 244, 0.15); 
         }
-        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-        
-        /* Smooth RGB background glow */
         .glow {
             position: absolute;
-            width: 300px;
-            height: 300px;
+            width: 400px;
+            height: 400px;
             background: var(--accent);
-            filter: blur(120px);
-            opacity: 0.15;
+            filter: blur(150px);
+            opacity: 0.1;
             z-index: 0;
             border-radius: 50%;
+        }
+        .separator {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            margin: 24px 0;
         }
     </style>
 </head>
@@ -45,51 +47,24 @@
     <div class="glow"></div>
 
     <div class="glass p-12 rounded-[3rem] max-w-lg w-full text-center relative z-10 mx-4">
-        <div class="mb-8 flex justify-center">
-            <div class="w-16 h-16 bg-purple-600/20 rounded-2xl flex items-center justify-center border border-purple-500/30 pulse">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9667f4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-            </div>
-        </div>
-
-        <h1 class="text-2xl font-black uppercase tracking-tighter mb-4">Sorry! The site is currently down 😞</h1>
+        <h1 class="text-xl font-black uppercase tracking-tight text-white/90">
+            Sorry! The site is currently down 😞
+        </h1>
         
-        <div class="h-[1px] w-full bg-white/5 my-6"></div>
+        <div class="separator"></div>
         
-        <p class="text-white/50 text-sm font-bold leading-relaxed mb-6">
+        <p class="text-white/60 text-sm font-bold leading-relaxed">
             Once the site is up, it will be back and better than ever!
         </p>
 
-        <p class="text-purple-500 text-[10px] font-black uppercase tracking-[0.2em] pulse mb-8">
-            Scanning for server signal...
-        </p>
+        <div class="separator"></div>
 
-        <div class="text-white/20 text-[10px] font-black uppercase tracking-widest">
+        <div class="text-purple-500 text-[11px] font-black uppercase tracking-[0.2em]">
             Thanks for your patience
         </div>
+        
+        <div class="separator"></div>
     </div>
 
-    <script>
-        // Set the URL of your main chat site here
-        const MAIN_SITE_URL = 'index.html'; 
-
-        async function checkServer() {
-            try {
-                // Try to fetch the main page
-                const response = await fetch(MAIN_SITE_URL, { method: 'HEAD', cache: 'no-store' });
-                if (response.ok) {
-                    // If the site responds, redirect automatically
-                    window.location.href = MAIN_SITE_URL;
-                }
-            } catch (error) {
-                console.log("Server still offline...");
-            }
-        }
-
-        // Check every 30 seconds
-        setInterval(checkServer, 30000);
-        
-        // Initial check
-        checkServer();
-    </script>
 </body>
 </html>

@@ -1,214 +1,531 @@
-<!-- FULL FILE – NO TRUNCATION -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CrypticChat</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>CrypticChat</title>
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #050307; --accent: #9667f4; --glass: rgba(15, 12, 22, 0.85); --glass-border: rgba(150, 103, 244, 0.15); }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; overflow: hidden; }
+        
+        /* LAYERS */
+        #snow-canvas { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+        #disco-layer { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 0.5s; mix-blend-mode: overlay; }
+        #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
 
-<script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+        /* COMPONENTS */
+        .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); }
+        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; word-wrap: break-word; }
+        .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .system-msg { align-self: center; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 11px; padding: 4px 12px; margin: 8px 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
+        
+        /* STATES */
+        .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.15) !important; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .mute-on { color: #ef4444 !important; background: rgba(239, 68, 68, 0.1); }
+        .deafen-on { color: #f59e0b !important; background: rgba(245, 158, 11, 0.1); }
+        .speaking-pulse { box-shadow: 0 0 0 2px #22c55e; animation: pulse 1s infinite; }
+        
+        /* ANIMATIONS */
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes disco-flash { 
+            0% { background: rgba(255,0,0,0.4); } 20% { background: rgba(255,255,0,0.4); } 
+            40% { background: rgba(0,255,0,0.4); } 60% { background: rgba(0,255,255,0.4); } 
+            80% { background: rgba(0,0,255,0.4); } 100% { background: rgba(255,0,255,0.4); } 
+        }
+        .disco-active { animation: disco-flash 0.5s infinite; opacity: 1 !important; }
 
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
-
-<style>
-:root { --bg:#050307; --accent:#9667f4 }
-body { margin:0; background:var(--bg); color:white; font-family:Manrope; height:100dvh; overflow:hidden }
-
-.glass { background:rgba(15,12,22,.85); backdrop-filter:blur(20px); border:1px solid rgba(150,103,244,.15) }
-.bubble { max-width:85%; padding:10px 16px; border-radius:18px; margin-bottom:6px }
-.mine { background:var(--accent); align-self:flex-end }
-.theirs { background:#1f1d2b }
-
-.status-vc { color:#22c55e }
-.vc-badge { font-size:9px; margin-left:6px; color:#22c55e; font-weight:800 }
-
-.admin-panel {
-  position:fixed; inset:0; background:rgba(0,0,0,.7);
-  display:none; align-items:center; justify-content:center; z-index:9999
-}
-.admin-panel.active { display:flex }
-.disco {
-  position:fixed; inset:0; pointer-events:none;
-  animation:rainbow 1s linear infinite; z-index:9998
-}
-@keyframes rainbow {
-  0%{background:red}20%{background:orange}40%{background:yellow}
-  60%{background:green}80%{background:blue}100%{background:purple}
-}
-</style>
+        .toast { background: #1e1b29; border: 1px solid #9667f4; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; margin-bottom: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    </style>
 </head>
-
 <body>
 
-<div id="adminPanel" class="admin-panel">
-  <div class="glass p-6 rounded-xl space-y-3 w-80 text-center">
-    <h2 class="font-black uppercase">admin panel</h2>
-    <button onclick="purge()" class="w-full bg-red-600 p-2 rounded">purge chat</button>
-    <button onclick="announce()" class="w-full bg-purple-600 p-2 rounded">announce</button>
-    <button onclick="disco()" class="w-full bg-pink-600 p-2 rounded">disco</button>
-    <button onclick="toggleAdmin(false)" class="w-full bg-white/10 p-2 rounded">close</button>
-  </div>
-</div>
+<canvas id="snow-canvas"></canvas>
+<div id="disco-layer"></div>
+<div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center pointer-events-none"></div>
+<div id="remote-audios" class="hidden"></div>
 
-<div id="discoOverlay"></div>
-
-<div id="app-root" class="h-full flex flex-col">
-
-<!-- AUTH -->
-<div id="view-auth" class="flex-1 flex items-center justify-center">
-  <div class="glass p-8 rounded-3xl w-96 text-center">
-    <h1 class="font-black text-3xl mb-6">crypticchat</h1>
-    <input id="auth-user" class="w-full p-3 mb-3 bg-white/5 rounded" placeholder="username">
-    <input id="auth-pass" type="password" class="w-full p-3 mb-4 bg-white/5 rounded" placeholder="password">
-    <button id="loginBtn" class="w-full bg-purple-600 p-3 rounded font-black">sign in</button>
-    <button id="signupBtn" class="mt-3 text-xs opacity-50">sign up instead</button>
-  </div>
-</div>
-
-<!-- JOIN -->
-<div id="view-join" class="hidden flex-1 flex items-center justify-center">
-  <div class="glass p-8 rounded-3xl w-96 text-center">
-    <input id="display-name" class="w-full p-3 mb-3 bg-white/5 rounded" placeholder="alias">
-    <input id="room-id" class="w-full p-3 mb-4 bg-white/5 rounded" placeholder="room">
-    <button id="join-room-btn" class="w-full bg-purple-600 p-3 rounded font-black">join</button>
-  </div>
-</div>
-
-<!-- CHAT -->
-<div id="view-chat" class="hidden flex-1 flex">
-  <aside class="w-64 glass p-3 overflow-y-auto">
-    <div id="users-list" class="space-y-2"></div>
-    <button id="adminBtn" onclick="toggleAdmin(true)" class="hidden mt-4 w-full bg-red-600 p-2 rounded text-xs">admin</button>
-  </aside>
-
-  <main class="flex-1 flex flex-col">
-    <div id="messages" class="flex-1 p-4 overflow-y-auto"></div>
-    <div class="p-3 flex gap-2">
-      <div id="input" contenteditable class="flex-1 bg-white/5 p-3 rounded"></div>
-      <button id="send-btn" class="bg-purple-600 p-3 rounded">send</button>
+<div id="admin-panel" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div class="glass w-96 p-6 rounded-3xl relative">
+        <button onclick="toggleAdminPanel()" class="absolute top-4 right-4 text-white/50 hover:text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        <h2 class="text-xl font-black uppercase text-purple-400 mb-6 flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            Admin Tools
+        </h2>
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="adminAction('purge')" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-4 rounded-xl font-bold uppercase text-xs border border-red-500/20 transition-all">Purge Chat</button>
+            <button onclick="adminAction('disco')" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-4 rounded-xl font-bold uppercase text-xs border border-purple-500/20 transition-all">Disco Mode</button>
+            <input id="kick-target" placeholder="User to Kick" class="col-span-1 bg-white/5 p-3 rounded-xl text-xs outline-none border border-white/10">
+            <button onclick="adminAction('kick')" class="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 p-3 rounded-xl font-bold uppercase text-xs border border-orange-500/20">Kick User</button>
+            <input id="announce-text" placeholder="System Announcement" class="col-span-2 bg-white/5 p-3 rounded-xl text-xs outline-none border border-white/10">
+            <button onclick="adminAction('announce')" class="col-span-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 p-3 rounded-xl font-bold uppercase text-xs border border-blue-500/20">Broadcast</button>
+        </div>
     </div>
-  </main>
+</div>
+
+<div id="app-root">
+    <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
+            
+            <h1 id="auth-title" class="text-4xl font-black mb-2 tracking-tighter uppercase text-white">CrypticChat</h1>
+            <p id="auth-subtitle" class="text-xs font-bold text-purple-400 mb-8 uppercase tracking-widest">Secure Channels</p>
+            
+            <div class="flex bg-white/5 p-1 rounded-xl mb-6">
+                <button onclick="toggleAuthMode(true)" id="tab-login" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white/10 text-white">Login</button>
+                <button onclick="toggleAuthMode(false)" id="tab-signup" class="flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all text-white/40 hover:text-white">Sign Up</button>
+            </div>
+
+            <input id="auth-user" type="text" class="w-full mb-3 p-4 bg-white/5 rounded-2xl outline-none text-sm font-semibold border border-transparent focus:border-purple-500/50 transition-all" placeholder="Username">
+            <input id="auth-pass" type="password" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-sm font-semibold border border-transparent focus:border-purple-500/50 transition-all" placeholder="Password">
+            
+            <button id="auth-main-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-5 rounded-2xl font-extrabold uppercase text-xs tracking-wider transition-all shadow-lg shadow-purple-900/20">Enter System</button>
+            <button onclick="initGuest()" class="mt-6 text-[10px] text-white/30 uppercase font-bold tracking-widest hover:text-white transition-colors">Enter as Ghost</button>
+        </div>
+    </div>
+
+    <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
+            <div class="mb-8">
+                <div class="w-16 h-16 bg-purple-600 mx-auto rounded-2xl flex items-center justify-center mb-4 text-2xl">⚡</div>
+                <h1 class="text-3xl font-black uppercase tracking-tighter">Connection</h1>
+            </div>
+            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-sm font-bold" placeholder="Alias">
+            <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-sm font-bold" placeholder="Room ID (e.g. LOBBY)">
+            <button id="join-room-btn" class="w-full bg-white text-black hover:bg-gray-200 py-5 rounded-2xl font-extrabold text-xs uppercase tracking-wider transition-all">Establish Link</button>
+            <button onclick="logout()" class="mt-6 text-[10px] text-red-400 uppercase font-bold tracking-widest hover:text-red-300">Disconnect User</button>
+        </div>
+    </div>
+
+    <div id="view-chat" class="hidden h-full flex flex-col">
+        <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40 relative">
+            <div class="flex items-center gap-4">
+                <button onclick="leaveRoom()" class="text-white/30 hover:text-white transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                <div>
+                    <div id="roomLabel" class="font-black text-white uppercase text-sm tracking-tight leading-none"></div>
+                    <div class="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Encrypted</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="admin-btn" onclick="toggleAdminPanel()" class="hidden text-yellow-400 p-2 hover:bg-yellow-400/10 rounded-xl transition-all"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                <div class="h-6 w-px bg-white/10 mx-1"></div>
+                <button id="deafen-btn" class="hidden text-white/30 hover:text-white p-2.5 rounded-xl transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/><line x1="10" y1="10" x2="14" y2="14"/><line x1="14" y1="10" x2="10" y2="14"/></svg></button>
+                <button id="mute-btn" class="hidden text-white/30 hover:text-white p-2.5 rounded-xl transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+                <button id="vc-btn" class="bg-white/5 hover:bg-white/10 text-white p-2 py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/5">
+                    <span class="text-[9px] font-black uppercase tracking-tighter">Join VC</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
+                <div class="text-[10px] font-black uppercase text-white/20 mb-3 tracking-widest">Active Operatives</div>
+                <div id="users-list" class="space-y-2"></div>
+            </aside>
+            <main class="flex-1 flex flex-col relative">
+                <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent">
+                    <div class="flex gap-2 max-w-4xl mx-auto items-end">
+                        <div id="input" contenteditable="true" placeholder="Encrypted Message..." spellcheck="false" class="shadow-xl"></div>
+                        <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3.5 rounded-xl text-white shadow-lg shadow-purple-900/40 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const app = initializeApp({ /* same config */ })
-const db = getFirestore(app)
+const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
+const db = getFirestore(initializeApp(firebaseConfig));
 
-let isAdmin = false, myName, room, ably, channel
+let ably, channel, myDisplayName, currentRoom = '', isGuest = false, isAdmin = false;
+let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
+let unreadCount = 0, isFocused = true, isSignUp = false;
+const notifSound = new Audio("https://files.catbox.moe/8tz2o5.mp3");
 
-// LOGIN / SIGNUP
-loginBtn.onclick = async () => {
-  const u = auth-user.value.toLowerCase(), p = auth-pass.value
-  const ref = doc(db,"users",u)
-  const snap = await getDoc(ref)
-  if(!snap.exists()) return alert("no account")
-  if(snap.data().password!==p) return alert("wrong pass")
-  isAdmin = snap.data().isAdmin === true
-  persist(u,p)
-  showJoin()
+// --- INITIALIZATION & PERSISTENCE ---
+
+document.addEventListener("DOMContentLoaded", async () => {
+    // Check local storage for persistent session
+    const savedUser = localStorage.getItem("cc_user");
+    const savedRoom = localStorage.getItem("cc_room");
+    
+    if (savedUser) {
+        const u = JSON.parse(savedUser);
+        // Quick verify
+        const snap = await getDoc(doc(db, "users", u.name));
+        if (snap.exists() && snap.data().password === u.pass) {
+            isAdmin = snap.data().isAdmin || false; // DB CHECK FOR ADMIN
+            if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
+            initAbly(u.name, u.pass, savedRoom);
+            return;
+        }
+    }
+    document.getElementById("view-auth").classList.remove("hidden"); // Show login if no session
+});
+
+// --- AUTH LOGIC ---
+
+window.toggleAuthMode = (mode) => {
+    isSignUp = !mode;
+    document.getElementById("tab-login").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!isSignUp ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`;
+    document.getElementById("tab-signup").className = `flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${isSignUp ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`;
+    document.getElementById("auth-main-btn").innerText = isSignUp ? "Create Identity" : "Enter System";
+};
+
+document.getElementById("auth-main-btn").onclick = async () => {
+    const u = document.getElementById("auth-user").value.trim().toLowerCase();
+    const p = document.getElementById("auth-pass").value;
+    if(!u || !p) return notify("Fields cannot be empty");
+
+    const userRef = doc(db, "users", u);
+    const snap = await getDoc(userRef);
+
+    if (isSignUp) {
+        if (snap.exists()) return notify("Identity already claimed");
+        await setDoc(userRef, { password: p, isAdmin: false, created: serverTimestamp() });
+        notify("Identity Created. Logging in...");
+    } else {
+        if (!snap.exists() || snap.data().password !== p) return notify("Invalid Credentials");
+        isAdmin = snap.data().isAdmin || false; // DB CHECK
+    }
+
+    // Save session
+    localStorage.setItem("cc_user", JSON.stringify({name: u, pass: p}));
+    initAbly(u, p);
+};
+
+window.initGuest = () => {
+    isGuest = true;
+    myDisplayName = "Ghost-" + Math.floor(Math.random()*1000);
+    document.getElementById("view-auth").classList.add("hidden");
+    document.getElementById("view-join").classList.remove("hidden");
+    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l" }); // Public key for demo/guest
+    // Warning: Public keys should be restricted in prod. Ideally use authUrl even for guests.
+};
+
+function initAbly(u, p, autoRoom) {
+    if(isAdmin) document.getElementById("admin-btn").classList.remove("hidden");
+    // For this demo we use the key directly or authUrl if you have a server. 
+    // Reusing the key for simplicity in this artifact.
+    ably = new Ably.Realtime({ key: "xVTLWA.0W2vvg:M_W2_y_V3C4L8P-l", clientId: u }); 
+    
+    ably.connection.on('connected', () => {
+        document.getElementById("view-auth").classList.add("hidden");
+        document.getElementById("view-join").classList.remove("hidden");
+        if(autoRoom) {
+            document.getElementById("room-id").value = autoRoom;
+            document.getElementById("display-name").value = u; // Auto fill username
+            enterChat();
+        }
+    });
 }
 
-signupBtn.onclick = async () => {
-  const u = auth-user.value.toLowerCase(), p = auth-pass.value
-  await setDoc(doc(db,"users",u),{password:p,isAdmin:false})
-  alert("account created")
+window.logout = () => {
+    localStorage.removeItem("cc_user");
+    localStorage.removeItem("cc_room");
+    location.reload();
 }
 
-function persist(u,p){
-  localStorage.setItem("cc_user",u)
-  localStorage.setItem("cc_pass",p)
+// --- ROOM LOGIC ---
+
+document.getElementById("join-room-btn").onclick = enterChat;
+window.leaveRoom = () => {
+    localStorage.removeItem("cc_room");
+    location.reload();
 }
 
-function showJoin(){
-  view-auth.classList.add("hidden")
-  view-join.classList.remove("hidden")
+function enterChat() {
+    myDisplayName = (document.getElementById("display-name").value.trim() || "Phantom");
+    if(isGuest) myDisplayName += " (GUEST)";
+    currentRoom = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
+    
+    localStorage.setItem("cc_room", currentRoom); // Save room
+
+    document.getElementById("view-join").classList.add("hidden");
+    document.getElementById("view-chat").classList.remove("hidden");
+    document.getElementById("roomLabel").innerText = currentRoom;
+    if(isGuest) document.getElementById("vc-btn").classList.add("hidden");
+
+    channel = ably.channels.get("room-" + currentRoom);
+    channel.presence.enter({ user: myDisplayName, inCall: false, isSpeaking: false, isAdmin: isAdmin });
+    channel.presence.subscribe(() => updateUsers());
+
+    // --- MESSAGING ---
+    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
+    onSnapshot(q, (s) => {
+        const box = document.getElementById("messages"); box.innerHTML = '';
+        s.forEach(d => {
+            const m = d.data();
+            renderMsg(m.user, m.text, m.user === myDisplayName, m.type);
+        });
+        box.scrollTop = box.scrollHeight;
+        if (!isFocused) { unreadCount++; notifSound.play(); document.title = `(${unreadCount}) CrypticChat`; }
+    });
+
+    // --- SIGNALS (VC & ADMIN) ---
+    channel.subscribe("signal", async (m) => {
+        const d = m.data;
+        if (d.target && d.target !== myDisplayName) return; // Msg not for me
+
+        // ADMIN SIGNALS
+        if (d.type === "kick") {
+            alert("You have been kicked by an Admin.");
+            logout();
+        }
+        if (d.type === "disco") {
+            const l = document.getElementById("disco-layer");
+            l.classList.add("disco-active");
+            notify("🕺 DISCO PROTOCOL INITIATED 🕺");
+            setTimeout(() => l.classList.remove("disco-active"), 15000);
+        }
+        if (d.type === "announce") {
+            notify("📢 SYSTEM: " + d.text);
+            renderMsg("SYSTEM", d.text, false, "system");
+        }
+
+        // VC SIGNALS
+        if (isGuest || !isVoiceActive) return;
+        if (d.from === myDisplayName) return;
+
+        if (d.type === "join-call") {
+            // Initiate connection to new joiner
+            initiatePeer(d.from, true);
+        }
+        if (d.type === "offer") {
+            const pc = initiatePeer(d.from, false);
+            await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
+            const ans = await pc.createAnswer();
+            await pc.setLocalDescription(ans);
+            channel.publish("signal", { type: "answer", answer: ans, target: d.from, from: myDisplayName });
+        }
+        if (d.type === "answer") await peers[d.from].setRemoteDescription(new RTCSessionDescription(d.answer));
+        if (d.type === "ice") await peers[d.from].addIceCandidate(new RTCIceCandidate(d.candidate));
+    });
 }
 
-// JOIN ROOM
-join-room-btn.onclick = () => {
-  myName = display-name.value || "phantom"
-  room = room-id.value || "global"
-  localStorage.setItem("cc_room",room)
-  enter()
+// --- ADMIN PANEL ---
+
+window.toggleAdminPanel = () => {
+    const p = document.getElementById("admin-panel");
+    p.classList.toggle("hidden");
+};
+
+window.adminAction = async (act) => {
+    if (!isAdmin) return;
+    const kickUser = document.getElementById("kick-target").value;
+    const announceText = document.getElementById("announce-text").value;
+
+    switch(act) {
+        case "purge":
+            if(!confirm("Delete last 50 messages?")) return;
+            // 1. Visual Clear via signal (optional, but good UX)
+            // 2. DB Clear
+            const q = query(collection(db, "rooms", currentRoom, "messages"), limit(50));
+            const snap = await getDocs(q);
+            const batch = writeBatch(db);
+            snap.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            notify("Purge Complete");
+            break;
+        case "kick":
+            if(!kickUser) return notify("Enter user to kick");
+            channel.publish("signal", { type: "kick", target: kickUser });
+            notify(`Kicked ${kickUser}`);
+            break;
+        case "disco":
+            channel.publish("signal", { type: "disco" });
+            break;
+        case "announce":
+            if(!announceText) return;
+            channel.publish("signal", { type: "announce", text: announceText });
+            document.getElementById("announce-text").value = "";
+            break;
+    }
+};
+
+// --- VC LOGIC ---
+
+document.getElementById("vc-btn").onclick = async () => {
+    if (isDeafened) return notify("Cannot join while deafened");
+    if (!isVoiceActive) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            isVoiceActive = true;
+            
+            // UI Update
+            const btn = document.getElementById("vc-btn");
+            btn.classList.add("vc-on");
+            btn.innerHTML = `<span class="text-[9px] font-black uppercase">Leave</span>`;
+            document.getElementById("mute-btn").classList.remove("hidden");
+            document.getElementById("deafen-btn").classList.remove("hidden");
+            
+            channel.presence.update({ user: myDisplayName, inCall: true, isAdmin: isAdmin });
+            channel.publish("signal", { type: "join-call", from: myDisplayName }); // Announce entry
+            setupVisualizer();
+        } catch (e) { console.error(e); notify("Microphone Access Denied"); }
+    } else stopVC();
+};
+
+function initiatePeer(target, initiator) {
+    if(peers[target]) return peers[target];
+    
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    peers[target] = pc;
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+    pc.ontrack = (e) => {
+        let el = document.getElementById(`aud-${target}`);
+        if (!el) { el = document.createElement('audio'); el.id = `aud-${target}`; el.autoplay = true; document.getElementById("remote-audios").appendChild(el); }
+        el.srcObject = e.streams[0]; el.muted = isDeafened;
+    };
+
+    pc.onicecandidate = (e) => { 
+        if (e.candidate) channel.publish("signal", { type: "ice", candidate: e.candidate, target: target, from: myDisplayName }); 
+    };
+
+    if (initiator) {
+        pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => {
+            channel.publish("signal", { type: "offer", offer: pc.localDescription, target: target, from: myDisplayName });
+        });
+    }
+    return pc;
 }
 
-function enter(){
-  view-join.classList.add("hidden")
-  view-chat.classList.remove("hidden")
-  if(isAdmin) adminBtn.classList.remove("hidden")
-
-  ably = new Ably.Realtime("YOUR_ABLY_KEY")
-  channel = ably.channels.get(room)
-
-  channel.presence.enter({ user:myName, inCall:false })
-  channel.presence.subscribe(updateUsers)
-
-  channel.subscribe("kick",m=>{
-    if(m.data===myName) location.reload()
-  })
-
-  onSnapshot(collection(db,"rooms",room,"messages"),snap=>{
-    messages.innerHTML=""
-    snap.forEach(d=>renderMsg(d.data()))
-  })
+function stopVC() {
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    Object.values(peers).forEach(p => p.close());
+    peers = {}; isVoiceActive = false;
+    
+    const btn = document.getElementById("vc-btn");
+    btn.classList.remove("vc-on");
+    btn.innerHTML = `<span class="text-[9px] font-black uppercase">Join VC</span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
+    
+    document.getElementById("mute-btn").classList.add("hidden");
+    document.getElementById("deafen-btn").classList.add("hidden");
+    channel.presence.update({ user: myDisplayName, inCall: false, isSpeaking: false, isAdmin: isAdmin });
 }
 
-// USERS LIST FIX
-function updateUsers(){
-  channel.presence.get((_,m)=>{
-    users-list.innerHTML = m.map(u=>`
-      <div class="bg-white/5 p-2 rounded">
-        <span class="${u.data.inCall?'status-vc':''}">
-          ${u.data.user}
-        </span>
-        ${u.data.inCall?'<span class="vc-badge">IN VC</span>':''}
-        ${isAdmin && u.data.user!==myName?`<button onclick="kick('${u.data.user}')" class="ml-2 text-red-500">kick</button>`:''}
-      </div>
-    `).join("")
-  })
+function setupVisualizer() {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(localStream);
+    const analyzer = audioCtx.createAnalyser();
+    analyzer.fftSize = 256;
+    source.connect(analyzer);
+    const data = new Uint8Array(analyzer.frequencyBinCount);
+    const check = () => {
+        if(!isVoiceActive) return;
+        analyzer.getByteFrequencyData(data);
+        const volume = data.reduce((a,b) => a+b) / data.length;
+        const speaking = volume > 20 && !isMuted;
+        channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: speaking, isAdmin: isAdmin });
+        requestAnimationFrame(check);
+    };
+    check();
 }
 
-function kick(u){
-  channel.publish("kick",u)
+// --- UTILS & UI UPDATE ---
+
+document.getElementById("mute-btn").onclick = () => { 
+    isMuted = !isMuted; 
+    localStream.getAudioTracks()[0].enabled = !isMuted; 
+    document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); 
+};
+
+document.getElementById("deafen-btn").onclick = () => {
+    isDeafened = !isDeafened;
+    document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
+    document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
+    if(isDeafened && isVoiceActive && !isMuted) { document.getElementById("mute-btn").click(); } // Auto mute if deafen
+};
+
+function updateUsers() {
+    channel.presence.get((err, members) => {
+        if(!members) return;
+        document.getElementById("users-list").innerHTML = members.map(m => {
+            const d = m.data;
+            const inVcStyle = d.inCall ? 'text-green-400 font-bold' : 'text-white/40';
+            const vcBadge = d.inCall ? '<span class="text-[8px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded ml-2">IN VC</span>' : '';
+            const adminBadge = d.isAdmin ? '<span class="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded ml-1">OP</span>' : '';
+            return `
+            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-2 border border-white/5 ${d.isSpeaking ? 'speaking-pulse' : ''}">
+                <div class="w-2 h-2 rounded-full ${d.inCall ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-white/20'}"></div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center">
+                        <span class="text-[11px] uppercase truncate ${inVcStyle}">${d.user}</span>
+                        ${adminBadge}
+                    </div>
+                    ${vcBadge}
+                </div>
+            </div>`
+        }).join("");
+    });
 }
 
-// ADMIN
-function toggleAdmin(v){ adminPanel.classList.toggle("active",v) }
-
-async function purge(){
-  const q = await getDocs(collection(db,"rooms",room,"messages"))
-  q.forEach(d=>deleteDoc(d.ref))
+function renderMsg(u, t, me, type) {
+    const box = document.getElementById("messages");
+    const div = document.createElement("div");
+    
+    if (type === "system") {
+        div.className = "system-msg text-yellow-400 border border-yellow-500/30";
+        div.innerText = t;
+    } else {
+        div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
+        const nameColor = me ? 'text-white/50' : 'text-purple-300';
+        div.innerHTML = `<div class="text-[9px] ${nameColor} font-bold uppercase mb-1">${u}</div><span class="text-sm leading-relaxed">${t}</span>`;
+    }
+    box.appendChild(div);
 }
 
-function announce(){
-  const t = prompt("announcement")
-  channel.publish("announce",t)
-}
+document.getElementById("send-btn").onclick = async () => {
+    const i = document.getElementById("input"); 
+    if (!i.innerText.trim()) return;
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
+        user: myDisplayName, text: i.innerText, timestamp: serverTimestamp(), type: "chat" 
+    });
+    i.innerHTML = "";
+};
 
-function disco(){
-  const d = document.createElement("div")
-  d.className="disco"
-  document.body.appendChild(d)
-  setTimeout(()=>d.remove(),15000)
-}
+window.notify = (m) => {
+    const t = document.createElement("div"); t.className = "toast"; t.innerText = m;
+    document.getElementById("notification-container").appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+};
 
-// MESSAGES
-send-btn.onclick = ()=> {
-  if(!input.innerText.trim()) return
-  addDoc(collection(db,"rooms",room,"messages"),{user:myName,text:input.innerText})
-  input.innerText=""
-}
+window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
+window.onblur = () => { isFocused = false; };
 
-function renderMsg(m){
-  const d=document.createElement("div")
-  d.className="bubble "+(m.user===myName?"mine":"theirs")
-  d.innerText=`${m.user}: ${m.text}`
-  messages.appendChild(d)
+// --- VISUALS ---
+const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.onresize = resize; resize();
+let snow = Array.from({length: 50}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 }));
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    snow.forEach(p => {
+        p.y += p.d; if(p.y > canvas.height) p.y = -5;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(draw);
 }
+draw();
 </script>
 </body>
 </html>

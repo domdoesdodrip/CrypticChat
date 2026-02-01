@@ -21,16 +21,13 @@
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; }
         #input:empty:before { content: attr(placeholder); color: #4b5563; }
         
+        /* STATUS & VC HIGHLIGHTS */
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; flex-shrink: 0; }
+        .user-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; }
+        .speaking-active { border-color: #22c55e !important; box-shadow: inset 0 0 10px rgba(34, 197, 94, 0.2); animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
         .vc-on { color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
-        .mute-on { color: #ef4444 !important; }
-        .deafen-on { color: #f59e0b !important; }
-        
-        /* STATUS DOT FIX */
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #374151; flex-shrink: 0; }
-        .dot-online { background: #22c55e !important; box-shadow: 0 0 10px #22c55e; }
-        
-        .speaking-pulse { outline: 2px solid #22c55e; outline-offset: -2px; animation: pulse 0.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         .toast { background: rgba(239, 68, 68, 0.9); color: white; padding: 12px 20px; border-radius: 12px; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px; }
     </style>
 </head>
@@ -52,9 +49,10 @@
     </div>
 
     <div id="view-join" class="hidden flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center">
+        <div class="glass w-full max-w-md p-10 rounded-[2.5rem] text-center relative">
+            <button onclick="location.reload()" class="absolute top-6 left-6 text-white/20 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
             <h1 class="text-3xl font-black mb-10 uppercase tracking-tighter">Enter Room</h1>
-            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-center" placeholder="Alias">
+            <input id="display-name" type="text" maxlength="15" class="w-full mb-4 p-4 bg-white/5 rounded-2xl outline-none text-center font-bold" placeholder="Alias">
             <input id="room-id" type="text" class="w-full mb-8 p-4 bg-white/5 rounded-2xl outline-none text-center" placeholder="Room ID (Optional)">
             <button id="join-room-btn" class="w-full bg-purple-600 py-5 rounded-2xl font-extrabold text-white text-xs uppercase">Connect</button>
         </div>
@@ -63,7 +61,7 @@
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-40 border-b border-white/5">
             <div class="flex items-center gap-3">
-                <button onclick="location.reload()" class="text-white/40"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                <button onclick="location.reload()" class="text-white/40 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
                 <div id="roomLabel" class="font-black text-purple-500 uppercase text-xs"></div>
             </div>
             <div class="flex items-center gap-1">
@@ -93,41 +91,31 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-let ably, channel, myDisplayName, currentRoom = '', isGuest = false;
+let ably, channel, myDisplayName, currentRoom = '', isGuest = false, guestDocID = null;
 let localStream, peers = {}, isVoiceActive = false, isMuted = false, isDeafened = false;
 let unreadCount = 0, isFocused = true;
 const notifUrl = "https://files.catbox.moe/8tz2o5.mp3";
 
-// OVERLAPPING AUDIO FIX
-function playAlert() {
-    new Audio(notifUrl).play().catch(()=>{});
-}
+// OVERLAPPING AUDIO 
+function playAlert() { new Audio(notifUrl).play().catch(()=>{}); }
 
-// GUEST MODE LOGIC
+// GUEST LOGIC
 document.getElementById("guest-btn").onclick = async () => {
     isGuest = true;
-    const guestID = "guest_" + Math.random().toString(36).substr(2, 5);
+    guestDocID = "guest_" + Math.random().toString(36).substr(2, 5);
     const guestPass = "tmp_pass";
-    
-    // Fix: Generate temp account in DB so guest isn't empty
-    await setDoc(doc(db, "users", guestID), { password: guestPass, isGuest: true });
-    
-    document.getElementById("display-name").value = guestID.toUpperCase();
-    initAbly(guestID, guestPass);
+    await setDoc(doc(db, "users", guestDocID), { password: guestPass, isGuest: true });
+    document.getElementById("display-name").value = guestDocID.toUpperCase();
+    initAbly(guestDocID, guestPass);
 };
 
-window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
-window.onblur = () => { isFocused = false; };
-
-// ENTER TO SEND FIX
-document.getElementById("input").onkeydown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-};
+// GUEST CLEANUP - Delete temp account on tab close
+window.onbeforeunload = () => { if(isGuest && guestDocID) deleteDoc(doc(db, "users", guestDocID)); };
 
 document.getElementById("auth-main-btn").onclick = async () => {
     const u = document.getElementById("auth-user").value.trim().toLowerCase(), p = document.getElementById("auth-pass").value;
@@ -150,16 +138,12 @@ document.getElementById("join-room-btn").onclick = () => {
     const alias = (document.getElementById("display-name").value.trim() || "Phantom");
     const room = (document.getElementById("room-id").value.trim() || "GLOBAL").toUpperCase();
     
-    // FIX: Check if alias is already used in the room
-    const checkChannel = ably.channels.get("room-" + room);
-    checkChannel.presence.get((err, members) => {
-        const isTaken = members && members.some(m => m.data.user.toLowerCase() === alias.toLowerCase());
-        if (isTaken) {
-            return notify("ALIAS '" + alias + "' IS ALREADY IN THIS ROOM");
+    // ALIAS CHECK
+    ably.channels.get("room-" + room).presence.get((err, members) => {
+        if (members && members.some(m => m.data.user.toLowerCase() === alias.toLowerCase())) {
+            return notify("NAME TAKEN IN " + room);
         }
-        myDisplayName = alias;
-        currentRoom = room;
-        enterChat();
+        myDisplayName = alias; currentRoom = room; enterChat();
     });
 };
 
@@ -167,26 +151,24 @@ function enterChat() {
     document.getElementById("view-join").classList.add("hidden");
     document.getElementById("view-chat").classList.remove("hidden");
     document.getElementById("roomLabel").innerText = currentRoom;
-
     if(isGuest) document.getElementById("vc-btn").classList.add("hidden");
 
     channel = ably.channels.get("room-" + currentRoom);
     channel.presence.enter({ user: myDisplayName, inCall: false, isSpeaking: false });
     channel.presence.subscribe(() => updateUsers());
 
-    // Messages Stream
-    const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50));
-    onSnapshot(q, (s) => {
+    onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"), limit(50)), (s) => {
         const box = document.getElementById("messages"); box.innerHTML = '';
         s.forEach(d => {
             const m = d.data();
-            renderMsg(m.user, m.text, m.user === myDisplayName);
+            const div = document.createElement("div"); div.className = `bubble flex flex-col ${m.user === myDisplayName?'mine':'theirs'}`;
+            div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${m.user}</div><span class="text-sm">${m.text}</span>`;
+            box.appendChild(div);
         });
         box.scrollTop = box.scrollHeight;
         if (!isFocused) { unreadCount++; playAlert(); document.title = `(${unreadCount}) CrypticChat`; }
     });
 
-    // VC Signalling logic remains same...
     channel.subscribe("vc-signal", async (m) => {
         if(isGuest) return;
         const d = m.data; if (d.from === myDisplayName || (d.to && d.to !== myDisplayName)) return;
@@ -205,7 +187,16 @@ function enterChat() {
     });
 }
 
-// VC ENGINE
+// ENTER TO SEND
+document.getElementById("input").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+async function sendMessage() {
+    const i = document.getElementById("input"), text = i.innerText.trim();
+    if (!text) return; i.innerHTML = "";
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text, timestamp: serverTimestamp() });
+}
+document.getElementById("send-btn").onclick = sendMessage;
+
+// VC TOOLS
 document.getElementById("vc-btn").onclick = async () => {
     if (isDeafened) return notify("UNDEAFEN FIRST");
     if (!isVoiceActive) {
@@ -213,8 +204,7 @@ document.getElementById("vc-btn").onclick = async () => {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             isVoiceActive = true;
             document.getElementById("vc-btn").classList.add("vc-on");
-            document.getElementById("mute-btn").classList.remove("hidden");
-            document.getElementById("deafen-btn").classList.remove("hidden");
+            document.querySelectorAll("#mute-btn, #deafen-btn").forEach(b => b.classList.remove("hidden"));
             channel.presence.update({ user: myDisplayName, inCall: true });
             channel.publish("vc-signal", { type: "join", from: myDisplayName });
             setupVisualizer();
@@ -225,16 +215,14 @@ document.getElementById("vc-btn").onclick = async () => {
 function setupVisualizer() {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioCtx.createMediaStreamSource(localStream);
-    const analyzer = audioCtx.createAnalyser();
-    analyzer.fftSize = 256;
+    const analyzer = audioCtx.createAnalyser(); analyzer.fftSize = 256;
     source.connect(analyzer);
     const data = new Uint8Array(analyzer.frequencyBinCount);
     const check = () => {
         if(!isVoiceActive) return;
         analyzer.getByteFrequencyData(data);
         const volume = data.reduce((a,b) => a+b) / data.length;
-        const speaking = volume > 20 && !isMuted;
-        channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: speaking });
+        channel.presence.update({ user: myDisplayName, inCall: true, isSpeaking: (volume > 20 && !isMuted) });
         requestAnimationFrame(check);
     };
     check();
@@ -244,46 +232,60 @@ function updateUsers() {
     channel.presence.get((err, members) => {
         if(!members) return;
         document.getElementById("users-list").innerHTML = members.map(m => `
-            <div class="bg-white/5 p-3 rounded-xl flex items-center gap-3 border border-white/5 ${m.data.isSpeaking ? 'speaking-pulse' : ''}">
-                <div class="status-dot ${m.data.inCall ? 'dot-online' : ''}"></div>
+            <div class="user-card bg-white/5 p-3 rounded-xl flex items-center gap-3 ${m.data.isSpeaking ? 'speaking-active' : ''}">
+                <div class="status-dot"></div>
                 <span class="text-[10px] font-bold uppercase ${m.data.inCall ? 'text-green-400' : 'text-white/40'}">${m.data.user}</span>
             </div>`).join("");
     });
 }
 
-function renderMsg(u, t, me) {
-    const box = document.getElementById("messages"), div = document.createElement("div");
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'}`;
-    div.innerHTML = `<div class="text-[9px] opacity-40 uppercase font-black mb-1">${u}</div><span class="text-sm">${t}</span>`;
-    box.appendChild(div);
+function createPeer(target) {
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    peers[target] = pc;
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    pc.ontrack = (e) => {
+        let el = document.getElementById(`aud-${target}`);
+        if (!el) { el = document.createElement('audio'); el.id = `aud-${target}`; el.autoplay = true; document.getElementById("remote-audios").appendChild(el); }
+        el.srcObject = e.streams[0]; el.muted = isDeafened;
+    };
+    pc.onicecandidate = (e) => { if (e.candidate) channel.publish("vc-signal", { type: "ice", candidate: e.candidate, to: target, from: myDisplayName }); };
+    return pc;
 }
 
-async function sendMessage() {
-    const i = document.getElementById("input"); if (!i.innerText.trim()) return;
-    const text = i.innerText; i.innerHTML = "";
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { user: myDisplayName, text, timestamp: serverTimestamp() });
+function stopVC() {
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    Object.values(peers).forEach(p => p.close());
+    peers = {}; isVoiceActive = false;
+    document.getElementById("vc-btn").classList.remove("vc-on");
+    document.querySelectorAll("#mute-btn, #deafen-btn").forEach(b => b.classList.add("hidden"));
+    channel.presence.update({ user: myDisplayName, inCall: false, isSpeaking: false });
 }
 
-document.getElementById("send-btn").onclick = sendMessage;
+document.getElementById("mute-btn").onclick = () => { isMuted = !isMuted; localStream.getAudioTracks()[0].enabled = !isMuted; document.getElementById("mute-btn").classList.toggle("mute-on", isMuted); };
+document.getElementById("deafen-btn").onclick = () => {
+    isDeafened = !isDeafened;
+    document.querySelectorAll("#remote-audios audio").forEach(a => a.muted = isDeafened);
+    document.getElementById("deafen-btn").classList.toggle("deafen-on", isDeafened);
+    if(isDeafened && isVoiceActive) { isMuted = true; localStream.getAudioTracks()[0].enabled = false; document.getElementById("mute-btn").classList.add("mute-on"); }
+};
 
+window.onfocus = () => { isFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
+window.onblur = () => { isFocused = false; };
 window.notify = (m) => {
     const t = document.createElement("div"); t.className = "toast"; t.innerText = m;
     document.getElementById("notification-container").appendChild(t);
     setTimeout(() => t.remove(), 4000);
 };
 
-// SNOW WITH BREEZE
+// SNOW 
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.onresize = resize; resize();
 let snow = Array.from({length: 45}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.5+0.5, d: Math.random()*0.4+0.1, s: Math.random()*0.2-0.1 }));
 function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255,255,255,0.12)";
     snow.forEach(p => {
-        p.y += p.d; p.x += p.s;
-        if(p.y > canvas.height) p.y = -5;
-        if(p.x > canvas.width) p.x = 0; if(p.x < 0) p.x = canvas.width;
+        p.y += p.d; p.x += p.s; if(p.y > canvas.height) p.y = -5; if(p.x > canvas.width) p.x = 0; if(p.x < 0) p.x = canvas.width;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
     });
     requestAnimationFrame(draw);

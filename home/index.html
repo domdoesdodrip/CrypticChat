@@ -14,16 +14,16 @@
         #app-root { position: relative; z-index: 10; height: 100%; width: 100%; display: flex; flex-direction: column; }
         .glass { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid rgba(150, 103, 244, 0.15); }
         
-        /* Message Bubbles */
         .bubble { max-width: 80%; padding: 10px 14px; border-radius: 18px; margin-bottom: 6px; position: relative; }
         .mine { background: #9667f4; align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1a1825; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
-        /* Modal */
         #kick-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; }
-
         #input-area { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 14px; width: 100%; max-height: 100px; overflow-y: auto; }
         .toast { background: #9667f4; color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 11px; margin-bottom: 8px; }
+        
+        .msg-btn { opacity: 0.5; transition: opacity 0.2s; padding: 2px; }
+        .msg-btn:hover { opacity: 1; }
     </style>
 </head>
 <body>
@@ -33,31 +33,28 @@
 
 <div id="kick-modal">
     <div class="glass p-6 rounded-[2rem] text-center max-w-xs w-full mx-4">
-        <h3 class="text-lg font-black mb-2 uppercase">Kick User?</h3>
+        <h3 class="text-lg font-black mb-2 uppercase text-red-500">Kick Identity?</h3>
         <p id="kick-target-name" class="text-white/40 mb-6 text-[11px]"></p>
         <div class="flex gap-3">
-            <button onclick="closeKickModal()" class="flex-1 bg-white/5 py-2.5 rounded-xl text-xs font-bold">Back</button>
-            <button id="confirm-kick-btn" class="flex-1 bg-red-600 py-2.5 rounded-xl text-xs font-bold">Kick</button>
+            <button onclick="closeKickModal()" class="flex-1 bg-white/5 py-2.5 rounded-xl text-xs font-bold">Cancel</button>
+            <button id="confirm-kick-btn" class="flex-1 bg-red-600 py-2.5 rounded-xl text-xs font-bold">Confirm</button>
         </div>
     </div>
 </div>
 
 <div id="app-root">
     <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center shadow-2xl">
+        <div class="glass w-full max-w-sm p-8 rounded-[2.5rem] text-center shadow-2xl border-purple-500/30">
             <h1 class="text-4xl font-black mb-8 tracking-tighter uppercase">Cryptic</h1>
-            
             <div class="flex bg-white/5 p-1 rounded-xl mb-6">
                 <button onclick="toggleAuth(true)" id="tab-login" class="flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all bg-white/10">Login</button>
                 <button onclick="toggleAuth(false)" id="tab-signup" class="flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all text-white/30">Sign Up</button>
             </div>
-
             <div class="space-y-3 mb-8">
                 <input id="auth-user" type="text" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 text-sm" placeholder="Username">
                 <input id="auth-pass" type="password" class="w-full p-4 bg-white/5 rounded-xl outline-none border border-white/5 text-sm" placeholder="Password">
             </div>
-            
-            <button id="auth-main-btn" class="w-full bg-purple-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-purple-500 transition-all">Enter</button>
+            <button id="auth-main-btn" class="w-full bg-purple-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest">Enter</button>
             <button onclick="initGuest()" class="mt-6 text-[10px] text-white/30 uppercase font-black hover:text-white transition-colors">Ghost Access</button>
         </div>
     </div>
@@ -74,28 +71,28 @@
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-5 shrink-0 z-50">
             <div class="flex items-center gap-3">
-                <button onclick="window.location.reload()" class="text-white/40">←</button>
+                <button onclick="window.location.reload()" class="text-white/40 hover:text-white">←</button>
                 <div id="roomLabel" class="font-black text-purple-400 uppercase text-xs"></div>
             </div>
             <div id="admin-tag" class="hidden px-3 py-1 bg-red-600 text-[9px] font-black rounded-full uppercase">Admin</div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-5 overflow-y-auto border-r border-white/5">
+            <aside class="hidden lg:flex flex-col w-60 glass p-5 overflow-y-auto border-r border-white/5">
                 <div id="users-list" class="space-y-2"></div>
             </aside>
 
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-5 pb-32 flex flex-col overflow-y-auto"></div>
                 
-                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl">
-                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-950 p-2 rounded-t-xl border-x border-t border-white/10">
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl">
+                    <div id="reply-bar" class="hidden flex justify-between items-center bg-purple-950/80 backdrop-blur-md p-2 rounded-t-xl border-x border-t border-white/10">
                         <span id="reply-text" class="text-[9px] font-bold truncate"></span>
                         <button onclick="cancelReply()">✕</button>
                     </div>
                     <div class="glass p-2 rounded-xl flex items-center gap-2">
                         <div id="input-area" contenteditable="true" placeholder="Message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 h-10 w-12 rounded-lg flex items-center justify-center">
+                        <button id="send-btn" class="bg-purple-600 h-10 w-12 rounded-lg flex items-center justify-center shrink-0">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m22 2-7 20-4-9-9-4Z"/></svg>
                         </button>
                     </div>
@@ -142,7 +139,6 @@ document.getElementById("auth-main-btn").onclick = async () => {
 };
 
 window.initGuest = () => { myUID = "Ghost_" + Math.random().toString(36).substring(7); showJoin(); };
-
 function showJoin() { document.getElementById("view-auth").classList.add("hidden"); document.getElementById("view-join").classList.remove("hidden"); }
 
 document.getElementById("join-btn").onclick = () => {
@@ -176,20 +172,25 @@ function renderMsg(data, id) {
     const box = document.getElementById("messages"), isMe = data.uid === myUID;
     const div = document.createElement("div");
     div.className = `bubble flex flex-col ${isMe ? 'mine' : 'theirs'}`;
+    
     div.innerHTML = `
-        ${data.reply ? `<div class="text-[9px] bg-black/30 p-2 rounded-lg mb-2 border-l-2 border-white">@${data.reply.user}: ${data.reply.text}</div>` : ''}
-        <div class="flex items-center justify-between gap-4 mb-1">
-            <span class="text-[9px] font-black uppercase opacity-50">${data.alias}</span>
+        ${data.reply ? `<div class="text-[9px] bg-black/20 p-2 rounded-lg mb-2 border-l-2 border-white">@${data.reply.user}: ${data.reply.text}</div>` : ''}
+        <div class="flex items-center justify-between gap-4 mb-0.5">
+            <span class="text-[9px] font-black uppercase opacity-40">${data.alias}</span>
             <div class="flex gap-2">
-                <button onclick="setReply('${data.alias}', '${data.text}')">Reply</button>
-                ${isAdmin ? `<button onclick="deleteMsg('${id}')" class="text-red-400">Del</button>` : ''}
+                <button class="msg-btn" onclick="setReply('${data.alias}', '${data.text}')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                </button>
+                ${isAdmin ? `
+                <button class="msg-btn text-red-400" onclick="deleteMsg('${id}')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                </button>` : ''}
             </div>
         </div>
-        <div class="text-sm font-medium">${data.text}</div>`;
+        <div class="text-[13px] font-medium leading-relaxed">${data.text}</div>`;
     box.appendChild(div);
 }
 
-// ENTER TO SEND
 document.getElementById("input-area").onkeydown = (e) => {
     if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 };
@@ -215,8 +216,8 @@ function updateUsers() {
         if(err) return;
         document.getElementById("users-list").innerHTML = m.map(u => `
             <div class="bg-white/5 p-3 rounded-xl flex items-center justify-between group">
-                <span class="text-xs font-bold">${u.data.alias}</span>
-                ${isAdmin && u.clientId !== myUID ? `<button onclick="openKickModal('${u.clientId}', '${u.data.alias}')" class="text-[9px] text-red-500">KICK</button>` : ''}
+                <span class="text-xs font-bold truncate pr-2">${u.data.alias}</span>
+                ${isAdmin && u.clientId !== myUID ? `<button onclick="openKickModal('${u.clientId}', '${u.data.alias}')" class="text-[9px] text-red-500 font-black">KICK</button>` : ''}
             </div>`).join("");
     });
 }
@@ -224,7 +225,7 @@ function updateUsers() {
 window.setReply = (u, t) => { replyingTo = { user: u, text: t }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-text").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { replyingTo = null; document.getElementById("reply-bar").classList.add("hidden"); };
 window.deleteMsg = async (id) => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); };
-window.openKickModal = (id, name) => { document.getElementById("kick-target-name").innerText = `Kick ${name}?`; document.getElementById("kick-modal").style.display = "flex"; document.getElementById("confirm-kick-btn").onclick = () => { channel.publish("kick-event", { target: id }); closeKickModal(); }; };
+window.openKickModal = (id, name) => { document.getElementById("kick-target-name").innerText = `Remove identity: ${name}?`; document.getElementById("kick-modal").style.display = "flex"; document.getElementById("confirm-kick-btn").onclick = () => { channel.publish("kick-event", { target: id }); closeKickModal(); }; };
 window.closeKickModal = () => { document.getElementById("kick-modal").style.display = "none"; };
 window.notify = (m) => { const t = document.createElement("div"); t.className = "toast"; t.innerText = m; document.getElementById("notification-container").appendChild(t); setTimeout(() => t.remove(), 3000); };
 

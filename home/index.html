@@ -139,19 +139,20 @@ const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", auth
 const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
-let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
+let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL";
 
 // Identity
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
 
-// Join Logic
+// JOIN LOGIC
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
-    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     const errorBar = document.getElementById("error-msg");
     if(!rawName) return;
+    
     const lowerName = rawName.toLowerCase();
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
@@ -159,14 +160,17 @@ document.getElementById("join-btn").onclick = async () => {
         errorBar.innerText = "Username taken."; errorBar.classList.remove("hidden"); return;
     }
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
+    
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
-    channel = ably.channels.get("room-" + roomID);
+    channel = ably.channels.get("room-" + currentRoom);
+    
     channel.presence.enter({ user: myName, isAdmin }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = roomID;
-        const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"));
+        document.getElementById("roomLabel").innerText = currentRoom;
+        
+        const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
         onSnapshot(q, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") render(change.doc.data().user, change.doc.data().text, change.doc.data().uid === myId, change.doc.id, change.doc.data().isAdmin, change.doc.data().reply);
@@ -176,6 +180,31 @@ document.getElementById("join-btn").onclick = async () => {
         channel.presence.subscribe(() => syncUsers());
         syncUsers();
     });
+};
+
+// MESSAGE LOGIC
+async function sendMessage() {
+    const input = document.getElementById("input");
+    const text = input.innerText.trim();
+    if(!text) return;
+    
+    input.innerText = ""; 
+    const msgData = { 
+        text, user: myName, uid: myId, isAdmin, 
+        timestamp: serverTimestamp(), 
+        reply: currentReply 
+    };
+    
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
+    cancelReply();
+}
+
+document.getElementById("send-btn").onclick = sendMessage;
+document.getElementById("input").onkeydown = (e) => {
+    if(e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
 };
 
 function render(u, t, me, msgId, senderIsAdmin, reply) {
@@ -199,7 +228,18 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-// GAME ENGINE (SHIP RUSH ORIGINAL)
+// DELETE LOGIC
+window.openDeleteModal = (id) => { 
+    const modal = document.getElementById("delete-modal");
+    modal.style.display = "flex";
+    document.getElementById("confirm-delete-btn").onclick = async () => {
+        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
+        modal.style.display = "none";
+    };
+};
+window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
+
+// GAME ENGINE (SHIP RUSH)
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
 const gameKeys = { left: false, right: false };
@@ -214,19 +254,12 @@ function initShipRush() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById("game-view").appendChild(renderer.domElement);
-    
-    // Light
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
     const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 5); scene.add(sun);
-
-    // Grid
     grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
     grid.position.y = -1; scene.add(grid);
-
-    // Ship
     playerGroup = new THREE.Group();
     const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
-    const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
     const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.7}));
     cockpit.position.set(0, 0.2, 0.2); cockpit.scale.set(1, 1, 2);
@@ -235,11 +268,6 @@ function initShipRush() {
     const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
     playerGroup.add(hull, cockpit, lWing, rWing);
     scene.add(playerGroup);
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
@@ -255,28 +283,20 @@ function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
-
-    if(gameKeys.left && playerGroup.position.x > -8) {
-        playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6);
-    } else if(gameKeys.right && playerGroup.position.x < 8) {
-        playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6);
-    } else { playerGroup.rotation.z *= 0.85; }
-
+    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
+    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
+    else { playerGroup.rotation.z *= 0.85; }
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
-
     if(++spawnTimer > spawnInterval) {
         const theme = themes[(level-1)%themes.length];
         const shapes = [new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.IcosahedronGeometry(1.2), new THREE.TorusGeometry(1, 0.4, 8, 16)];
         const obs = new THREE.Mesh(shapes[Math.floor(Math.random()*shapes.length)], new THREE.MeshPhongMaterial({ color: theme.obs, emissive: theme.obs, emissiveIntensity: 0.5 }));
         obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
-
     for(let i=obstacles.length-1; i>=0; i--) {
         obstacles[i].position.z += gameSpeed;
         if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
             isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden');
-            const rec = localStorage.getItem('neonRushRecord') || 0; if(score > rec) localStorage.setItem('neonRushRecord', score);
-            document.getElementById('record').innerText = localStorage.getItem('neonRushRecord');
         }
         if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; 
             if(score % 15 === 0) { level++; gameSpeed += 0.04; document.getElementById('level-display').innerText = level; }
@@ -288,13 +308,13 @@ function animateGame() {
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 
-// Chat Utility Functions
+// UTILS
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
-window.leaveRoom = async () => { if(myName) await deleteDoc(doc(db, "active_usernames", lowerName)); location.reload(); };
+window.leaveRoom = () => location.reload();
 function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
-// Snow Canvas
+// SNOW
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }

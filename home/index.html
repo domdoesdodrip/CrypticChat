@@ -19,11 +19,10 @@
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         .ping-active { border: 2px solid var(--ping-red) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        .sys-msg { align-self: center; font-size: 10px; color: #9ca3af; text-transform: uppercase; margin: 12px 0; background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 99px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); }
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
         #input:empty:before { content: attr(placeholder); color: #6b7280; }
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
     </style>
 </head>
 <body>
@@ -40,23 +39,53 @@
     </div>
 </div>
 
+<div id="games-view" class="modal-base">
+    <div class="glass w-[90%] h-[80%] max-w-4xl flex flex-col p-8 rounded-[40px] shadow-2xl overflow-hidden border-purple-500/20">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h2 class="text-3xl font-black text-white tracking-tighter">ARCADE</h2>
+                <p class="text-xs text-purple-400 font-bold uppercase tracking-widest">Mini Games Collection</p>
+            </div>
+            <button onclick="toggleGames(false)" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-3 rounded-2xl transition-all font-black text-xs">EXIT ARCADE</button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto pr-2 custom-scroll">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-white/5 border border-white/10 p-6 rounded-3xl hover:border-purple-500/40 transition-all cursor-not-allowed group">
+                    <div class="text-4xl mb-3">🐍</div>
+                    <h3 class="font-black text-lg">Neon Snake</h3>
+                    <p class="text-xs text-gray-500 mb-4">The classic game, reinvented.</p>
+                    <span class="text-[10px] bg-white/5 px-3 py-1 rounded-full text-gray-400 font-bold">LOCKED</span>
+                </div>
+                <div class="bg-white/5 border border-white/10 p-6 rounded-3xl hover:border-purple-500/40 transition-all cursor-not-allowed group">
+                    <div class="text-4xl mb-3">🎾</div>
+                    <h3 class="font-black text-lg">Void Pong</h3>
+                    <p class="text-xs text-gray-500 mb-4">Fast paced 1v1 action.</p>
+                    <span class="text-[10px] bg-white/5 px-3 py-1 rounded-full text-gray-400 font-bold">LOCKED</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
-    <div id="view-login" class="flex-1 flex items-center justify-center p-4">
+    <div id="view-login" class="flex-1 flex flex-col items-center justify-center p-4">
         <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
-            <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">CrypticChat</h1>
+            <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">Cryptic</h1>
             <input id="name" type="text" maxlength="20" class="w-full mb-3 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
             <input id="room" type="text" maxlength="12" class="w-full mb-6 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Room ID">
             <p id="error-msg" class="text-red-500 text-xs mb-4 font-bold hidden"></p>
-            <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-extrabold shadow-lg transition-all active:scale-95 uppercase">JOIN</button>
+            <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-extrabold shadow-lg transition-all active:scale-95 uppercase">JOIN CHAT</button>
+            <button onclick="toggleGames(true)" class="w-full mt-3 bg-white/5 hover:bg-white/10 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all">Open Arcade</button>
         </div>
     </div>
 
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
-            <div class="flex items-center gap-3">
-                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded border border-purple-500/30 font-black tracking-tighter">ADMIN</span>
-                <button onclick="leaveRoom()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black transition-colors">LEAVE</button>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleGames(true)" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all">GAMES</button>
+                <button onclick="leaveRoom()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest transition-all">LEAVE</button>
             </div>
         </header>
 
@@ -65,7 +94,6 @@
                 <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest text-center">Active Users</div>
                 <div id="users-desktop" class="space-y-2"></div>
             </aside>
-
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-1"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md border-t border-white/10 z-20">
@@ -95,10 +123,11 @@ const db = getFirestore(initializeApp(firebaseConfig));
 const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
 
-// Initialize Identity
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
-if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
+if(myId === adminUID) { isAdmin = true; }
+
+window.toggleGames = (show) => { document.getElementById("games-view").style.display = show ? 'flex' : 'none'; };
 
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
@@ -106,29 +135,25 @@ document.getElementById("join-btn").onclick = async () => {
     const errorBar = document.getElementById("error-msg");
 
     if(!rawName) return;
-
-    // NAME FILTER LOGIC
     const lowerName = rawName.toLowerCase();
     const isRestricted = lowerName.includes("dom") || lowerName.includes("d0m");
     const hasAllow = rawName.endsWith("<allow>");
 
     if(isRestricted && !hasAllow) {
-        errorBar.innerText = "Restricted name";
+        errorBar.innerText = "Restricted name.";
         errorBar.classList.remove("hidden");
         return;
     }
 
-    // UNIQUE USERNAME REGISTRY
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
     if(userDoc.exists() && userDoc.data().uid !== myId) {
-        errorBar.innerText = "This username is already active in a room.";
+        errorBar.innerText = "Name taken.";
         errorBar.classList.remove("hidden");
         return;
     }
 
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
-    
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
     channel = ably.channels.get("room-" + roomID);
@@ -137,21 +162,9 @@ document.getElementById("join-btn").onclick = async () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
         document.getElementById("roomLabel").innerText = roomID;
-
-        // Ably Delete Listener
-        channel.subscribe("msg_delete", async (m) => {
-            await deleteDoc(doc(db, "rooms", roomID, "messages", m.data.id));
-        });
-
+        channel.subscribe("msg_delete", (m) => deleteDoc(doc(db, "rooms", roomID, "messages", m.data.id)));
         const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"));
-        onSnapshot(q, async (snapshot) => {
-            // ROTATOR: Clean oldest 15 if total > 35
-            if(snapshot.size > 35) {
-                const oldest = snapshot.docs.slice(0, 15);
-                oldest.forEach(d => deleteDoc(doc(db, "rooms", roomID, "messages", d.id)));
-                return;
-            }
-
+        onSnapshot(q, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const d = change.doc.data();
@@ -160,7 +173,6 @@ document.getElementById("join-btn").onclick = async () => {
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
             });
         });
-
         channel.presence.subscribe(() => syncUsers());
         syncUsers();
     });
@@ -172,17 +184,14 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
     const div = document.createElement("div"); div.id = msgId;
     const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
-
     div.innerHTML = `
         ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
         <div class="flex flex-col">
-            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Admin)':''}</div>` : ''}
+            ${!me ? `<div class="text-[10px] text-purple-400 font-black uppercase mb-0.5">${u}</div>` : ''}
             <div class="flex justify-between items-start gap-4">
                 <span class="text-sm">${t}</span>
                 <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
-                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                    </button>
+                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
             </div>
@@ -194,41 +203,24 @@ async function send() {
     const input = document.getElementById("input"), rID = document.getElementById("roomLabel").innerText;
     let text = input.innerText.trim();
     if(!text) return;
-
-    const capReply = currentReply;
-    input.innerHTML = ""; cancelReply();
-
-    await addDoc(collection(db, "rooms", rID, "messages"), {
-        user: myName, uid: myId, text, isAdmin, reply: capReply, timestamp: serverTimestamp()
-    });
+    const capReply = currentReply; input.innerHTML = ""; cancelReply();
+    await addDoc(collection(db, "rooms", rID, "messages"), { user: myName, uid: myId, text, isAdmin, reply: capReply, timestamp: serverTimestamp() });
 }
 
 window.openDeleteModal = (id) => { deleteTargetId = id; document.getElementById("delete-modal").style.display = 'flex'; };
 window.closeDeleteModal = () => { document.getElementById("delete-modal").style.display = 'none'; };
-document.getElementById("confirm-delete-btn").onclick = () => { 
-    channel.publish("msg_delete", { id: deleteTargetId }); 
-    window.closeDeleteModal(); 
-};
-
-window.startReply = (u, t) => { 
-    currentReply = { user: u, text: t.substring(0, 30) }; 
-    document.getElementById("reply-bar").classList.remove("hidden"); 
-    document.getElementById("reply-user").innerText = `Replying to @${u}`; 
-};
+document.getElementById("confirm-delete-btn").onclick = () => { channel.publish("msg_delete", { id: deleteTargetId }); window.closeDeleteModal(); };
+window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
-
-window.leaveRoom = async () => {
-    if(myName) await deleteDoc(doc(db, "active_usernames", myName.toLowerCase()));
-    location.reload();
-};
+window.leaveRoom = async () => { if(myName) await deleteDoc(doc(db, "active_usernames", myName.toLowerCase())); location.reload(); };
 
 function syncUsers() {
     channel.presence.get((err, members) => {
         if(!members) return;
         document.getElementById("users-desktop").innerHTML = members.map(m => `
             <div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div>
-                <span class="text-xs font-bold">${m.data.user}</span>
+                <div class="h-1.5 w-1.5 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div>
+                <span class="text-[11px] font-bold">${m.data.user}</span>
             </div>`).join("");
     });
 }

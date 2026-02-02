@@ -5,47 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>CrypticChat</title>
     <link rel="icon" type="image/x-icon" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
-    
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; }
-        
         #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
         .glass { background: rgba(15, 12, 22, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
-        
         @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        
-        .bubble { 
-            max-width: 85%; 
-            padding: 10px 16px; 
-            border-radius: 18px; 
-            margin-bottom: 6px; 
-            position: relative; 
-            border: 2px solid transparent; 
-            transition: all 0.2s; 
-            overflow-wrap: break-word;
-            word-wrap: break-word;
-            word-break: break-word;
-        }
+        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; border: 2px solid transparent; transition: all 0.2s; overflow-wrap: break-word; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        
-        .ping-pill { background: #3b82f6; color: white; padding: 1px 6px; border-radius: 4px; font-weight: 800; border: 1.5px solid rgba(0,0,0,0.5); display: inline-block; margin: 0 1px; }
         .ping-active { border: 2px solid var(--ping-red) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-
         .sys-msg { align-self: center; font-size: 10px; color: #9ca3af; text-transform: uppercase; margin: 12px 0; background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 99px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); }
-
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
         #input:empty:before { content: attr(placeholder); color: #6b7280; }
-        
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        #mobile-users { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(5,3,7,0.95); padding: 20px; }
     </style>
 </head>
 <body>
@@ -54,7 +32,7 @@
 
 <div id="delete-modal" class="modal-base">
     <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
-        <h3 class="text-xl font-bold mb-4">Delete Message?</h3>
+        <h3 class="text-xl font-bold mb-4 text-white">Delete Message?</h3>
         <div class="flex gap-3">
             <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold">Cancel</button>
             <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">Delete</button>
@@ -65,9 +43,10 @@
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
-            <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">CrypticChat</h1>
-            <input id="name" type="text" maxlength="12" class="w-full mb-3 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
+            <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">Cryptic</h1>
+            <input id="name" type="text" maxlength="20" class="w-full mb-3 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
             <input id="room" type="text" maxlength="12" class="w-full mb-6 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Room ID">
+            <p id="error-msg" class="text-red-500 text-xs mb-4 font-bold hidden"></p>
             <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-extrabold shadow-lg transition-all active:scale-95 uppercase">JOIN</button>
         </div>
     </div>
@@ -76,8 +55,8 @@
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
-                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded border border-purple-500/30 font-black tracking-tighter">ADMIN USER</span>
-                <button onclick="location.reload()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black transition-colors">LEAVE</button>
+                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded border border-purple-500/30 font-black tracking-tighter">ADMIN</span>
+                <button onclick="leaveRoom()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black transition-colors">LEAVE</button>
             </div>
         </header>
 
@@ -108,7 +87,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
@@ -116,26 +95,41 @@ const db = getFirestore(initializeApp(firebaseConfig));
 const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
 
-function initIdentity() {
-    let id = localStorage.getItem('cryptic_uid');
-    if (!id) {
-        id = 'uid-' + Math.random().toString(36).substring(2, 12);
-        localStorage.setItem('cryptic_uid', id);
-    }
-    myId = id;
-    if(myId === adminUID) {
-        isAdmin = true;
-        document.getElementById("admin-indicator").classList.remove("hidden");
-    }
-}
-initIdentity();
+// Initialize Identity
+myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
+localStorage.setItem('cryptic_uid', myId);
+if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
 
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
-    if(!rawName) return;
-    myName = rawName;
     const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    const errorBar = document.getElementById("error-msg");
+
+    if(!rawName) return;
+
+    // NAME FILTER LOGIC
+    const lowerName = rawName.toLowerCase();
+    const isRestricted = lowerName.includes("dom") || lowerName.includes("d0m");
+    const hasAllow = rawName.endsWith("<allow>");
+
+    if(isRestricted && !hasAllow) {
+        errorBar.innerText = "Restricted name. Must include <allow> at the end.";
+        errorBar.classList.remove("hidden");
+        return;
+    }
+
+    // UNIQUE USERNAME REGISTRY
+    const userRegRef = doc(db, "active_usernames", lowerName);
+    const userDoc = await getDoc(userRegRef);
+    if(userDoc.exists() && userDoc.data().uid !== myId) {
+        errorBar.innerText = "This username is already active in a room.";
+        errorBar.classList.remove("hidden");
+        return;
+    }
+
+    await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
     
+    myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
     channel = ably.channels.get("room-" + roomID);
 
@@ -144,15 +138,20 @@ document.getElementById("join-btn").onclick = async () => {
         document.getElementById("view-chat").classList.remove("hidden");
         document.getElementById("roomLabel").innerText = roomID;
 
-        // Sync system announcements and real-time deletions
-        channel.subscribe("sys_announce", m => renderSystem(m.data.text));
-        channel.subscribe("delete", async (m) => {
-            if(isAdmin) await deleteDoc(doc(db, "rooms", roomID, "messages", m.data.id));
+        // Ably Delete Listener
+        channel.subscribe("msg_delete", async (m) => {
+            await deleteDoc(doc(db, "rooms", roomID, "messages", m.data.id));
         });
 
-        // Firebase History Listener
-        const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"), limit(70));
-        onSnapshot(q, (snapshot) => {
+        const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"));
+        onSnapshot(q, async (snapshot) => {
+            // ROTATOR: Clean oldest 15 if total > 35
+            if(snapshot.size > 35) {
+                const oldest = snapshot.docs.slice(0, 15);
+                oldest.forEach(d => deleteDoc(doc(db, "rooms", roomID, "messages", d.id)));
+                return;
+            }
+
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const d = change.doc.data();
@@ -175,14 +174,14 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
 
     div.innerHTML = `
-        ${reply ? `<div class="reply-preview">Replying to @${reply.user}: ${reply.text}</div>` : ''}
+        ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
         <div class="flex flex-col">
-            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase tracking-tighter mb-0.5">${u} ${senderIsAdmin?'(Admin)':''}</div>` : ''}
+            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Admin)':''}</div>` : ''}
             <div class="flex justify-between items-start gap-4">
-                <span class="leading-relaxed text-sm">${t}</span>
+                <span class="text-sm">${t}</span>
                 <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
                     <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
                     </button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
@@ -192,24 +191,24 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
 }
 
 async function send() {
-    const input = document.getElementById("input");
-    const roomID = document.getElementById("roomLabel").innerText;
-    let rawText = input.innerText.trim();
-    if(!rawText) return;
+    const input = document.getElementById("input"), rID = document.getElementById("roomLabel").innerText;
+    let text = input.innerText.trim();
+    if(!text) return;
 
-    if(isAdmin && rawText.startsWith("/announce ")) {
-        channel.publish("sys_announce", { text: rawText.replace("/announce ", "") });
-    } else {
-        await addDoc(collection(db, "rooms", roomID, "messages"), {
-            user: myName, uid: myId, text: rawText, isAdmin, reply: currentReply, timestamp: serverTimestamp()
-        });
-    }
+    const capReply = currentReply;
     input.innerHTML = ""; cancelReply();
+
+    await addDoc(collection(db, "rooms", rID, "messages"), {
+        user: myName, uid: myId, text, isAdmin, reply: capReply, timestamp: serverTimestamp()
+    });
 }
 
 window.openDeleteModal = (id) => { deleteTargetId = id; document.getElementById("delete-modal").style.display = 'flex'; };
 window.closeDeleteModal = () => { document.getElementById("delete-modal").style.display = 'none'; };
-document.getElementById("confirm-delete-btn").onclick = () => { channel.publish("delete", { id: deleteTargetId }); window.closeDeleteModal(); };
+document.getElementById("confirm-delete-btn").onclick = () => { 
+    channel.publish("msg_delete", { id: deleteTargetId }); 
+    window.closeDeleteModal(); 
+};
 
 window.startReply = (u, t) => { 
     currentReply = { user: u, text: t.substring(0, 30) }; 
@@ -218,10 +217,10 @@ window.startReply = (u, t) => {
 };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
 
-function renderSystem(msg) {
-    const div = document.createElement("div"); div.className = "sys-msg animate-msg"; div.innerText = msg;
-    document.getElementById("messages").appendChild(div);
-}
+window.leaveRoom = async () => {
+    if(myName) await deleteDoc(doc(db, "active_usernames", myName.toLowerCase()));
+    location.reload();
+};
 
 function syncUsers() {
     channel.presence.get((err, members) => {
@@ -237,14 +236,12 @@ function syncUsers() {
 document.getElementById("send-btn").onclick = send;
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
 
-// SNOW ANIMATION
-const canvas = document.getElementById("snow-canvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, w: Math.random() * 0.03, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
-window.onresize = resize; resize();
-function drawSnow() { ctx.clearRect(0, 0, canvas.width, canvas.height); snow.forEach(p => { p.y += p.d; p.a += p.w; p.x += Math.sin(p.a) * 0.4; if(p.y > canvas.height) { p.y = -10; p.x = Math.random() * canvas.width; } ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.shadowBlur = 10; ctx.shadowColor = "rgba(150, 103, 244, 0.5)"; ctx.fill(); ctx.shadowBlur = 0; }); requestAnimationFrame(drawSnow); }
-drawSnow();
+function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, w: Math.random() * 0.03, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
+window.onresize = res; res();
+function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; p.a += p.w; p.x += Math.sin(p.a) * 0.4; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
+draw();
 </script>
 </body>
 </html>

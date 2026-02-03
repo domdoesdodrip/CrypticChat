@@ -24,17 +24,13 @@
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 
-        /* GAME UI */
-        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        /* GAME UI INTEGRATION */
+        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; }
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
-        
-        /* Mobile Controls */
-        #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: auto; }
-        .touch-zone { flex: 1; height: 100%; -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
 <body>
@@ -42,10 +38,6 @@
 <canvas id="snow-canvas"></canvas>
 
 <div id="game-view">
-    <div id="touch-controls">
-        <div class="touch-zone" id="touch-left"></div>
-        <div class="touch-zone" id="touch-right"></div>
-    </div>
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
@@ -58,17 +50,21 @@
                     <span id="level-display" class="text-2xl font-bold">1</span>
                 </div>
             </div>
-            <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE</button>
+            <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
+        </div>
+        <div class="stat-box self-end">
+            <span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span>
+            <span id="record" class="text-2xl font-bold">0</span>
         </div>
     </div>
 
     <div id="startScreen" class="game-overlay">
-        <h1 class="text-4xl md:text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-widest">SHIP RUSH</h1>
-        <button onclick="beginFlight()" class="game-btn text-xl uppercase">Begin</button>
+        <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
+        <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLYING</button>
     </div>
 
     <div id="gameOverScreen" class="game-overlay hidden">
-        <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED</h1>
+        <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
         <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
     </div>
 </div>
@@ -145,110 +141,156 @@ const db = getFirestore(initializeApp(firebaseConfig));
 const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL";
 
+// Identity
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
 
-// JOIN
+// JOIN LOGIC
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    const errorBar = document.getElementById("error-msg");
     if(!rawName) return;
+    
     const lowerName = rawName.toLowerCase();
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
     if(userDoc.exists() && userDoc.data().uid !== myId) {
-        const err = document.getElementById("error-msg"); err.innerText = "Username taken."; err.classList.remove("hidden"); return;
+        errorBar.innerText = "Username taken."; errorBar.classList.remove("hidden"); return;
     }
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
+    
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
     channel = ably.channels.get("room-" + currentRoom);
+    
     channel.presence.enter({ user: myName, isAdmin }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
         document.getElementById("roomLabel").innerText = currentRoom;
+        
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
-        onSnapshot(q, (s) => s.docChanges().forEach(c => {
-            if(c.type==="added") render(c.doc.data().user, c.doc.data().text, c.doc.data().uid===myId, c.doc.id, c.doc.data().isAdmin, c.doc.data().reply);
-            if(c.type==="removed") document.getElementById(c.doc.id)?.remove();
-        }));
-        channel.presence.subscribe(() => syncUsers()); syncUsers();
+        onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") render(change.doc.data().user, change.doc.data().text, change.doc.data().uid === myId, change.doc.id, change.doc.data().isAdmin, change.doc.data().reply);
+                if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
+            });
+        });
+        channel.presence.subscribe(() => syncUsers());
+        syncUsers();
     });
 };
 
-// SEND & ENTER
+// MESSAGE LOGIC
 async function sendMessage() {
     const input = document.getElementById("input");
-    const t = input.innerText.trim();
-    if(!t) return;
-    input.innerText = "";
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { text: t, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply });
+    const text = input.innerText.trim();
+    if(!text) return;
+    
+    input.innerText = ""; 
+    const msgData = { 
+        text, user: myName, uid: myId, isAdmin, 
+        timestamp: serverTimestamp(), 
+        reply: currentReply 
+    };
+    
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
     cancelReply();
 }
-document.getElementById("send-btn").onclick = sendMessage;
-document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-function render(u, t, me, msgId, sAdmin, reply) {
+document.getElementById("send-btn").onclick = sendMessage;
+document.getElementById("input").onkeydown = (e) => {
+    if(e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+};
+
+function render(u, t, me, msgId, senderIsAdmin, reply) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); div.id = msgId;
-    const isP = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isP ? 'ping-active' : ''} animate-msg shadow-lg`;
-    div.innerHTML = `${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
-        <div class="flex flex-col">${!me ? `<div class="text-[10px] text-purple-400 font-black mb-0.5">${u} ${sAdmin?'(ADM)':''}</div>` : ''}
-            <div class="flex justify-between items-start gap-4"><span class="text-sm">${t}</span>
-                <div class="flex gap-2 opacity-20 hover:opacity-100 transition-opacity">
-                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')">💬</button>
-                    ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')">🗑️</button>` : ''}
+    const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
+    div.innerHTML = `
+        ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
+        <div class="flex flex-col">
+            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Admin)':''}</div>` : ''}
+            <div class="flex justify-between items-start gap-4">
+                <span class="text-sm">${t}</span>
+                <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
+                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
             </div>
         </div>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-// GAME ENGINE
+// DELETE LOGIC
+window.openDeleteModal = (id) => { 
+    const modal = document.getElementById("delete-modal");
+    modal.style.display = "flex";
+    document.getElementById("confirm-delete-btn").onclick = async () => {
+        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
+        modal.style.display = "none";
+    };
+};
+window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
+
+// GAME ENGINE (SHIP RUSH)
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
 const gameKeys = { left: false, right: false };
+const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }, { fog: 0x0a0010, grid: 0x8800ff, obs: 0x00ffff }];
 
 function initShipRush() {
     if (renderer) return;
-    scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x000510, 10, 60);
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
-    renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById("game-view").appendChild(renderer.domElement);
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -1; scene.add(grid);
+    const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 5); scene.add(sun);
+    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
+    grid.position.y = -1; scene.add(grid);
     playerGroup = new THREE.Group();
-    const ship = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), new THREE.MeshPhongMaterial({color: 0x333333}));
-    playerGroup.add(ship); scene.add(playerGroup);
-
-    // MOBILE TOUCH LISTENERS
-    const tL = document.getElementById('touch-left'), tR = document.getElementById('touch-right');
-    const setL = (v) => gameKeys.left = v; const setR = (v) => gameKeys.right = v;
-    tL.ontouchstart = (e) => { e.preventDefault(); setL(true); }; tL.ontouchend = () => setL(false);
-    tR.ontouchstart = (e) => { e.preventDefault(); setR(true); }; tR.ontouchend = () => setR(false);
+    const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
+    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.7}));
+    cockpit.position.set(0, 0.2, 0.2); cockpit.scale.set(1, 1, 2);
+    const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
+    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5); lWing.rotation.y = 0.3;
+    const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
+    playerGroup.add(hull, cockpit, lWing, rWing);
+    scene.add(playerGroup);
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
 window.retryGame = () => {
-    score = 0; level = 1; obstacles.forEach(o => scene.remove(o)); obstacles = [];
-    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true;
+    score = 0; level = 1; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = [];
+    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden');
+    isGameRunning = true;
 };
 
 function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
-    if(gameKeys.left && playerGroup.position.x > -8) playerGroup.position.x -= 0.28;
-    if(gameKeys.right && playerGroup.position.x < 8) playerGroup.position.x += 0.28;
+    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
+    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
+    else { playerGroup.rotation.z *= 0.85; }
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
     if(++spawnTimer > spawnInterval) {
-        const obs = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshPhongMaterial({ color: 0xff00ff }));
+        const theme = themes[(level-1)%themes.length];
+        const shapes = [new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.IcosahedronGeometry(1.2), new THREE.TorusGeometry(1, 0.4, 8, 16)];
+        const obs = new THREE.Mesh(shapes[Math.floor(Math.random()*shapes.length)], new THREE.MeshPhongMaterial({ color: theme.obs, emissive: theme.obs, emissiveIntensity: 0.5 }));
         obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
     for(let i=obstacles.length-1; i>=0; i--) {
@@ -256,31 +298,11 @@ function animateGame() {
         if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
             isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden');
         }
-        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
+        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; 
+            if(score % 15 === 0) { level++; gameSpeed += 0.04; document.getElementById('level-display').innerText = level; }
+        }
     }
     renderer.render(scene, camera);
 }
 
-window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
-window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
-
-// UTILS
-window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
-window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
-window.leaveRoom = () => location.reload();
-window.openDeleteModal = (id) => { 
-    document.getElementById("delete-modal").style.display = "flex";
-    document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); closeDeleteModal(); };
-};
-window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
-function syncUsers() { channel.presence.get((e, m) => { if(!m) return; document.getElementById("users-desktop").innerHTML = m.map(p => `<div class="bg-white/5 p-2 rounded text-xs">${p.data.user}</div>`).join(""); }); }
-
-const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
-let snow = [];
-function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 40}, () => ({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2+1, d: Math.random()*0.5+0.2 })); }
-res(); window.onresize = res;
-function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fillStyle = "white"; ctx.fill(); }); requestAnimationFrame(draw); }
-draw();
-</script>
-</body>
-</html>
+window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys

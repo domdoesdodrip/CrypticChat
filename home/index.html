@@ -23,16 +23,22 @@
         #input:empty:before { content: attr(placeholder); color: #6b7280; }
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
+        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; }
+        .chat-img:hover { transform: scale(1.02); }
+
+        /* LIGHTBOX */
+        #lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); cursor: zoom-out; }
+        #lightbox img { max-width: 95vw; max-height: 95vh; box-shadow: 0 0 50px rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 4px; animation: msgIn 0.3s ease; }
 
         /* CALCULATOR */
-        #calc-ui { position: absolute; width: 260px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        #calc-ui { position: absolute; width: 260px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); top: 100px; left: 100px; }
         .calc-btn { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; font-size: 14px; }
         .calc-btn:hover { background: var(--accent); }
         .sci-btn { color: #0ff; font-family: 'Orbitron', monospace; font-size: 10px; padding: 12px 0; }
 
-        /* TYPING */
-        #typing-indicator { font-size: 10px; color: #9667f4; font-weight: 800; height: 14px; margin-bottom: 4px; padding-left: 4px; }
+        /* UPLOAD PREVIEW */
+        #upload-preview { display: none; align-items: center; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 5px; font-size: 12px; }
+        #upload-preview img { height: 30px; width: 30px; object-fit: cover; border-radius: 4px; margin-right: 8px; }
 
         /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
@@ -44,14 +50,18 @@
         
         #leaderboard-panel { max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; background: rgba(0,0,0,0.9); border: 1px solid #0ff; padding: 20px; border-radius: 10px; display: none; z-index: 130; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
         .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; font-size: 14px; color: white; }
-        .lb-rank { color: #0ff; width: 30px; }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
 
-<!-- CALCULATOR WING -->
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="this.style.display='none'">
+    <img id="lightbox-img" src="">
+</div>
+
+<!-- CALCULATOR -->
 <div id="calc-ui" class="glass p-5">
     <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move">
         <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Core</span>
@@ -59,16 +69,8 @@
     </div>
     <input id="calc-display" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
     <div class="grid grid-cols-4 gap-2">
-        <div onclick="calcIn('sin(')" class="calc-btn sci-btn">sin</div>
-        <div onclick="calcIn('cos(')" class="calc-btn sci-btn">cos</div>
-        <div onclick="calcIn('tan(')" class="calc-btn sci-btn">tan</div>
-        <div onclick="calcIn('sqrt(')" class="calc-btn sci-btn">√</div>
-        
-        <div onclick="calcIn('C')" class="calc-btn text-red-400">C</div>
-        <div onclick="calcIn('^')" class="calc-btn sci-btn">^</div>
-        <div onclick="calcIn('(')" class="calc-btn sci-btn">(</div>
-        <div onclick="calcIn(')')" class="calc-btn sci-btn">)</div>
-        
+        <div onclick="calcIn('sin(')" class="calc-btn sci-btn">sin</div><div onclick="calcIn('cos(')" class="calc-btn sci-btn">cos</div><div onclick="calcIn('tan(')" class="calc-btn sci-btn">tan</div><div onclick="calcIn('sqrt(')" class="calc-btn sci-btn">√</div>
+        <div onclick="calcIn('C')" class="calc-btn text-red-400">C</div><div onclick="calcIn('^')" class="calc-btn sci-btn">^</div><div onclick="calcIn('(')" class="calc-btn sci-btn">(</div><div onclick="calcIn(')')" class="calc-btn sci-btn">)</div>
         <div onclick="calcIn('7')" class="calc-btn">7</div><div onclick="calcIn('8')" class="calc-btn">8</div><div onclick="calcIn('9')" class="calc-btn">9</div><div onclick="calcIn('/')" class="calc-btn">÷</div>
         <div onclick="calcIn('4')" class="calc-btn">4</div><div onclick="calcIn('5')" class="calc-btn">5</div><div onclick="calcIn('6')" class="calc-btn">6</div><div onclick="calcIn('*')" class="calc-btn">×</div>
         <div onclick="calcIn('1')" class="calc-btn">1</div><div onclick="calcIn('2')" class="calc-btn">2</div><div onclick="calcIn('3')" class="calc-btn">3</div><div onclick="calcIn('-')" class="calc-btn">-</div>
@@ -77,41 +79,27 @@
     </div>
 </div>
 
-<!-- GAME WING -->
+<!-- GAME UI -->
 <div id="game-view">
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
-            <div class="flex gap-4">
-                <div class="stat-box">
-                    <span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span>
-                    <span id="score" class="text-2xl font-bold">0</span>
-                </div>
-            </div>
+            <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span><span id="score" class="text-2xl font-bold">0</span></div>
             <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
         </div>
     </div>
-
     <div id="leaderboard-panel">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-[#0ff] tracking-widest">GLOBAL ELITE</h2>
-            <button onclick="document.getElementById('leaderboard-panel').style.display='none'" class="text-red-500 font-bold">✕</button>
-        </div>
+        <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold text-[#0ff] tracking-widest">GLOBAL ELITE</h2><button onclick="document.getElementById('leaderboard-panel').style.display='none'" class="text-red-500 font-bold">✕</button></div>
         <div id="lb-content">Loading...</div>
     </div>
-
     <div id="startScreen" class="game-overlay">
         <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
         <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLIGHT</button>
         <button onclick="showLeaderboard()" class="game-btn text-sm">GLOBAL LEADERBOARD</button>
     </div>
-
     <div id="gameOverScreen" class="game-overlay hidden">
         <h1 class="text-5xl font-bold mb-4 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
         <p id="final-score" class="text-white mb-6 text-xl">SCORE: 0</p>
-        <div class="flex gap-4">
-            <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
-            <button onclick="showLeaderboard()" class="game-btn text-sm">LEADERBOARD</button>
-        </div>
+        <div class="flex gap-4"><button onclick="retryGame()" class="game-btn text-xl">RETRY</button><button onclick="showLeaderboard()" class="game-btn text-sm">LEADERBOARD</button></div>
     </div>
 </div>
 
@@ -119,16 +107,12 @@
 <div id="delete-modal" class="modal-base">
     <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
         <h3 class="text-xl font-bold mb-4 text-white">Delete Message?</h3>
-        <div class="flex gap-3">
-            <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold">Cancel</button>
-            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">Delete</button>
-        </div>
+        <div class="flex gap-3"><button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold">Cancel</button><button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">Delete</button></div>
     </div>
 </div>
 
 <!-- MAIN APP -->
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
-    <!-- LOGIN -->
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
             <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">CrypticChat</h1>
@@ -139,12 +123,14 @@
         </div>
     </div>
 
-    <!-- CHAT UI -->
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
-                <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10 text-[10px] uppercase font-bold text-purple-400">Sci-Calc</button>
+                <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                    <!-- Lucide Calculator Icon -->
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+                </button>
                 <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
                 </button>
@@ -166,13 +152,16 @@
                         <span id="reply-user" class="text-xs text-purple-400 font-bold"></span>
                         <button onclick="cancelReply()" class="text-xs px-2 opacity-50 hover:opacity-100">✕</button>
                     </div>
+                    <div id="upload-preview">
+                        <img id="preview-img" src="">
+                        <span class="flex-1 text-gray-400">Image attached</span>
+                        <button onclick="clearUpload()" class="text-red-400 hover:text-red-200">✕</button>
+                    </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <!-- Image Upload Button -->
                         <input type="file" id="img-upload" hidden accept="image/*">
                         <button onclick="document.getElementById('img-upload').click()" class="text-gray-400 hover:text-white p-2">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
-                        
                         <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
                         <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -197,11 +186,9 @@ const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", auth
 const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
-const adminFingerprint = '1680_1050_24';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", typingTimeout;
-// Tab Notification vars
-let unreadCount = 0;
-let isWindowFocused = true;
+let pendingImage = null; // Store base64 here
+let unreadCount = 0, isWindowFocused = true;
 
 window.onblur = () => { isWindowFocused = false; };
 window.onfocus = () => { isWindowFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
@@ -214,8 +201,6 @@ document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     if(!rawName) return;
-    
-    // Identity Check
     const lowerName = rawName.toLowerCase();
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
@@ -239,12 +224,7 @@ document.getElementById("join-btn").onclick = async () => {
                 if (change.type === "added") {
                     const d = change.doc.data();
                     render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply, d.image);
-                    
-                    // Tab Notification Logic
-                    if(!isWindowFocused && d.uid !== myId) {
-                        unreadCount++;
-                        document.title = `(${unreadCount}) New Message!`;
-                    }
+                    if(!isWindowFocused && d.uid !== myId) { unreadCount++; document.title = `(${unreadCount}) New Message!`; }
                 }
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
             });
@@ -264,21 +244,35 @@ document.getElementById("input").oninput = () => {
     typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
 };
 
-// IMAGE UPLOAD LISTENER
+// IMAGE UPLOAD HANDLER
 document.getElementById("img-upload").addEventListener('change', function() {
     if (this.files && this.files[0]) {
         const reader = new FileReader();
-        reader.onload = (e) => sendMessage(null, e.target.result);
+        reader.onload = (e) => {
+            pendingImage = e.target.result;
+            document.getElementById("preview-img").src = pendingImage;
+            document.getElementById("upload-preview").style.display = "flex";
+        };
         reader.readAsDataURL(this.files[0]);
     }
 });
 
-async function sendMessage(manualText = null, imageUrl = null) {
+window.clearUpload = () => {
+    pendingImage = null;
+    document.getElementById("img-upload").value = "";
+    document.getElementById("upload-preview").style.display = "none";
+};
+
+async function sendMessage() {
     const inputEl = document.getElementById("input");
-    const text = manualText || inputEl.innerText.trim();
-    if(!text && !imageUrl) return;
+    const text = inputEl.innerText.trim();
     
-    if(!manualText && !imageUrl) inputEl.innerText = ""; 
+    if(!text && !pendingImage) return;
+    
+    // Clear UI immediately
+    inputEl.innerText = "";
+    const imgToSend = pendingImage;
+    clearUpload(); 
 
     if(text === "/purge" && isAdmin) {
         const snap = await getDocs(query(collection(db, "rooms", currentRoom, "messages")));
@@ -295,7 +289,7 @@ async function sendMessage(manualText = null, imageUrl = null) {
         isAdmin, 
         timestamp: serverTimestamp(), 
         reply: currentReply,
-        image: imageUrl 
+        image: imgToSend 
     });
     cancelReply();
 }
@@ -303,6 +297,7 @@ async function sendMessage(manualText = null, imageUrl = null) {
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
+// RENDER MESSAGE
 function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
@@ -311,7 +306,8 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
     
     let contentHtml = '';
-    if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.open(this.src)">`;
+    // Click calls showLightbox instead of window.open
+    if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
     if(t) contentHtml += `<span class="text-sm mt-1">${t}</span>`;
 
     div.innerHTML = `
@@ -329,17 +325,38 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-window.openDeleteModal = (id) => { 
-    const modal = document.getElementById("delete-modal");
-    modal.style.display = "flex";
-    document.getElementById("confirm-delete-btn").onclick = async () => {
-        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
-        modal.style.display = "none";
-    };
+window.showLightbox = (src) => {
+    document.getElementById("lightbox-img").src = src;
+    document.getElementById("lightbox").style.display = "flex";
 };
-window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 
-// --- GAME ENGINE ---
+// DRAGGABLE CALCULATOR
+const calcUi = document.getElementById("calc-ui");
+const calcHeader = document.getElementById("calc-drag");
+let isDragging = false, offset = { x: 0, y: 0 };
+
+calcHeader.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    offset.x = e.clientX - calcUi.offsetLeft;
+    offset.y = e.clientY - calcUi.offsetTop;
+});
+window.addEventListener("mouseup", () => isDragging = false);
+window.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+        calcUi.style.left = (e.clientX - offset.x) + "px";
+        calcUi.style.top = (e.clientY - offset.y) + "px";
+    }
+});
+window.toggleCalc = () => calcUi.style.display = (calcUi.style.display === 'block' ? 'none' : 'block');
+window.calcIn = v => { 
+    const d = document.getElementById("calc-display"); 
+    if(v==='C') d.value="0"; 
+    else if(v==='=') {
+        try { d.value = eval(d.value.replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/sqrt/g, 'Math.sqrt').replace(/\^/g, '**')); } catch { d.value = "ERR"; }
+    } else { d.value = d.value==="0" ? v : d.value+v; }
+};
+
+// GAME ENGINE 2.0 (Better Models)
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
@@ -354,15 +371,23 @@ function initShipRush() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById("game-view").appendChild(renderer.domElement);
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
-    grid.position.y = -1; scene.add(grid);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(0, 10, 5); scene.add(dirLight);
+    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -2; scene.add(grid);
+
+    // Composite Ship Model (Arwing Style)
     playerGroup = new THREE.Group();
-    const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
-    const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
-    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5);
-    const rWing = lWing.clone(); rWing.position.x = 0.8;
-    playerGroup.add(hull, lWing, rWing); scene.add(playerGroup);
+    const matBody = new THREE.MeshPhongMaterial({ color: 0x999999, flatShading: true });
+    const matTrim = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x004444 });
+    // Fuselage
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.5, 3, 4), matBody);
+    body.rotation.x = -Math.PI / 2;
+    // Wings
+    const wings = new THREE.Mesh(new THREE.BufferGeometry(), matTrim);
+    const vertices = new Float32Array([ 0,0,1,  2,0,2,  0,0,-1,   0,0,1, -2,0,2, 0,0,-1 ]);
+    wings.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    wings.geometry.computeVertexNormals();
+    playerGroup.add(body, wings);
+    scene.add(playerGroup);
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
@@ -370,25 +395,15 @@ window.exitGame = () => { isGameRunning = false; document.getElementById("game-v
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
 window.retryGame = () => { score = 0; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true; };
 
-// GLOBAL LEADERBOARD LOGIC
 window.showLeaderboard = async () => {
-    const p = document.getElementById("leaderboard-panel");
-    const c = document.getElementById("lb-content");
-    p.style.display = 'block';
-    c.innerHTML = "Fetching global data...";
-    
+    const p = document.getElementById("leaderboard-panel"), c = document.getElementById("lb-content");
+    p.style.display = 'block'; c.innerHTML = "Fetching global data...";
     try {
-        const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10));
-        const snap = await getDocs(q);
-        let html = "";
-        let rank = 1;
-        snap.forEach(doc => {
-            const d = doc.data();
-            html += `<div class="lb-row"><span class="lb-rank">#${rank++}</span><span>${d.user}</span><span class="text-[#0ff] font-bold">${d.score}</span></div>`;
-        });
-        if(!html) html = "No records yet.";
-        c.innerHTML = html;
-    } catch(e) { c.innerHTML = "Error loading scores."; }
+        const snap = await getDocs(query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10)));
+        let html = "", rank = 1;
+        snap.forEach(doc => { const d = doc.data(); html += `<div class="lb-row"><span class="text-[#0ff]">#${rank++}</span><span>${d.user}</span><span class="font-bold">${d.score}</span></div>`; });
+        c.innerHTML = html || "No records yet.";
+    } catch { c.innerHTML = "Error loading scores."; }
 };
 
 function animateGame() {
@@ -396,52 +411,45 @@ function animateGame() {
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
     
-    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
-    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
-    else { playerGroup.rotation.z *= 0.85; }
+    // Movement & Tilt
+    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.3; playerGroup.rotation.z = 0.5; playerGroup.rotation.y = 0.2; } 
+    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.3; playerGroup.rotation.z = -0.5; playerGroup.rotation.y = -0.2; } 
+    else { playerGroup.rotation.z *= 0.85; playerGroup.rotation.y *= 0.85; }
     
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
     
     if(++spawnTimer > 25) {
-        const obs = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2), new THREE.MeshPhongMaterial({ color: 0xff00ff }));
-        obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
+        // Better Obstacles: Octahedrons with wireframes
+        const group = new THREE.Group();
+        const geo = new THREE.OctahedronGeometry(1.5); // "Data Crystal" shape
+        const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0xaa00aa, transparent: true, opacity: 0.9 }));
+        const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xff00ff }));
+        group.add(mesh, wire);
+        group.position.set((Math.random()-0.5)*16, 0.5, -60);
+        // Random spin speed for obstacle
+        group.userData = { rotX: Math.random()*0.1, rotY: Math.random()*0.1 };
+        scene.add(group); obstacles.push(group); spawnTimer = 0;
     }
     
     for(let i=obstacles.length-1; i>=0; i--) {
-        obstacles[i].position.z += gameSpeed;
-        if(playerGroup.position.distanceTo(obstacles[i].position) < 1.5) { 
+        const ob = obstacles[i];
+        ob.position.z += gameSpeed;
+        ob.rotation.x += ob.userData.rotX; ob.rotation.y += ob.userData.rotY; // Rotate Crystal
+
+        if(playerGroup.position.distanceTo(ob.position) < 2) { 
             isGameRunning = false; 
             document.getElementById('gameOverScreen').classList.remove('hidden');
             document.getElementById('final-score').innerText = `SCORE: ${score}`;
-            // Submit Score to Global DB
             if(score > 0) addDoc(collection(db, "leaderboard"), { user: myName, score: score, date: serverTimestamp() });
         }
-        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
+        if(ob.position.z > 10) { scene.remove(ob); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
     }
     renderer.render(scene, camera);
 }
 
-// --- SCIENTIFIC CALCULATOR ---
-window.toggleCalc = () => { const c = document.getElementById("calc-ui"); c.style.display = c.style.display === 'block' ? 'none' : 'block'; c.style.left = "50px"; c.style.top = "50px"; };
-window.calcIn = v => { 
-    const d = document.getElementById("calc-display"); 
-    if(v==='C') d.value="0"; 
-    else if(v==='=') {
-        try {
-            // Replace visual functions with JS Math functions
-            let expr = d.value
-                .replace(/sin/g, 'Math.sin')
-                .replace(/cos/g, 'Math.cos')
-                .replace(/tan/g, 'Math.tan')
-                .replace(/sqrt/g, 'Math.sqrt')
-                .replace(/\^/g, '**');
-            d.value = eval(expr);
-        } catch { d.value = "ERR"; }
-    } else {
-        d.value = d.value==="0" ? v : d.value+v; 
-    }
-};
-
+// UTILS
+window.openDeleteModal = (id) => { const m = document.getElementById("delete-modal"); m.style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); m.style.display = "none"; }; };
+window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
@@ -449,7 +457,6 @@ window.cancelReply = () => { currentReply = null; document.getElementById("reply
 window.leaveRoom = () => location.reload();
 function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
-// BG PARTICLES
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }

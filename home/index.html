@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,20 +23,61 @@
         #input:empty:before { content: attr(placeholder); color: #6b7280; }
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
 
-        /* GAME UI INTEGRATION */
-        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; }
+        /* CALCULATOR */
+        #calc-ui { position: absolute; width: 260px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        .calc-btn { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; font-size: 14px; }
+        .calc-btn:hover { background: var(--accent); }
+        .sci-btn { color: #0ff; font-family: 'Orbitron', monospace; font-size: 10px; padding: 12px 0; }
+
+        /* TYPING */
+        #typing-indicator { font-size: 10px; color: #9667f4; font-weight: 800; height: 14px; margin-bottom: 4px; padding-left: 4px; }
+
+        /* GAME UI */
+        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
-        .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; }
+        .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; margin: 10px; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
+        
+        #leaderboard-panel { max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; background: rgba(0,0,0,0.9); border: 1px solid #0ff; padding: 20px; border-radius: 10px; display: none; z-index: 130; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; font-size: 14px; color: white; }
+        .lb-rank { color: #0ff; width: 30px; }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
 
+<!-- CALCULATOR WING -->
+<div id="calc-ui" class="glass p-5">
+    <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move">
+        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Core</span>
+        <button onclick="toggleCalc()">✕</button>
+    </div>
+    <input id="calc-display" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
+    <div class="grid grid-cols-4 gap-2">
+        <div onclick="calcIn('sin(')" class="calc-btn sci-btn">sin</div>
+        <div onclick="calcIn('cos(')" class="calc-btn sci-btn">cos</div>
+        <div onclick="calcIn('tan(')" class="calc-btn sci-btn">tan</div>
+        <div onclick="calcIn('sqrt(')" class="calc-btn sci-btn">√</div>
+        
+        <div onclick="calcIn('C')" class="calc-btn text-red-400">C</div>
+        <div onclick="calcIn('^')" class="calc-btn sci-btn">^</div>
+        <div onclick="calcIn('(')" class="calc-btn sci-btn">(</div>
+        <div onclick="calcIn(')')" class="calc-btn sci-btn">)</div>
+        
+        <div onclick="calcIn('7')" class="calc-btn">7</div><div onclick="calcIn('8')" class="calc-btn">8</div><div onclick="calcIn('9')" class="calc-btn">9</div><div onclick="calcIn('/')" class="calc-btn">÷</div>
+        <div onclick="calcIn('4')" class="calc-btn">4</div><div onclick="calcIn('5')" class="calc-btn">5</div><div onclick="calcIn('6')" class="calc-btn">6</div><div onclick="calcIn('*')" class="calc-btn">×</div>
+        <div onclick="calcIn('1')" class="calc-btn">1</div><div onclick="calcIn('2')" class="calc-btn">2</div><div onclick="calcIn('3')" class="calc-btn">3</div><div onclick="calcIn('-')" class="calc-btn">-</div>
+        <div onclick="calcIn('0')" class="calc-btn col-span-2">0</div><div onclick="calcIn('.')" class="calc-btn">.</div><div onclick="calcIn('+')" class="calc-btn">+</div>
+        <div onclick="calcIn('=')" class="calc-btn bg-purple-600 col-span-4 mt-1">=</div>
+    </div>
+</div>
+
+<!-- GAME WING -->
 <div id="game-view">
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
@@ -46,30 +86,36 @@
                     <span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span>
                     <span id="score" class="text-2xl font-bold">0</span>
                 </div>
-                <div class="stat-box">
-                    <span class="text-[10px] text-[#0ff] block tracking-widest">LEVEL</span>
-                    <span id="level-display" class="text-2xl font-bold">1</span>
-                </div>
             </div>
             <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
         </div>
-        <div class="stat-box self-end">
-            <span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span>
-            <span id="record" class="text-2xl font-bold">0</span>
+    </div>
+
+    <div id="leaderboard-panel">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-[#0ff] tracking-widest">GLOBAL ELITE</h2>
+            <button onclick="document.getElementById('leaderboard-panel').style.display='none'" class="text-red-500 font-bold">✕</button>
         </div>
+        <div id="lb-content">Loading...</div>
     </div>
 
     <div id="startScreen" class="game-overlay">
         <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
-        <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLYING</button>
+        <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLIGHT</button>
+        <button onclick="showLeaderboard()" class="game-btn text-sm">GLOBAL LEADERBOARD</button>
     </div>
 
     <div id="gameOverScreen" class="game-overlay hidden">
-        <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
-        <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
+        <h1 class="text-5xl font-bold mb-4 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
+        <p id="final-score" class="text-white mb-6 text-xl">SCORE: 0</p>
+        <div class="flex gap-4">
+            <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
+            <button onclick="showLeaderboard()" class="game-btn text-sm">LEADERBOARD</button>
+        </div>
     </div>
 </div>
 
+<!-- DELETE MODAL -->
 <div id="delete-modal" class="modal-base">
     <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
         <h3 class="text-xl font-bold mb-4 text-white">Delete Message?</h3>
@@ -80,7 +126,9 @@
     </div>
 </div>
 
+<!-- MAIN APP -->
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
+    <!-- LOGIN -->
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
             <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">CrypticChat</h1>
@@ -91,10 +139,12 @@
         </div>
     </div>
 
+    <!-- CHAT UI -->
     <div id="view-chat" class="hidden h-full flex flex-col">
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
+                <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10 text-[10px] uppercase font-bold text-purple-400">Sci-Calc</button>
                 <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
                 </button>
@@ -111,11 +161,18 @@
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-1"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md border-t border-white/10 z-20">
+                    <div id="typing-indicator"></div>
                     <div id="reply-bar" class="hidden flex justify-between items-center p-2 bg-white/5 rounded-t-xl mb-1 border-x border-t border-white/10">
                         <span id="reply-user" class="text-xs text-purple-400 font-bold"></span>
                         <button onclick="cancelReply()" class="text-xs px-2 opacity-50 hover:opacity-100">✕</button>
                     </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
+                        <!-- Image Upload Button -->
+                        <input type="file" id="img-upload" hidden accept="image/*">
+                        <button onclick="document.getElementById('img-upload').click()" class="text-gray-400 hover:text-white p-2">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        </button>
+                        
                         <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
                         <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -133,66 +190,138 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, limit, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import * as THREE from 'three';
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
-let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
+const adminFingerprint = '1680_1050_24';
+let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", typingTimeout;
+// Tab Notification vars
+let unreadCount = 0;
+let isWindowFocused = true;
 
-// Identity
+window.onblur = () => { isWindowFocused = false; };
+window.onfocus = () => { isWindowFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
+
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
 
-// Join Logic
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
-    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
-    const errorBar = document.getElementById("error-msg");
+    currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     if(!rawName) return;
+    
+    // Identity Check
     const lowerName = rawName.toLowerCase();
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
     if(userDoc.exists() && userDoc.data().uid !== myId) {
-        errorBar.innerText = "Username taken."; errorBar.classList.remove("hidden"); return;
+        document.getElementById("error-msg").innerText = "Username taken by another device."; 
+        document.getElementById("error-msg").classList.remove("hidden"); return;
     }
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
+    
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
-    channel = ably.channels.get("room-" + roomID);
+    channel = ably.channels.get("room-" + currentRoom);
+    
     channel.presence.enter({ user: myName, isAdmin }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = roomID;
-        const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"));
-        onSnapshot(q, (snapshot) => {
+        document.getElementById("roomLabel").innerText = currentRoom;
+        
+        onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
             snapshot.docChanges().forEach((change) => {
-                if (change.type === "added") render(change.doc.data().user, change.doc.data().text, change.doc.data().uid === myId, change.doc.id, change.doc.data().isAdmin, change.doc.data().reply);
+                if (change.type === "added") {
+                    const d = change.doc.data();
+                    render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply, d.image);
+                    
+                    // Tab Notification Logic
+                    if(!isWindowFocused && d.uid !== myId) {
+                        unreadCount++;
+                        document.title = `(${unreadCount}) New Message!`;
+                    }
+                }
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
             });
+        });
+
+        channel.subscribe('typing', msg => {
+            document.getElementById('typing-indicator').innerText = msg.data ? `${msg.data} is typing...` : '';
         });
         channel.presence.subscribe(() => syncUsers());
         syncUsers();
     });
 };
 
-function render(u, t, me, msgId, senderIsAdmin, reply) {
+document.getElementById("input").oninput = () => {
+    channel.publish('typing', myName);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
+};
+
+// IMAGE UPLOAD LISTENER
+document.getElementById("img-upload").addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => sendMessage(null, e.target.result);
+        reader.readAsDataURL(this.files[0]);
+    }
+});
+
+async function sendMessage(manualText = null, imageUrl = null) {
+    const inputEl = document.getElementById("input");
+    const text = manualText || inputEl.innerText.trim();
+    if(!text && !imageUrl) return;
+    
+    if(!manualText && !imageUrl) inputEl.innerText = ""; 
+
+    if(text === "/purge" && isAdmin) {
+        const snap = await getDocs(query(collection(db, "rooms", currentRoom, "messages")));
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        return;
+    }
+
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
+        text: text || "", 
+        user: myName, 
+        uid: myId, 
+        isAdmin, 
+        timestamp: serverTimestamp(), 
+        reply: currentReply,
+        image: imageUrl 
+    });
+    cancelReply();
+}
+
+document.getElementById("send-btn").onclick = () => sendMessage();
+document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+
+function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); div.id = msgId;
     const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
+    
+    let contentHtml = '';
+    if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.open(this.src)">`;
+    if(t) contentHtml += `<span class="text-sm mt-1">${t}</span>`;
+
     div.innerHTML = `
         ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
         <div class="flex flex-col">
-            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Admin)':''}</div>` : ''}
+            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}
             <div class="flex justify-between items-start gap-4">
-                <span class="text-sm">${t}</span>
+                <div class="flex flex-col">${contentHtml}</div>
                 <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
-                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    <button onclick="window.startReply('${u}', '${(t || "Image").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
             </div>
@@ -200,102 +329,127 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-// GAME ENGINE (SHIP RUSH ORIGINAL)
+window.openDeleteModal = (id) => { 
+    const modal = document.getElementById("delete-modal");
+    modal.style.display = "flex";
+    document.getElementById("confirm-delete-btn").onclick = async () => {
+        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
+        modal.style.display = "none";
+    };
+};
+window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
+
+// --- GAME ENGINE ---
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
-let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
+let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
-const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }, { fog: 0x0a0010, grid: 0x8800ff, obs: 0x00ffff }];
 
 function initShipRush() {
     if (renderer) return;
     scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
+    scene.fog = new THREE.Fog(0x000510, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById("game-view").appendChild(renderer.domElement);
-    
-    // Light
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 5); scene.add(sun);
-
-    // Grid
     grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
     grid.position.y = -1; scene.add(grid);
-
-    // Ship
     playerGroup = new THREE.Group();
     const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
-    const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
-    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.7}));
-    cockpit.position.set(0, 0.2, 0.2); cockpit.scale.set(1, 1, 2);
     const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
-    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5); lWing.rotation.y = 0.3;
-    const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
-    playerGroup.add(hull, cockpit, lWing, rWing);
-    scene.add(playerGroup);
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5);
+    const rWing = lWing.clone(); rWing.position.x = 0.8;
+    playerGroup.add(hull, lWing, rWing); scene.add(playerGroup);
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
-window.retryGame = () => {
-    score = 0; level = 1; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = [];
-    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden');
-    isGameRunning = true;
+window.retryGame = () => { score = 0; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true; };
+
+// GLOBAL LEADERBOARD LOGIC
+window.showLeaderboard = async () => {
+    const p = document.getElementById("leaderboard-panel");
+    const c = document.getElementById("lb-content");
+    p.style.display = 'block';
+    c.innerHTML = "Fetching global data...";
+    
+    try {
+        const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10));
+        const snap = await getDocs(q);
+        let html = "";
+        let rank = 1;
+        snap.forEach(doc => {
+            const d = doc.data();
+            html += `<div class="lb-row"><span class="lb-rank">#${rank++}</span><span>${d.user}</span><span class="text-[#0ff] font-bold">${d.score}</span></div>`;
+        });
+        if(!html) html = "No records yet.";
+        c.innerHTML = html;
+    } catch(e) { c.innerHTML = "Error loading scores."; }
 };
 
 function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
-
-    if(gameKeys.left && playerGroup.position.x > -8) {
-        playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6);
-    } else if(gameKeys.right && playerGroup.position.x < 8) {
-        playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6);
-    } else { playerGroup.rotation.z *= 0.85; }
-
+    
+    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
+    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
+    else { playerGroup.rotation.z *= 0.85; }
+    
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
-
-    if(++spawnTimer > spawnInterval) {
-        const theme = themes[(level-1)%themes.length];
-        const shapes = [new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.IcosahedronGeometry(1.2), new THREE.TorusGeometry(1, 0.4, 8, 16)];
-        const obs = new THREE.Mesh(shapes[Math.floor(Math.random()*shapes.length)], new THREE.MeshPhongMaterial({ color: theme.obs, emissive: theme.obs, emissiveIntensity: 0.5 }));
+    
+    if(++spawnTimer > 25) {
+        const obs = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2), new THREE.MeshPhongMaterial({ color: 0xff00ff }));
         obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
-
+    
     for(let i=obstacles.length-1; i>=0; i--) {
         obstacles[i].position.z += gameSpeed;
-        if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
-            isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden');
-            const rec = localStorage.getItem('neonRushRecord') || 0; if(score > rec) localStorage.setItem('neonRushRecord', score);
-            document.getElementById('record').innerText = localStorage.getItem('neonRushRecord');
+        if(playerGroup.position.distanceTo(obstacles[i].position) < 1.5) { 
+            isGameRunning = false; 
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = `SCORE: ${score}`;
+            // Submit Score to Global DB
+            if(score > 0) addDoc(collection(db, "leaderboard"), { user: myName, score: score, date: serverTimestamp() });
         }
-        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; 
-            if(score % 15 === 0) { level++; gameSpeed += 0.04; document.getElementById('level-display').innerText = level; }
-        }
+        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
     }
     renderer.render(scene, camera);
 }
 
+// --- SCIENTIFIC CALCULATOR ---
+window.toggleCalc = () => { const c = document.getElementById("calc-ui"); c.style.display = c.style.display === 'block' ? 'none' : 'block'; c.style.left = "50px"; c.style.top = "50px"; };
+window.calcIn = v => { 
+    const d = document.getElementById("calc-display"); 
+    if(v==='C') d.value="0"; 
+    else if(v==='=') {
+        try {
+            // Replace visual functions with JS Math functions
+            let expr = d.value
+                .replace(/sin/g, 'Math.sin')
+                .replace(/cos/g, 'Math.cos')
+                .replace(/tan/g, 'Math.tan')
+                .replace(/sqrt/g, 'Math.sqrt')
+                .replace(/\^/g, '**');
+            d.value = eval(expr);
+        } catch { d.value = "ERR"; }
+    } else {
+        d.value = d.value==="0" ? v : d.value+v; 
+    }
+};
+
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
-
-// Chat Utility Functions
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
-window.leaveRoom = async () => { if(myName) await deleteDoc(doc(db, "active_usernames", lowerName)); location.reload(); };
-function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
+window.leaveRoom = () => location.reload();
+function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
-// Snow Canvas
+// BG PARTICLES
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }

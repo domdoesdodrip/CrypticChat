@@ -24,11 +24,6 @@
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 
-        /* CALCULATOR */
-        #calc-ui { position: absolute; width: 220px; z-index: 500; display: none; user-select: none; }
-        .calc-btn { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .calc-btn:hover { background: rgba(255,255,255,0.1); }
-
         /* GAME UI INTEGRATION */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; }
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
@@ -36,50 +31,38 @@
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
-        
-        #mini-chat { position: absolute; bottom: 20px; right: 20px; width: 280px; z-index: 150; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
-        .mini-bubble { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(5px); padding: 6px 12px; border-radius: 10px; font-family: 'Manrope'; font-size: 12px; border-left: 3px solid var(--accent); }
     </style>
 </head>
 <body>
 
 <canvas id="snow-canvas"></canvas>
 
-<div id="calc-ui" class="glass rounded-2xl border border-white/10 shadow-2xl p-4">
-    <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move opacity-50 hover:opacity-100 transition-opacity">
-        <span class="text-[10px] font-black tracking-widest uppercase">Calc_V1</span>
-        <button onclick="toggleCalc()" class="text-red-500 text-lg">✕</button>
-    </div>
-    <input id="calc-display" type="text" readonly class="w-full bg-black/50 border border-white/5 p-3 rounded-lg text-right mb-2 font-mono text-xl outline-none" value="0">
-    <div class="grid grid-cols-4 gap-1">
-        <div onclick="calcIn('C')" class="calc-btn text-red-500">C</div>
-        <div onclick="calcIn('/')" class="calc-btn text-purple-400">/</div>
-        <div onclick="calcIn('*')" class="calc-btn text-purple-400">*</div>
-        <div onclick="calcIn('back')" class="calc-btn">←</div>
-        <div onclick="calcIn('7')" class="calc-btn">7</div><div onclick="calcIn('8')" class="calc-btn">8</div><div onclick="calcIn('9')" class="calc-btn">9</div><div onclick="calcIn('-')" class="calc-btn text-purple-400">-</div>
-        <div onclick="calcIn('4')" class="calc-btn">4</div><div onclick="calcIn('5')" class="calc-btn">5</div><div onclick="calcIn('6')" class="calc-btn">6</div><div onclick="calcIn('+')" class="calc-btn text-purple-400">+</div>
-        <div onclick="calcIn('1')" class="calc-btn">1</div><div onclick="calcIn('2')" class="calc-btn">2</div><div onclick="calcIn('3')" class="calc-btn">3</div>
-        <div onclick="calcIn('=')" class="calc-btn bg-purple-600/30 row-span-2 flex items-center justify-center text-xl">=</div>
-        <div onclick="calcIn('0')" class="calc-btn col-span-3">0</div>
-    </div>
-</div>
-
 <div id="game-view">
-    <div id="mini-chat"></div>
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
-                <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span><span id="score" class="text-2xl font-bold">0</span></div>
-                <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">LEVEL</span><span id="level-display" class="text-2xl font-bold">1</span></div>
+                <div class="stat-box">
+                    <span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span>
+                    <span id="score" class="text-2xl font-bold">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="text-[10px] text-[#0ff] block tracking-widest">LEVEL</span>
+                    <span id="level-display" class="text-2xl font-bold">1</span>
+                </div>
             </div>
             <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
         </div>
-        <div class="stat-box self-end"><span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span><span id="record" class="text-2xl font-bold">0</span></div>
+        <div class="stat-box self-end">
+            <span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span>
+            <span id="record" class="text-2xl font-bold">0</span>
+        </div>
     </div>
+
     <div id="startScreen" class="game-overlay">
         <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
         <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLYING</button>
     </div>
+
     <div id="gameOverScreen" class="game-overlay hidden">
         <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
         <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
@@ -111,9 +94,6 @@
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
-                <button onclick="toggleCalc()" class="bg-white/5 hover:bg-white/10 text-white/50 p-2 rounded-lg border border-white/10 transition-all">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><path d="M16 14v2"/><path d="M12 14v2"/><path d="M8 14v2"/><path d="M12 18v2"/><path d="M8 18v2"/></svg>
-                </button>
                 <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
                 </button>
@@ -146,203 +126,180 @@
     </div>
 </div>
 
-<script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } } </script>
+<script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import * as THREE from 'three';
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
-let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", unreadCount = 0;
+let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
 
+// Identity
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
 
-// TITLE & VISIBILITY
-window.addEventListener('focus', () => { unreadCount = 0; document.title = "CrypticChat"; });
-
-// PURGE COMMAND
-async function purgeAll() {
-    if(!isAdmin) return;
-    const snap = await getDocs(collection(db, "rooms", currentRoom, "messages"));
-    const batch = writeBatch(db);
-    snap.forEach(d => batch.delete(d.ref));
-    await batch.commit();
-}
-
-// CALCULATOR LOGIC
-const calc = document.getElementById("calc-ui");
-let isDragging = false, dragOffset = { x: 0, y: 0 };
-document.getElementById("calc-drag").onmousedown = (e) => {
-    isDragging = true;
-    dragOffset.x = e.clientX - calc.offsetLeft;
-    dragOffset.y = e.clientY - calc.offsetTop;
-};
-document.onmousemove = (e) => { if(isDragging) { calc.style.left = (e.clientX - dragOffset.x) + "px"; calc.style.top = (e.clientY - dragOffset.y) + "px"; }};
-document.onmouseup = () => isDragging = false;
-
-window.toggleCalc = () => { calc.style.display = (calc.style.display === 'block') ? 'none' : 'block'; if(calc.style.display === 'block') { calc.style.left = "50px"; calc.style.top = "100px"; }};
-window.calcIn = (v) => {
-    const d = document.getElementById("calc-display");
-    if(v === 'C') d.value = "0";
-    else if(v === 'back') d.value = d.value.slice(0, -1) || "0";
-    else if(v === '=') { try { d.value = eval(d.value); } catch { d.value = "ERR"; } }
-    else { d.value = (d.value === "0" ? v : d.value + v); }
-};
-
-window.addEventListener('keydown', (e) => {
-    if(calc.style.display === 'block') {
-        if(/[0-9+\-*/.]/.test(e.key)) calcIn(e.key);
-        if(e.key === 'Enter') calcIn('=');
-        if(e.key === 'Backspace') calcIn('back');
-        if(e.key === 'Escape') toggleCalc();
-    }
-});
-
-// JOIN LOGIC
+// Join Logic
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
-    currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    const errorBar = document.getElementById("error-msg");
     if(!rawName) return;
+    const lowerName = rawName.toLowerCase();
+    const userRegRef = doc(db, "active_usernames", lowerName);
+    const userDoc = await getDoc(userRegRef);
+    if(userDoc.exists() && userDoc.data().uid !== myId) {
+        errorBar.innerText = "Username taken."; errorBar.classList.remove("hidden"); return;
+    }
+    await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
-    channel = ably.channels.get("room-" + currentRoom);
-    channel.presence.enter({ user: myName, isAdmin });
-
-    document.getElementById("view-login").classList.add("hidden"); 
-    document.getElementById("view-chat").classList.remove("hidden");
-    document.getElementById("roomLabel").innerText = currentRoom;
-
-    onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc")), (snap) => {
-        snap.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const d = change.doc.data();
-                render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply);
-                updateMiniChat(d.user, d.text);
-                if(document.hidden) { unreadCount++; document.title = `CrypticChat (${unreadCount})`; }
-            }
-            if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
+    channel = ably.channels.get("room-" + roomID);
+    channel.presence.enter({ user: myName, isAdmin }, () => {
+        document.getElementById("view-login").classList.add("hidden"); 
+        document.getElementById("view-chat").classList.remove("hidden");
+        document.getElementById("roomLabel").innerText = roomID;
+        const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"));
+        onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") render(change.doc.data().user, change.doc.data().text, change.doc.data().uid === myId, change.doc.id, change.doc.data().isAdmin, change.doc.data().reply);
+                if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
+            });
         });
+        channel.presence.subscribe(() => syncUsers());
+        syncUsers();
     });
-    channel.presence.subscribe(() => syncUsers());
 };
 
-async function sendMessage() {
-    const input = document.getElementById("input");
-    const text = input.innerText.trim();
-    if(!text) return;
-    if(text === "/<purge><confirm>" && isAdmin) { purgeAll(); input.innerText = ""; return; }
-    input.innerText = ""; 
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { text, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply });
-    cancelReply();
-}
-
-document.getElementById("send-btn").onclick = sendMessage;
-document.getElementById("input").onkeydown = (e) => { 
-    channel.presence.update({ user: myName, typing: true, isAdmin });
-    if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } 
-};
-
-function render(u, t, me, msgId, sAdmin, reply) {
+function render(u, t, me, msgId, senderIsAdmin, reply) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); div.id = msgId;
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-msg shadow-lg`;
-    div.innerHTML = `${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}<div class="text-[10px] opacity-50 font-black uppercase">${u}</div><span class="text-sm">${t}</span>`;
+    const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
+    div.innerHTML = `
+        ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
+        <div class="flex flex-col">
+            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Admin)':''}</div>` : ''}
+            <div class="flex justify-between items-start gap-4">
+                <span class="text-sm">${t}</span>
+                <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
+                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
+                </div>
+            </div>
+        </div>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-function updateMiniChat(u, t) {
-    const container = document.getElementById("mini-chat");
-    const msg = document.createElement("div");
-    msg.className = "mini-bubble animate-msg";
-    msg.innerHTML = `<b>${u}:</b> ${t}`;
-    container.appendChild(msg);
-    if(container.children.length > 8) container.removeChild(container.firstChild);
-}
-
-// GAME ENGINE
+// GAME ENGINE (SHIP RUSH ORIGINAL)
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
-let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.5, spawnTimer = 0;
+let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
 const gameKeys = { left: false, right: false };
+const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }, { fog: 0x0a0010, grid: 0x8800ff, obs: 0x00ffff }];
 
 function initShipRush() {
     if (renderer) return;
-    scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x000510, 10, 60);
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById("game-view").prepend(renderer.domElement);
+    document.getElementById("game-view").appendChild(renderer.domElement);
+    
+    // Light
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -1; scene.add(grid);
+    const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 5); scene.add(sun);
+
+    // Grid
+    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
+    grid.position.y = -1; scene.add(grid);
+
+    // Ship
     playerGroup = new THREE.Group();
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), new THREE.MeshPhongMaterial({ color: 0x333333 }));
-    playerGroup.add(hull); scene.add(playerGroup);
+    const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
+    const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
+    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.7}));
+    cockpit.position.set(0, 0.2, 0.2); cockpit.scale.set(1, 1, 2);
+    const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
+    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5); lWing.rotation.y = 0.3;
+    const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
+    playerGroup.add(hull, cockpit, lWing, rWing);
+    scene.add(playerGroup);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
-window.retryGame = () => { score = 0; level = 1; gameSpeed = 0.5; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true; };
+window.retryGame = () => {
+    score = 0; level = 1; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = [];
+    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden');
+    isGameRunning = true;
+};
 
 function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
-    if(gameKeys.left && playerGroup.position.x > -8) playerGroup.position.x -= 0.3;
-    if(gameKeys.right && playerGroup.position.x < 8) playerGroup.position.x += 0.3;
+
+    if(gameKeys.left && playerGroup.position.x > -8) {
+        playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6);
+    } else if(gameKeys.right && playerGroup.position.x < 8) {
+        playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6);
+    } else { playerGroup.rotation.z *= 0.85; }
+
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
-    
-    if(++spawnTimer > (20 - level)) {
-        const shapes = [new THREE.BoxGeometry(2, 2, 2), new THREE.IcosahedronGeometry(1.5), new THREE.TorusGeometry(1.2, 0.4)];
-        const obs = new THREE.Mesh(shapes[Math.floor(Math.random()*shapes.length)], new THREE.MeshPhongMaterial({ color: 0xff00ff }));
-        obs.position.set((Math.random()-0.5)*18, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
+
+    if(++spawnTimer > spawnInterval) {
+        const theme = themes[(level-1)%themes.length];
+        const shapes = [new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.IcosahedronGeometry(1.2), new THREE.TorusGeometry(1, 0.4, 8, 16)];
+        const obs = new THREE.Mesh(shapes[Math.floor(Math.random()*shapes.length)], new THREE.MeshPhongMaterial({ color: theme.obs, emissive: theme.obs, emissiveIntensity: 0.5 }));
+        obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
+
     for(let i=obstacles.length-1; i>=0; i--) {
         obstacles[i].position.z += gameSpeed;
-        if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 1.2 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.5) {
+        if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
             isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden');
+            const rec = localStorage.getItem('neonRushRecord') || 0; if(score > rec) localStorage.setItem('neonRushRecord', score);
+            document.getElementById('record').innerText = localStorage.getItem('neonRushRecord');
         }
         if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; 
-            if(score % 10 === 0) { level++; gameSpeed += 0.05; document.getElementById('level-display').innerText = level; }
+            if(score % 15 === 0) { level++; gameSpeed += 0.04; document.getElementById('level-display').innerText = level; }
         }
     }
     renderer.render(scene, camera);
 }
 
-window.addEventListener('keydown', (e) => { 
-    if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; 
-    if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; 
-});
-window.addEventListener('keyup', (e) => { 
-    if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; 
-    if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; 
-});
+window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
+window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 
-function syncUsers() { 
-    channel.presence.get((err, members) => { 
-        if(!members) return; 
-        document.getElementById("users-desktop").innerHTML = members.map(m => `
-            <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                <div class="flex items-center gap-2">
-                    <div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div>
-                    <span class="text-xs font-bold">${m.data.user}</span>
-                </div>
-                ${m.data.typing ? '<span class="text-[8px] text-purple-400 animate-pulse font-black uppercase">Typing</span>' : ''}
-            </div>`).join(""); 
-    }); 
-}
+// Chat Utility Functions
+window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
+window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
+window.leaveRoom = async () => { if(myName) await deleteDoc(doc(db, "active_usernames", lowerName)); location.reload(); };
+function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
+// Snow Canvas
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
 res(); window.onresize = res;
-function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
+function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
 draw();
 </script>
 </body>

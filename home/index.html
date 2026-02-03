@@ -24,7 +24,7 @@
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 
-        /* GAME UI & MOBILE TOUCH ZONES */
+        /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
         #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: auto; }
         .touch-zone { flex: 1; height: 100%; -webkit-tap-highlight-color: transparent; }
@@ -34,6 +34,15 @@
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
+
+        /* MINI CHAT OVERLAY */
+        #mini-chat-layer { position: absolute; bottom: 20px; left: 20px; width: 300px; max-width: 60%; z-index: 130; pointer-events: none; display: flex; flex-direction: column; gap: 10px; }
+        .mini-msg { background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 12px; color: rgba(255,255,255,0.8); border-left: 2px solid #0ff; animation: fadeMsg 10s forwards; margin-top: 2px; text-shadow: 1px 1px 0 #000; }
+        @keyframes fadeMsg { 0% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; display: none; } }
+        #mini-input-container { pointer-events: auto; display: flex; gap: 5px; opacity: 0.7; transition: opacity 0.2s; }
+        #mini-input-container:focus-within { opacity: 1; }
+        #mini-input { background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px; border-radius: 4px; flex: 1; font-family: 'Manrope', sans-serif; font-size: 12px; outline: none; }
+        #mini-send { background: #9667f4; border: none; color: white; border-radius: 4px; padding: 0 10px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -44,6 +53,15 @@
     <div id="touch-controls">
         <div class="touch-zone" id="touch-left"></div>
         <div class="touch-zone" id="touch-right"></div>
+    </div>
+
+    <div id="mini-chat-layer">
+        <div id="mini-messages-container" class="flex flex-col justify-end min-h-[100px]">
+            </div>
+        <div id="mini-input-container">
+            <input id="mini-input" type="text" placeholder="Type to chat..." autocomplete="off">
+            <button id="mini-send" onclick="sendMiniMessage()">></button>
+        </div>
     </div>
 
     <div id="game-ui-layer">
@@ -58,7 +76,7 @@
                     <span id="level-display" class="text-2xl font-bold">1</span>
                 </div>
             </div>
-            <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
+            <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10 z-[140]">CLOSE GAME</button>
         </div>
         <div class="stat-box self-end">
             <span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span>
@@ -74,7 +92,10 @@
 
     <div id="gameOverScreen" class="game-overlay hidden">
         <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
-        <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
+        <div class="flex gap-4">
+            <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
+            <button onclick="exitGame()" class="game-btn text-xl border-red-500 text-red-500 hover:shadow-[0_0_20px_#f00] hover:bg-red-500 hover:text-black">EXIT</button>
+        </div>
     </div>
 </div>
 
@@ -199,12 +220,32 @@ async function sendMessage() {
     cancelReply();
 }
 
+window.sendMiniMessage = async () => {
+    const input = document.getElementById("mini-input");
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+    // Re-focus game controls after sending
+    document.getElementById("mini-input").blur();
+    const msgData = { text, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: null };
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
+};
+
+document.getElementById("mini-input").onkeydown = (e) => {
+    if(e.key === "Enter") {
+        e.stopPropagation(); // Don't trigger game controls
+        window.sendMiniMessage();
+    }
+}
+
 document.getElementById("send-btn").onclick = sendMessage;
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
 function render(u, t, me, msgId, senderIsAdmin, reply) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
+    
+    // RENDER MAIN CHAT
     const div = document.createElement("div"); div.id = msgId;
     const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
@@ -221,6 +262,19 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
             </div>
         </div>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
+
+    // RENDER MINI CHAT (If Game is Open)
+    if(document.getElementById("game-view").style.display === 'block') {
+        const miniContainer = document.getElementById("mini-messages-container");
+        const miniDiv = document.createElement("div");
+        miniDiv.className = "mini-msg font-mono";
+        miniDiv.innerHTML = `<span class="text-[#9667f4] font-bold">${u}:</span> ${t}`;
+        miniContainer.appendChild(miniDiv);
+        
+        // Remove after 10s or if more than 5
+        if(miniContainer.children.length > 5) miniContainer.removeChild(miniContainer.firstChild);
+        setTimeout(() => { if(miniDiv.parentNode) miniDiv.parentNode.removeChild(miniDiv); }, 10000);
+    }
 }
 
 window.openDeleteModal = (id) => { 
@@ -233,9 +287,9 @@ window.openDeleteModal = (id) => {
 };
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 
-// GAME ENGINE (SHIP RUSH) - WITH MOBILE PHYSICS
+// GAME ENGINE (SHIP RUSH) - FIXED RESTART & DENSITY
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
-let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
+let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 12; // Lower interval = more objects
 const gameKeys = { left: false, right: false };
 const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }, { fog: 0x0a0010, grid: 0x8800ff, obs: 0x00ffff }];
 
@@ -277,9 +331,25 @@ function initShipRush() {
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
+
 window.retryGame = () => {
-    score = 0; level = 1; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = [];
-    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden');
+    // Completely Reset Game State
+    score = 0; 
+    level = 1; 
+    gameSpeed = 0.45; 
+    spawnTimer = 0;
+    
+    // Clear Obstacles from Scene
+    obstacles.forEach(o => scene.remove(o)); 
+    obstacles = [];
+    
+    // Reset Player & UI
+    playerGroup.position.x = 0; 
+    playerGroup.rotation.z = 0;
+    document.getElementById('score').innerText = "0";
+    document.getElementById('level-display').innerText = "1";
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    
     isGameRunning = true;
 };
 
@@ -297,13 +367,15 @@ function animateGame() {
         const theme = themes[(level-1)%themes.length];
         const shapes = [new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.IcosahedronGeometry(1.2), new THREE.TorusGeometry(1, 0.4, 8, 16)];
         const obs = new THREE.Mesh(shapes[Math.floor(Math.random()*shapes.length)], new THREE.MeshPhongMaterial({ color: theme.obs, emissive: theme.obs, emissiveIntensity: 0.5 }));
-        obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
+        // Increased span to -9 to 9 for wider density
+        obs.position.set((Math.random()-0.5)*18, 0.5, -60); 
+        scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
     for(let i=obstacles.length-1; i>=0; i--) {
         obstacles[i].position.z += gameSpeed;
         if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
             isGameRunning = false; 
-            if ("vibrate" in navigator) navigator.vibrate(200); // HAPTIC CRASH
+            if ("vibrate" in navigator) navigator.vibrate(200); 
             document.getElementById('gameOverScreen').classList.remove('hidden');
         }
         if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; 
@@ -313,8 +385,16 @@ function animateGame() {
     renderer.render(scene, camera);
 }
 
-window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
-window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
+window.addEventListener('keydown', (e) => { 
+    // Ignore game keys if typing in mini chat
+    if(document.activeElement === document.getElementById('mini-input')) return;
+    if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; 
+    if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; 
+});
+window.addEventListener('keyup', (e) => { 
+    if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; 
+    if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; 
+});
 
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };

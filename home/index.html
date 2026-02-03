@@ -18,22 +18,19 @@
         .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; border: 2px solid transparent; transition: all 0.2s; overflow-wrap: break-word; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .ping-active { border: 2px solid var(--ping-red) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
-        #input:empty:before { content: attr(placeholder); color: #6b7280; }
-        .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-
-        /* CALC */
+        
+        /* CALCULATOR */
         #calc-ui { position: absolute; width: 240px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
         .calc-btn { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
         .calc-btn:hover { background: rgba(150, 103, 244, 0.2); }
 
-        /* OLD MINI CHAT */
-        #mini-chat { position: absolute; bottom: 40px; left: 25px; width: 280px; z-index: 150; pointer-events: none; display: flex; flex-direction: column; gap: 8px; }
-        .mini-bubble { background: rgba(15, 12, 22, 0.5); backdrop-filter: blur(10px); padding: 10px 15px; border-radius: 14px; font-size: 12px; border-left: 4px solid var(--accent); color: white; box-shadow: 0 8px 24px rgba(0,0,0,0.4); transform-origin: left bottom; }
+        /* MINI CHAT OVERHAUL */
+        #mini-chat-wrapper { position: absolute; bottom: 30px; left: 20px; width: 300px; z-index: 150; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        #mini-chat-box { display: flex; flex-direction: column; gap: 6px; }
+        .mini-bubble { background: rgba(15, 12, 22, 0.7); backdrop-filter: blur(12px); padding: 8px 12px; border-radius: 12px; font-size: 13px; border-left: 3px solid var(--accent); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); font-family: 'Manrope', sans-serif; }
+        #mini-input-container { pointer-events: auto; display: flex; gap: 8px; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        #mini-input { background: transparent; border: none; outline: none; color: white; font-size: 13px; width: 100%; font-family: 'Manrope', sans-serif; }
 
-        /* TYPING */
         #typing-indicator { font-size: 10px; color: #9667f4; font-weight: 800; height: 14px; margin-bottom: 4px; padding-left: 4px; }
 
         /* GAME */
@@ -42,7 +39,8 @@
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; cursor: pointer; transition: 0.3s; pointer-events: auto; }
-        .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
+        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
+        #input:empty:before { content: attr(placeholder); color: #6b7280; }
     </style>
 </head>
 <body>
@@ -67,7 +65,12 @@
 </div>
 
 <div id="game-view">
-    <div id="mini-chat"></div>
+    <div id="mini-chat-wrapper">
+        <div id="mini-chat-box"></div>
+        <div id="mini-input-container">
+            <input type="text" id="mini-input" placeholder="Quick reply..." spellcheck="false">
+        </div>
+    </div>
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
@@ -76,10 +79,7 @@
             </div>
             <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
         </div>
-        <div class="stat-box self-end">
-            <span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span>
-            <span id="record" class="text-2xl font-bold">0</span>
-        </div>
+        <div class="stat-box self-end"><span class="text-[10px] text-[#0ff] block tracking-widest">RECORD</span><span id="record" class="text-2xl font-bold">0</span></div>
     </div>
     <div id="startScreen" class="game-overlay">
         <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
@@ -92,22 +92,22 @@
 </div>
 
 <div id="delete-modal" class="modal-base">
-    <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
+    <div class="glass p-6 rounded-3xl max-w-xs w-full text-center">
         <h3 class="text-xl font-bold mb-4 text-white">Delete Message?</h3>
         <div class="flex gap-3">
-            <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold">Cancel</button>
-            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">Delete</button>
+            <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl">Cancel</button>
+            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl">Delete</button>
         </div>
     </div>
 </div>
 
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
+        <div class="glass w-full max-w-md p-8 rounded-3xl text-center">
             <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">CrypticChat</h1>
             <input id="name" type="text" maxlength="20" class="w-full mb-3 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
             <input id="room" type="text" maxlength="12" class="w-full mb-6 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Room ID">
-            <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-extrabold shadow-lg transition-all active:scale-95 uppercase">JOIN</button>
+            <button id="join-btn" class="w-full bg-purple-600 py-4 rounded-xl font-extrabold uppercase">JOIN</button>
         </div>
     </div>
 
@@ -115,20 +115,15 @@
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
-                <button onclick="toggleCalc()" class="bg-white/5 hover:bg-white/10 text-white/50 p-2 rounded-lg border border-white/10 transition-all">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><path d="M16 14v2"/><path d="M12 14v2"/><path d="M8 14v2"/></svg>
-                </button>
-                <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4"/></svg>
-                </button>
-                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded border border-purple-500/30 font-black">ADMIN</span>
-                <button onclick="leaveRoom()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black transition-colors">LEAVE</button>
+                <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/></svg></button>
+                <button onclick="openGameView()" class="bg-purple-500/10 text-purple-400 p-2 rounded-lg border border-purple-500/20"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/></svg></button>
+                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded font-black">ADMIN</span>
+                <button onclick="leaveRoom()" class="bg-red-500/10 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black">LEAVE</button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
             <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
-                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest text-center">Active Users</div>
                 <div id="users-desktop" class="space-y-2"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
@@ -137,11 +132,11 @@
                     <div id="typing-indicator"></div>
                     <div id="reply-bar" class="hidden flex justify-between items-center p-2 bg-white/5 rounded-t-xl mb-1 border-x border-t border-white/10">
                         <span id="reply-user" class="text-xs text-purple-400 font-bold"></span>
-                        <button onclick="cancelReply()" class="text-xs px-2 opacity-50 hover:opacity-100">✕</button>
+                        <button onclick="cancelReply()" class="text-xs px-2 opacity-50">✕</button>
                     </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
                         <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
+                        <button id="send-btn" class="bg-purple-600 p-3 rounded-xl transition-all active:scale-90">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
                     </div>
@@ -163,11 +158,12 @@ const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
-let isAdmin = (myId === adminUID), currentRoomID = "GLOBAL", unreadCount = 0, typingTimeout, animID;
+let isAdmin = (myId === adminUID), currentRoomID = "GLOBAL", unreadCount = 0, currentReply = null;
 localStorage.setItem('cryptic_uid', myId);
 
 if(isAdmin) document.getElementById("admin-indicator").classList.remove("hidden");
 
+// JOIN
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     currentRoomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
@@ -185,10 +181,9 @@ document.getElementById("join-btn").onclick = async () => {
             snap.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const d = change.doc.data();
-                    const isMe = (d.uid === myId);
-                    render(d.user, d.text, isMe, change.doc.id, d.isAdmin, d.reply);
+                    render(d.user, d.text, (d.uid === myId), change.doc.id, d.isAdmin, d.reply);
                     updateMiniChat(d.user, d.text);
-                    if (!isMe && document.hidden) { unreadCount++; document.getElementById("page-title").innerText = `(${unreadCount}) CrypticChat`; }
+                    if (d.uid !== myId && document.hidden) { unreadCount++; document.getElementById("page-title").innerText = `(${unreadCount}) CrypticChat`; }
                 }
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
             });
@@ -204,7 +199,7 @@ document.getElementById("join-btn").onclick = async () => {
 
 window.onfocus = () => { unreadCount = 0; document.getElementById("page-title").innerText = "CrypticChat"; };
 
-// CALC
+// CALCULATOR
 const calc = document.getElementById("calc-ui");
 let isDragging = false, offset = { x: 0, y: 0 };
 document.getElementById("calc-drag").onmousedown = (e) => { isDragging = true; offset.x = e.clientX - calc.offsetLeft; offset.y = e.clientY - calc.offsetTop; };
@@ -219,43 +214,48 @@ window.calcIn = (v) => {
     else d.value = (d.value === "0" ? v : d.value + v);
 };
 
-// PURGE
-async function purgeMessages() {
-    if(!isAdmin) return;
-    const snap = await getDocs(query(collection(db, "rooms", currentRoomID, "messages")));
-    const batch = writeBatch(db);
-    snap.forEach(d => batch.delete(d.ref));
-    await batch.commit();
+// GLOBAL SEND FUNCTION
+async function sendMessage(txt, rply = null) {
+    if(!txt) return;
+    if(txt.toLowerCase() === "/purge" && isAdmin) {
+        const snap = await getDocs(query(collection(db, "rooms", currentRoomID, "messages")));
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        return;
+    }
+    await addDoc(collection(db, "rooms", currentRoomID, "messages"), { text: txt, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: rply });
 }
 
-const inputField = document.getElementById("input");
-inputField.oninput = () => {
-    channel.publish('typing', myName);
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
+// MAIN INPUT
+document.getElementById("send-btn").onclick = () => {
+    const txt = document.getElementById("input").innerText.trim();
+    sendMessage(txt, currentReply);
+    document.getElementById("input").innerText = ""; 
+    window.cancelReply();
 };
 
-document.getElementById("send-btn").onclick = async () => {
-    const text = inputField.innerText.trim();
-    if(!text) return;
-    if(text.toLowerCase() === "/purge" && isAdmin) { purgeMessages(); inputField.innerText = ""; return; }
-    await addDoc(collection(db, "rooms", currentRoomID, "messages"), { text, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: window.currentReply });
-    inputField.innerText = ""; window.cancelReply();
+// MINI INPUT
+document.getElementById("mini-input").onkeydown = (e) => {
+    if(e.key === 'Enter') {
+        const txt = e.target.value.trim();
+        if(txt) sendMessage(txt);
+        e.target.value = "";
+    }
 };
 
-function render(u, t, me, id, sAdmin, reply) {
+function render(u, t, me, id, sAdmin, rply) {
     const box = document.getElementById("messages");
     if(document.getElementById(id)) return;
     const div = document.createElement("div"); div.id = id;
-    const isPing = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
-    div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPing ? 'ping-active' : ''} animate-msg shadow-lg`;
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'} animate-msg shadow-lg`;
     div.innerHTML = `
-        ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
+        ${rply ? `<div class="reply-preview">@${rply.user}: ${rply.text}</div>` : ''}
         <div class="flex flex-col">
             ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${sAdmin?'(Admin)':''}</div>` : ''}
             <div class="flex justify-between items-start gap-4">
                 <span class="text-sm">${t}</span>
-                <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
+                <div class="flex gap-2 opacity-10 hover:opacity-100 transition-opacity pt-1">
                     <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
@@ -265,38 +265,33 @@ function render(u, t, me, id, sAdmin, reply) {
 }
 
 function updateMiniChat(u, t) {
-    const container = document.getElementById("mini-chat");
+    const box = document.getElementById("mini-chat-box");
     const m = document.createElement("div"); m.className = "mini-bubble animate-msg";
     m.innerHTML = `<span class="font-black text-purple-400 mr-2">${u}:</span> ${t.substring(0,45)}`;
-    container.appendChild(m);
-    if(container.children.length > 5) container.removeChild(container.firstChild);
+    box.appendChild(m);
+    if(box.children.length > 4) box.removeChild(box.firstChild);
 }
 
-// GAME
-let scene, camera, renderer, playerGroup, grid, obstacles = [];
+// GAME ENGINE
+let scene, camera, renderer, playerGroup, grid, obstacles = [], animID;
 let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
-const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }];
 
 function initShipRush() {
     if (renderer) return;
-    scene = new THREE.Scene(); scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x000510, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
-    renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById("game-view").prepend(renderer.domElement);
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 5); scene.add(sun);
     grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -1; scene.add(grid);
     playerGroup = new THREE.Group();
     const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
     const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
-    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.7}));
-    cockpit.position.set(0, 0.2, 0.2); cockpit.scale.set(1, 1, 2);
-    const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
-    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5); lWing.rotation.y = 0.3;
-    const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
-    playerGroup.add(hull, cockpit, lWing, rWing); scene.add(playerGroup);
+    playerGroup.add(hull); scene.add(playerGroup);
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
@@ -311,23 +306,19 @@ window.retryGame = () => { score = 0; level = 1; gameSpeed = 0.45; obstacles.for
 function animateGame() {
     animID = requestAnimationFrame(animateGame);
     if(!isGameRunning || !renderer) { if(renderer) renderer.render(scene, camera); return; }
-    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
-    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
-    else { playerGroup.rotation.z *= 0.85; }
+    if(gameKeys.left && playerGroup.position.x > -8) playerGroup.position.x -= 0.28;
+    else if(gameKeys.right && playerGroup.position.x < 8) playerGroup.position.x += 0.28;
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
     if(++spawnTimer > 25) {
-        const theme = themes[(level-1)%themes.length];
-        const obs = new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,1.8), new THREE.MeshPhongMaterial({ color: theme.obs, emissive: theme.obs, emissiveIntensity: 0.5 }));
+        const obs = new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,1.8), new THREE.MeshPhongMaterial({ color: 0xff00ff }));
         obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
     for(let i=obstacles.length-1; i>=0; i--) {
         obstacles[i].position.z += gameSpeed;
         if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
             isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden');
-            const rec = localStorage.getItem('neonRushRecord') || 0; if(score > rec) localStorage.setItem('neonRushRecord', score);
-            document.getElementById('record').innerText = localStorage.getItem('neonRushRecord');
         }
-        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; if(score % 15 === 0) { level++; gameSpeed += 0.04; document.getElementById('level-display').innerText = level; } }
+        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
     }
     renderer.render(scene, camera);
 }
@@ -335,12 +326,12 @@ function animateGame() {
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 
-window.startReply = (u, t) => { window.currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
-window.cancelReply = () => { window.currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
+window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
+window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
 window.openDeleteModal = (id) => { document.getElementById("delete-modal").style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoomID, "messages", id)); closeDeleteModal(); }; };
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 window.leaveRoom = () => location.reload();
-function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
+function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="bg-white/5 p-3 rounded-xl border border-white/5 text-xs font-bold">${m.data.user}</div>`).join(""); }); }
 
 const snowCanvas = document.getElementById("snow-canvas"), sctx = snowCanvas.getContext("2d");
 let flakes = [];

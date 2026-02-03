@@ -3,10 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title id="page-title">CrypticChat</title>
+    <title>CrypticChat</title>
+    <link rel="icon" type="image/x-icon" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; }
@@ -18,23 +19,33 @@
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         .ping-active { border: 2px solid var(--ping-red) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        #input-area { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
-        #input-area:empty:before { content: attr(placeholder); color: #6b7280; }
+        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
+        #input:empty:before { content: attr(placeholder); color: #6b7280; }
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 
         /* CALCULATOR */
         #calc-ui { position: absolute; width: 240px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
         .calc-btn { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
         .calc-btn:hover { background: var(--accent); }
 
-        /* MINI CHAT */
-        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; }
-        #mini-chat-wrapper { position: absolute; bottom: 30px; left: 20px; width: 300px; z-index: 150; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .mini-bubble { background: rgba(15, 12, 22, 0.8); backdrop-filter: blur(12px); padding: 8px 12px; border-radius: 12px; font-size: 13px; border-left: 3px solid var(--accent); color: white; margin-bottom: 5px; pointer-events: auto; }
-        #mini-input { pointer-events: auto; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px; color: white; width: 100%; outline: none; }
-
+        /* TYPING */
         #typing-indicator { font-size: 10px; color: #9667f4; font-weight: 800; height: 14px; margin-bottom: 4px; padding-left: 4px; }
-        .stat-box { font-family: 'Orbitron', sans-serif; background: rgba(0,0,0,0.8); border: 1px solid #0ff; padding: 10px 20px; border-radius: 4px; color: #0ff; text-shadow: 0 0 10px #0ff; }
+
+        /* GAME UI & MINI CHAT */
+        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        #mini-chat-wrapper { position: absolute; bottom: 30px; left: 20px; width: 280px; z-index: 150; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .mini-bubble { background: rgba(15, 12, 22, 0.8); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 12px; font-size: 12px; border-left: 3px solid var(--accent); color: white; pointer-events: auto; font-family: 'Manrope', sans-serif; }
+        #mini-input { pointer-events: auto; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; color: white; width: 100%; outline: none; font-family: 'Manrope', sans-serif; font-size: 13px; }
+        
+        #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: auto; }
+        .touch-zone { flex: 1; height: 100%; -webkit-tap-highlight-color: transparent; }
+        
+        #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
+        .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
+        .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
+        .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; }
+        .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
     </style>
 </head>
 <body>
@@ -59,21 +70,59 @@
 <div id="game-view">
     <div id="mini-chat-wrapper">
         <div id="mini-messages"></div>
-        <input type="text" id="mini-input" placeholder="Chat while flying..." spellcheck="false">
+        <input type="text" id="mini-input" placeholder="Quick chat..." spellcheck="false">
     </div>
-    <div class="absolute top-5 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none z-[120]">
-        <div class="stat-box text-center"><div class="text-[8px] opacity-70">SCORE</div><div id="g-score">0</div></div>
+    <div id="touch-controls">
+        <div class="touch-zone" id="touch-left"></div>
+        <div class="touch-zone" id="touch-right"></div>
     </div>
-    <button onclick="closeGame()" class="absolute top-5 right-5 stat-box text-red-500 border-red-500 text-xs z-[120] hover:bg-red-500/20">EXIT MISSION</button>
+
+    <div id="game-ui-layer">
+        <div class="flex justify-between items-start">
+            <div class="flex gap-4">
+                <div class="stat-box">
+                    <span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span>
+                    <span id="score" class="text-2xl font-bold">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="text-[10px] text-[#0ff] block tracking-widest">LEVEL</span>
+                    <span id="level-display" class="text-2xl font-bold">1</span>
+                </div>
+            </div>
+            <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
+        </div>
+    </div>
+
+    <div id="startScreen" class="game-overlay">
+        <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
+        <p class="text-[#0ff] mb-6 animate-pulse text-xs tracking-[4px]">TAP SIDES TO STEER, USE A/D OR ARROW KEYS</p>
+        <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLYING</button>
+    </div>
+
+    <div id="gameOverScreen" class="game-overlay hidden">
+        <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
+        <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
+    </div>
+</div>
+
+<div id="delete-modal" class="modal-base">
+    <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
+        <h3 class="text-xl font-bold mb-4 text-white">Delete Message?</h3>
+        <div class="flex gap-3">
+            <button onclick="closeDeleteModal()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold">Cancel</button>
+            <button id="confirm-delete-btn" class="flex-1 bg-red-600 py-3 rounded-xl font-bold">Delete</button>
+        </div>
+    </div>
 </div>
 
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl">
-            <h1 class="text-4xl font-black mb-8 tracking-tighter">CrypticChat</h1>
-            <input id="name" type="text" maxlength="20" class="w-full mb-3 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/10" placeholder="Username">
-            <input id="room" type="text" maxlength="12" class="w-full mb-6 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/10" placeholder="Room ID">
-            <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-extrabold uppercase">Join Room</button>
+        <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
+            <h1 class="text-4xl font-black mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-purple-400">CrypticChat</h1>
+            <input id="name" type="text" maxlength="20" class="w-full mb-3 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Username">
+            <input id="room" type="text" maxlength="12" class="w-full mb-6 p-4 bg-white/5 rounded-xl text-center outline-none border border-white/5 focus:border-purple-500" placeholder="Room ID">
+            <p id="error-msg" class="text-red-500 text-xs mb-4 font-bold hidden"></p>
+            <button id="join-btn" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-extrabold shadow-lg transition-all active:scale-95 uppercase">JOIN</button>
         </div>
     </div>
 
@@ -81,15 +130,18 @@
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
-                <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10 text-xs">Calculator</button>
-                <button onclick="openGame()" class="bg-purple-600 px-4 py-1.5 rounded-lg text-xs font-black">SHIP RUSH</button>
-                <button onclick="location.reload()" class="bg-red-500/10 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black">LEAVE</button>
+                <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10 text-[10px] uppercase font-bold text-purple-400">Calculator</button>
+                <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
+                </button>
+                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded border border-purple-500/30 font-black tracking-tighter">ADMIN</span>
+                <button onclick="leaveRoom()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black transition-colors">LEAVE</button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
             <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
-                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest">Active Users</div>
+                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest text-center">Active Users</div>
                 <div id="users-desktop" class="space-y-2"></div>
             </aside>
             <main class="flex-1 flex flex-col relative">
@@ -98,11 +150,13 @@
                     <div id="typing-indicator"></div>
                     <div id="reply-bar" class="hidden flex justify-between items-center p-2 bg-white/5 rounded-t-xl mb-1 border-x border-t border-white/10">
                         <span id="reply-user" class="text-xs text-purple-400 font-bold"></span>
-                        <button onclick="cancelReply()" class="text-xs px-2 opacity-50">✕</button>
+                        <button onclick="cancelReply()" class="text-xs px-2 opacity-50 hover:opacity-100">✕</button>
                     </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <div id="input-area" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
-                        <button id="send-btn" class="bg-purple-600 p-3 rounded-xl transition-all active:scale-90 font-bold">SEND</button>
+                        <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
+                        <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
                     </div>
                 </div>
             </main>
@@ -110,11 +164,13 @@
     </div>
 </div>
 
-<script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } } </script>
+<script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, collection, addDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import * as THREE from 'three';
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
@@ -122,29 +178,38 @@ const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
 const adminFingerprint = '1680_1050_24';
-let ably, channel, myName, myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 10);
-let isAdmin = (myId === adminUID), currentRoomID = "GLOBAL", currentReply = null, typingTimeout;
-localStorage.setItem('cryptic_uid', myId);
+let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", typingTimeout;
 
-document.getElementById("join-btn").onclick = () => {
-    myName = document.getElementById("name").value.trim();
-    currentRoomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
-    if(!myName) return;
+myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
+localStorage.setItem('cryptic_uid', myId);
+if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
+
+document.getElementById("join-btn").onclick = async () => {
+    let rawName = document.getElementById("name").value.trim();
+    currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    const errorBar = document.getElementById("error-msg");
+    if(!rawName) return;
     
+    const lowerName = rawName.toLowerCase();
+    const userRegRef = doc(db, "active_usernames", lowerName);
+    const userDoc = await getDoc(userRegRef);
+    if(userDoc.exists() && userDoc.data().uid !== myId) {
+        errorBar.innerText = "Username taken."; errorBar.classList.remove("hidden"); return;
+    }
+    await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
+    
+    myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
-    channel = ably.channels.get("room-" + currentRoomID);
+    channel = ably.channels.get("room-" + currentRoom);
     
     channel.presence.enter({ user: myName, isAdmin, fingerprint: adminFingerprint }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = currentRoomID;
+        document.getElementById("roomLabel").innerText = currentRoom;
         
-        onSnapshot(query(collection(db, "rooms", currentRoomID, "messages"), orderBy("timestamp", "asc")), (snap) => {
-            snap.docChanges().forEach((change) => {
-                if (change.type === "added") {
-                    const d = change.doc.data();
-                    renderMsg(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply);
-                }
+        onSnapshot(query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") render(change.doc.data().user, change.doc.data().text, change.doc.data().uid === myId, change.doc.id, change.doc.data().isAdmin, change.doc.data().reply);
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
             });
         });
@@ -152,122 +217,155 @@ document.getElementById("join-btn").onclick = () => {
         channel.subscribe('typing', msg => {
             document.getElementById('typing-indicator').innerText = msg.data ? `${msg.data} is typing...` : '';
         });
+
         channel.presence.subscribe(() => syncUsers());
         syncUsers();
     });
 };
 
-document.getElementById("input-area").oninput = () => {
+document.getElementById("input").oninput = () => {
     channel.publish('typing', myName);
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
 };
 
-async function sendMessage(txt, rply = null) {
-    if(!txt) return;
-    if(txt.toLowerCase() === "/purge" && isAdmin) {
-        const snap = await getDocs(query(collection(db, "rooms", currentRoomID, "messages")));
+async function sendMessage(manualText = null) {
+    const inputEl = document.getElementById("input");
+    const text = manualText || inputEl.innerText.trim();
+    if(!text) return;
+    
+    if(!manualText) inputEl.innerText = ""; 
+
+    // Admin Purge
+    if(text.toLowerCase() === "/purge" && isAdmin) {
+        const snap = await getDocs(query(collection(db, "rooms", currentRoom, "messages")));
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
         return;
     }
-    await addDoc(collection(db, "rooms", currentRoomID, "messages"), { text: txt, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: rply });
+
+    await addDoc(collection(db, "rooms", currentRoom, "messages"), { text, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply });
+    cancelReply();
 }
 
-document.getElementById("send-btn").onclick = () => {
-    const el = document.getElementById("input-area");
-    sendMessage(el.innerText.trim(), currentReply);
-    el.innerText = ""; window.cancelReply();
-};
+document.getElementById("send-btn").onclick = () => sendMessage();
+document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+document.getElementById("mini-input").onkeydown = (e) => { if(e.key === "Enter") { sendMessage(e.target.value); e.target.value = ""; } };
 
-document.getElementById("mini-input").onkeydown = (e) => {
-    if(e.key === 'Enter') { sendMessage(e.target.value.trim()); e.target.value = ""; }
-};
-
-function renderMsg(u, t, isMe, id, sAdmin, rply) {
+function render(u, t, me, msgId, senderIsAdmin, reply) {
     const box = document.getElementById("messages");
-    if(document.getElementById(id)) return;
-    const div = document.createElement("div"); div.id = id;
-    const isPing = !isMe && (t.includes(`@${myName}`) || (rply && rply.user === myName));
-    div.className = `bubble animate-msg ${isMe ? 'mine' : 'theirs'} ${isPing ? 'ping-active' : ''}`;
+    if(document.getElementById(msgId)) return;
+    const div = document.createElement("div"); div.id = msgId;
+    const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
+    div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
     div.innerHTML = `
-        ${rply ? `<div class="reply-preview">@${rply.user}: ${rply.text}</div>` : ''}
-        <div class="text-[10px] font-bold opacity-60 mb-1 uppercase">${u} ${sAdmin?'(PILOT-ADMIN)':''}</div>
-        <div class="flex justify-between items-start">
-            <span class="text-sm">${t}</span>
-            <div class="flex gap-2 opacity-0 hover:opacity-100 transition-opacity ml-4">
-                <button class="text-[10px] uppercase font-bold text-purple-400" onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')">Reply</button>
-                ${(isMe || isAdmin) ? `<button class="text-[10px] uppercase font-bold text-red-400" onclick="window.delMsg('${id}')">Del</button>` : ''}
+        ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
+        <div class="flex flex-col">
+            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}
+            <div class="flex justify-between items-start gap-4">
+                <span class="text-sm">${t}</span>
+                <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
+                    <button onclick="window.startReply('${u}', '${t.replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
+                </div>
             </div>
         </div>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 
-    const mini = document.getElementById("mini-messages");
+    // Mini Chat update
+    const miniBox = document.getElementById("mini-messages");
     const m = document.createElement("div"); m.className = "mini-bubble animate-msg";
-    m.innerHTML = `<span class="font-black text-purple-400">${u}:</span> ${t.substring(0,40)}`;
-    mini.appendChild(m);
-    if(mini.children.length > 5) mini.removeChild(mini.firstChild);
+    m.innerHTML = `<b class="text-purple-400">${u}:</b> ${t.substring(0,40)}`;
+    miniBox.appendChild(m);
+    if(miniBox.children.length > 4) miniBox.removeChild(miniBox.firstChild);
 }
+
+window.openDeleteModal = (id) => { 
+    const modal = document.getElementById("delete-modal");
+    modal.style.display = "flex";
+    document.getElementById("confirm-delete-btn").onclick = async () => {
+        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id));
+        modal.style.display = "none";
+    };
+};
+window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 
 // GAME ENGINE
-let gScene, gCam, gRen, ship, obstacles = [], gId, isPlaying = false, score = 0;
-const keys = { a: false, d: false };
+let scene, camera, renderer, playerGroup, grid, obstacles = [];
+let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
+const gameKeys = { left: false, right: false };
+const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }];
 
-function initGame() {
-    gScene = new THREE.Scene(); gScene.fog = new THREE.Fog(0x000000, 10, 60);
-    gCam = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    gCam.position.set(0, 3, 7); gCam.lookAt(0, 0, -5);
-    gRen = new THREE.WebGLRenderer({ antialias: true }); gRen.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById("game-view").prepend(gRen.domElement);
-    const grid = new THREE.GridHelper(300, 60, 0x9667f4, 0x110022); gScene.add(grid);
-    
-    ship = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 2), new THREE.MeshStandardMaterial({color: 0x333333}));
-    const wingL = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 1.2), new THREE.MeshStandardMaterial({color: 0x9667f4}));
-    wingL.position.set(-1.4, -0.1, 0.4); const wingR = wingL.clone(); wingR.position.x = 1.4;
-    const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.35), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5}));
-    cockpit.position.set(0, 0.3, 0.3); ship.add(body, wingL, wingR, cockpit); gScene.add(ship);
-    gScene.add(new THREE.PointLight(0xffffff, 150, 100), new THREE.AmbientLight(0xffffff, 0.4));
+function initShipRush() {
+    if (renderer) return;
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById("game-view").appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
+    grid.position.y = -1; scene.add(grid);
+    playerGroup = new THREE.Group();
+    const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
+    const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
+    const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5);
+    const rWing = lWing.clone(); rWing.position.x = 0.8;
+    playerGroup.add(hull, lWing, rWing); scene.add(playerGroup);
+
+    const tL = document.getElementById('touch-left'), tR = document.getElementById('touch-right');
+    tL.addEventListener('touchstart', (e) => { e.preventDefault(); gameKeys.left = true; });
+    tL.addEventListener('touchend', () => gameKeys.left = false);
+    tR.addEventListener('touchstart', (e) => { e.preventDefault(); gameKeys.right = true; });
+    tR.addEventListener('touchend', () => gameKeys.right = false);
 }
 
-window.openGame = () => { document.getElementById("game-view").style.display = "block"; if(!gRen) initGame(); isPlaying = true; loop(); };
-window.closeGame = () => { isPlaying = false; cancelAnimationFrame(gId); document.getElementById("game-view").style.display = "none"; };
+window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
+window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
+window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
+window.retryGame = () => { score = 0; level = 1; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true; };
 
-function loop() {
-    if(!isPlaying) return; gId = requestAnimationFrame(loop);
-    if(keys.a && ship.position.x > -12) { ship.position.x -= 0.25; ship.rotation.z = Math.min(ship.rotation.z + 0.12, 0.6); }
-    else if(keys.d && ship.position.x < 12) { ship.position.x += 0.25; ship.rotation.z = Math.max(ship.rotation.z - 0.12, -0.6); }
-    else { ship.rotation.z *= 0.85; }
-
-    if(Math.random() < 0.06) {
-        const obs = new THREE.Mesh(new THREE.OctahedronGeometry(1.2), new THREE.MeshStandardMaterial({color: 0xff0044, emissive: 0xff0044, emissiveIntensity: 0.5}));
-        obs.position.set((Math.random()-0.5)*24, 0.5, -60); gScene.add(obs); obstacles.push(obs);
+function animateGame() {
+    if (document.getElementById("game-view").style.display === 'none') return;
+    requestAnimationFrame(animateGame);
+    if(!isGameRunning) return;
+    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
+    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
+    else { playerGroup.rotation.z *= 0.85; }
+    grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
+    if(++spawnTimer > spawnInterval) {
+        const obs = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2), new THREE.MeshPhongMaterial({ color: 0xff00ff }));
+        obs.position.set((Math.random()-0.5)*16, 0.5, -60); scene.add(obs); obstacles.push(obs); spawnTimer = 0;
     }
     for(let i=obstacles.length-1; i>=0; i--) {
-        obstacles[i].position.z += 0.6;
-        if(ship.position.distanceTo(obstacles[i].position) < 1.8) { score = 0; document.getElementById("g-score").innerText = score; obstacles.forEach(o => gScene.remove(o)); obstacles = []; ship.position.x = 0; break; }
-        if(obstacles[i].position.z > 10) { gScene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById("g-score").innerText = score; }
+        obstacles[i].position.z += gameSpeed;
+        if(playerGroup.position.distanceTo(obstacles[i].position) < 1.5) { isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden'); }
+        if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
     }
-    gRen.render(gScene, gCam);
+    renderer.render(scene, camera);
 }
 
+// CALC LOGIC
 window.toggleCalc = () => { const c = document.getElementById("calc-ui"); c.style.display = c.style.display === 'block' ? 'none' : 'block'; c.style.left = "50px"; c.style.top = "50px"; };
 window.calcIn = v => { const d = document.getElementById("calc-display"); if(v==='C') d.value="0"; else if(v==='back') d.value = d.value.slice(0,-1) || "0"; else if(v==='=') try{d.value=eval(d.value)}catch{d.value="ERR"}; else d.value=d.value==="0"?v:d.value+v; };
+
+window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
+window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
-window.delMsg = (id) => deleteDoc(doc(db, "rooms", currentRoomID, "messages", id));
-window.addEventListener("keydown", e => { if(e.key === 'a') keys.a = true; if(e.key === 'd') keys.d = true; });
-window.addEventListener("keyup", e => { if(e.key === 'a') keys.a = false; if(e.key === 'd') keys.d = false; });
+window.leaveRoom = () => location.reload();
+function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
-function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="bg-white/5 p-3 rounded-xl border border-white/5 text-xs font-bold flex items-center gap-2"><div class="w-2 h-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div>${m.data.user}</div>`).join(""); }); }
-
-const snowCanvas = document.getElementById("snow-canvas"), sctx = snowCanvas.getContext("2d");
-let flakes = [];
-function sRes() { snowCanvas.width = window.innerWidth; snowCanvas.height = window.innerHeight; flakes = Array.from({length: 45}, () => ({ x: Math.random() * snowCanvas.width, y: Math.random() * snowCanvas.height, r: Math.random() * 2 + 1, d: Math.random() * 0.5 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
-sRes(); window.onresize = sRes;
-function sDraw() { sctx.clearRect(0,0,snowCanvas.width,snowCanvas.height); flakes.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > snowCanvas.height) p.y = -10; sctx.beginPath(); sctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); sctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; sctx.fill(); }); requestAnimationFrame(sDraw); }
-sDraw();
+const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
+let snow = [];
+function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
+res(); window.onresize = res;
+function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
+draw();
 </script>
 </body>
 </html>

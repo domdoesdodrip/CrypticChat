@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -305,4 +306,22 @@ function animateGame() {
     renderer.render(scene, camera);
 }
 
-window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys
+window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
+window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
+
+// UTILS
+window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
+window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
+window.leaveRoom = () => location.reload();
+function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
+
+// SNOW
+const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
+let snow = [];
+function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
+res(); window.onresize = res;
+function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
+draw();
+</script>
+</body>
+</html>

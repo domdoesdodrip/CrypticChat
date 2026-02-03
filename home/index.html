@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>CrypticChat</title>
+    <title id="page-title">CrypticChat</title>
     <link rel="icon" type="image/x-icon" href="https://api.iconify.design/lucide:messages-square.svg?color=%239667f4">
     <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,7 +24,19 @@
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 
-        /* GAME UI INTEGRATION */
+        /* GLASS CALCULATOR */
+        #calc-ui { position: absolute; width: 240px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); }
+        .calc-btn { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; font-size: 14px; }
+        .calc-btn:hover { background: rgba(150, 103, 244, 0.2); border-color: var(--accent); }
+        
+        /* MINI CHAT (LEFT) */
+        #mini-chat { position: absolute; bottom: 30px; left: 20px; width: 260px; z-index: 150; pointer-events: none; display: flex; flex-direction: column; gap: 6px; }
+        .mini-bubble { background: rgba(15, 12, 22, 0.4); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 12px; font-size: 11px; border-left: 3px solid var(--accent); color: rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+        /* TYPING INDICATOR */
+        #typing-indicator { font-size: 10px; color: #9667f4; font-weight: 800; height: 14px; margin-bottom: 4px; padding-left: 4px; }
+
+        /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; }
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
@@ -37,18 +49,32 @@
 
 <canvas id="snow-canvas"></canvas>
 
+<div id="calc-ui" class="glass p-5">
+    <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move opacity-60">
+        <span class="text-[9px] font-black tracking-[3px] uppercase text-purple-400">MATH.EXE</span>
+        <button onclick="toggleCalc()" class="hover:text-red-500 transition-colors">✕</button>
+    </div>
+    <input id="calc-display" type="text" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
+    <div class="grid grid-cols-4 gap-2">
+        <div onclick="calcIn('C')" class="calc-btn text-red-400">C</div>
+        <div onclick="calcIn('/')" class="calc-btn text-purple-400">/</div>
+        <div onclick="calcIn('*')" class="calc-btn text-purple-400">×</div>
+        <div onclick="calcIn('back')" class="calc-btn">←</div>
+        <div onclick="calcIn('7')" class="calc-btn">7</div><div onclick="calcIn('8')" class="calc-btn">8</div><div onclick="calcIn('9')" class="calc-btn">9</div><div onclick="calcIn('-')" class="calc-btn text-purple-400">-</div>
+        <div onclick="calcIn('4')" class="calc-btn">4</div><div onclick="calcIn('5')" class="calc-btn">5</div><div onclick="calcIn('6')" class="calc-btn">6</div><div onclick="calcIn('+')" class="calc-btn text-purple-400">+</div>
+        <div onclick="calcIn('1')" class="calc-btn">1</div><div onclick="calcIn('2')" class="calc-btn">2</div><div onclick="calcIn('3')" class="calc-btn">3</div>
+        <div onclick="calcIn('=')" class="calc-btn bg-purple-600/40 border-purple-500/50 row-span-2 flex items-center justify-center text-xl">═</div>
+        <div onclick="calcIn('0')" class="calc-btn col-span-3">0</div>
+    </div>
+</div>
+
 <div id="game-view">
+    <div id="mini-chat"></div>
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
-                <div class="stat-box">
-                    <span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span>
-                    <span id="score" class="text-2xl font-bold">0</span>
-                </div>
-                <div class="stat-box">
-                    <span class="text-[10px] text-[#0ff] block tracking-widest">LEVEL</span>
-                    <span id="level-display" class="text-2xl font-bold">1</span>
-                </div>
+                <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span><span id="score" class="text-2xl font-bold">0</span></div>
+                <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">LEVEL</span><span id="level-display" class="text-2xl font-bold">1</span></div>
             </div>
             <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
         </div>
@@ -57,12 +83,10 @@
             <span id="record" class="text-2xl font-bold">0</span>
         </div>
     </div>
-
     <div id="startScreen" class="game-overlay">
         <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
         <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLYING</button>
     </div>
-
     <div id="gameOverScreen" class="game-overlay hidden">
         <h1 class="text-5xl font-bold mb-8 text-red-500 drop-shadow-[0_0_20px_#f00]">CRASHED!</h1>
         <button onclick="retryGame()" class="game-btn text-xl">RETRY</button>
@@ -94,6 +118,9 @@
         <header class="glass h-16 flex items-center justify-between px-4 shrink-0 z-30">
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
+                <button onclick="toggleCalc()" class="bg-white/5 hover:bg-white/10 text-white/50 p-2 rounded-lg border border-white/10 transition-all">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><path d="M16 14v2"/><path d="M12 14v2"/><path d="M8 14v2"/><path d="M12 18v2"/><path d="M8 18v2"/></svg>
+                </button>
                 <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
                 </button>
@@ -110,6 +137,7 @@
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-1"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-black/80 backdrop-blur-md border-t border-white/10 z-20">
+                    <div id="typing-indicator"></div>
                     <div id="reply-bar" class="hidden flex justify-between items-center p-2 bg-white/5 rounded-t-xl mb-1 border-x border-t border-white/10">
                         <span id="reply-user" class="text-xs text-purple-400 font-bold"></span>
                         <button onclick="cancelReply()" class="text-xs px-2 opacity-50 hover:opacity-100">✕</button>
@@ -117,7 +145,7 @@
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
                         <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
                         <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
                     </div>
                 </div>
@@ -126,22 +154,19 @@
     </div>
 </div>
 
-<script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
+<script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } } </script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, collection, addDoc, deleteDoc, getDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import * as THREE from 'three';
 
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
-let ably, channel, myName, myId, isAdmin = false, currentReply = null, deleteTargetId = null;
+let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoomID = "GLOBAL", unreadCount = 0;
 
-// Identity
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
@@ -149,33 +174,88 @@ if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator
 // Join Logic
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
-    const roomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
+    currentRoomID = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     const errorBar = document.getElementById("error-msg");
     if(!rawName) return;
-    const lowerName = rawName.toLowerCase();
-    const userRegRef = doc(db, "active_usernames", lowerName);
-    const userDoc = await getDoc(userRegRef);
-    if(userDoc.exists() && userDoc.data().uid !== myId) {
-        errorBar.innerText = "Username taken."; errorBar.classList.remove("hidden"); return;
-    }
-    await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
-    channel = ably.channels.get("room-" + roomID);
+    channel = ably.channels.get("room-" + currentRoomID);
+    
     channel.presence.enter({ user: myName, isAdmin }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
-        document.getElementById("roomLabel").innerText = roomID;
-        const q = query(collection(db, "rooms", roomID, "messages"), orderBy("timestamp", "asc"));
-        onSnapshot(q, (snapshot) => {
+        document.getElementById("roomLabel").innerText = currentRoomID;
+        
+        onSnapshot(query(collection(db, "rooms", currentRoomID, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
             snapshot.docChanges().forEach((change) => {
-                if (change.type === "added") render(change.doc.data().user, change.doc.data().text, change.doc.data().uid === myId, change.doc.id, change.doc.data().isAdmin, change.doc.data().reply);
+                if (change.type === "added") {
+                    const d = change.doc.data();
+                    render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply);
+                    updateMiniChat(d.user, d.text);
+                    if (!me && document.hidden) {
+                        unreadCount++;
+                        document.getElementById("page-title").innerText = `(${unreadCount}) CrypticChat`;
+                    }
+                }
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
             });
         });
+
         channel.presence.subscribe(() => syncUsers());
+        
+        // Typing Indicator Listeners
+        channel.subscribe('typing', (msg) => {
+            const indicator = document.getElementById('typing-indicator');
+            indicator.innerText = msg.data ? `${msg.data} is typing...` : '';
+        });
+
         syncUsers();
     });
+};
+
+// RESET UNREAD ON FOCUS
+window.onfocus = () => { unreadCount = 0; document.getElementById("page-title").innerText = "CrypticChat"; };
+
+// CALCULATOR LOGIC
+const calc = document.getElementById("calc-ui");
+let isDragging = false, offset = { x: 0, y: 0 };
+document.getElementById("calc-drag").onmousedown = (e) => { isDragging = true; offset.x = e.clientX - calc.offsetLeft; offset.y = e.clientY - calc.offsetTop; };
+document.onmousemove = (e) => { if(isDragging) { calc.style.left = (e.clientX - offset.x) + "px"; calc.style.top = (e.clientY - offset.y) + "px"; }};
+document.onmouseup = () => isDragging = false;
+window.toggleCalc = () => { calc.style.display = (calc.style.display === 'block') ? 'none' : 'block'; if(calc.style.display === 'block') { calc.style.left = "50px"; calc.style.top = "100px"; }};
+window.calcIn = (v) => {
+    const d = document.getElementById("calc-display");
+    if(v === 'C') d.value = "0";
+    else if(v === 'back') d.value = d.value.slice(0, -1) || "0";
+    else if(v === '=') { try { d.value = eval(d.value); } catch { d.value = "ERR"; } }
+    else d.value = (d.value === "0" ? v : d.value + v);
+};
+
+// PURGE COMMAND
+async function purgeMessages() {
+    if(!isAdmin) return;
+    const q = query(collection(db, "rooms", currentRoomID, "messages"));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+}
+
+// SEND LOGIC
+const inputField = document.getElementById("input");
+let typingTimeout;
+inputField.oninput = () => {
+    channel.publish('typing', myName);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
+};
+
+document.getElementById("send-btn").onclick = async () => {
+    const text = inputField.innerText.trim();
+    if(!text) return;
+    if(text.toLowerCase() === "/purge" && isAdmin) { purgeMessages(); inputField.innerText = ""; return; }
+    await addDoc(collection(db, "rooms", currentRoomID, "messages"), { text, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply });
+    inputField.innerText = ""; cancelReply();
 };
 
 function render(u, t, me, msgId, senderIsAdmin, reply) {
@@ -199,62 +279,59 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-// GAME ENGINE (SHIP RUSH ORIGINAL)
-let scene, camera, renderer, playerGroup, grid, obstacles = [];
+function updateMiniChat(u, t) {
+    const container = document.getElementById("mini-chat");
+    const m = document.createElement("div"); m.className = "mini-bubble animate-msg";
+    m.innerHTML = `<b>${u}:</b> ${t.substring(0,40)}`;
+    container.appendChild(m);
+    if(container.children.length > 5) container.removeChild(container.firstChild);
+}
+
+// GAME ENGINE (FIXED FRAME RESET)
+let scene, camera, renderer, playerGroup, grid, obstacles = [], animID;
 let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
 const gameKeys = { left: false, right: false };
-const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }, { fog: 0x0a0010, grid: 0x8800ff, obs: 0x00ffff }];
+const themes = [{ fog: 0x000510, grid: 0x00ffff, obs: 0xff00ff }, { fog: 0x100500, grid: 0xffaa00, obs: 0xff4400 }, { fog: 0x051000, grid: 0x00ff88, obs: 0xccff00 }];
 
 function initShipRush() {
     if (renderer) return;
-    scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
+    scene = new THREE.Scene(); scene.fog = new THREE.Fog(themes[0].fog, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById("game-view").appendChild(renderer.domElement);
-    
-    // Light
+    document.getElementById("game-view").prepend(renderer.domElement);
     scene.add(new THREE.AmbientLight(0xffffff, 0.5));
     const sun = new THREE.DirectionalLight(0xffffff, 1); sun.position.set(5, 10, 5); scene.add(sun);
-
-    // Grid
-    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333);
-    grid.position.y = -1; scene.add(grid);
-
-    // Ship
+    grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -1; scene.add(grid);
     playerGroup = new THREE.Group();
     const mat = new THREE.MeshPhongMaterial({ color: 0x333333, flatShading: true });
-    const neonMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     const hull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 2), mat);
     const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.7}));
     cockpit.position.set(0, 0.2, 0.2); cockpit.scale.set(1, 1, 2);
     const wingGeo = new THREE.BoxGeometry(2, 0.1, 1);
     const lWing = new THREE.Mesh(wingGeo, mat); lWing.position.set(-0.8, 0, 0.5); lWing.rotation.y = 0.3;
     const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
-    playerGroup.add(hull, cockpit, lWing, rWing);
-    scene.add(playerGroup);
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    playerGroup.add(hull, cockpit, lWing, rWing); scene.add(playerGroup);
 }
 
-window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
-window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
+window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); isGameRunning = false; animateGame(); };
+window.exitGame = () => { 
+    isGameRunning = false; cancelAnimationFrame(animID);
+    document.getElementById("game-view").style.display = 'none'; 
+    if(renderer) { renderer.dispose(); renderer.domElement.remove(); renderer = null; }
+    obstacles = [];
+};
+
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
 window.retryGame = () => {
     score = 0; level = 1; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = [];
-    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden');
-    isGameRunning = true;
+    playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true;
 };
 
 function animateGame() {
-    if (document.getElementById("game-view").style.display === 'none') return;
-    requestAnimationFrame(animateGame);
-    if(!isGameRunning) return;
+    animID = requestAnimationFrame(animateGame);
+    if(!isGameRunning || !renderer) { if(renderer) renderer.render(scene, camera); return; }
 
     if(gameKeys.left && playerGroup.position.x > -8) {
         playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6);
@@ -288,19 +365,19 @@ function animateGame() {
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 
-// Chat Utility Functions
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
-window.leaveRoom = async () => { if(myName) await deleteDoc(doc(db, "active_usernames", lowerName)); location.reload(); };
+window.openDeleteModal = (id) => { document.getElementById("delete-modal").style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoomID, "messages", id)); closeDeleteModal(); }; };
+window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
+window.leaveRoom = () => location.reload();
 function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
-// Snow Canvas
-const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
-let snow = [];
-function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
-res(); window.onresize = res;
-function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
-draw();
+const snowCanvas = document.getElementById("snow-canvas"), sctx = snowCanvas.getContext("2d");
+let flakes = [];
+function sRes() { snowCanvas.width = window.innerWidth; snowCanvas.height = window.innerHeight; flakes = Array.from({length: 45}, () => ({ x: Math.random() * snowCanvas.width, y: Math.random() * snowCanvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
+sRes(); window.onresize = sRes;
+function sDraw() { sctx.clearRect(0,0,snowCanvas.width,snowCanvas.height); flakes.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > snowCanvas.height) p.y = -10; sctx.beginPath(); sctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); sctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; sctx.fill(); }); requestAnimationFrame(sDraw); }
+sDraw();
 </script>
 </body>
 </html>

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,8 +24,11 @@
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 
-        /* GAME UI INTEGRATION */
-        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; }
+        /* GAME UI & MOBILE TOUCH ZONES */
+        #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: auto; }
+        .touch-zone { flex: 1; height: 100%; -webkit-tap-highlight-color: transparent; }
+        
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
@@ -39,6 +41,11 @@
 <canvas id="snow-canvas"></canvas>
 
 <div id="game-view">
+    <div id="touch-controls">
+        <div class="touch-zone" id="touch-left"></div>
+        <div class="touch-zone" id="touch-right"></div>
+    </div>
+
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
@@ -61,6 +68,7 @@
 
     <div id="startScreen" class="game-overlay">
         <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
+        <p class="text-[#0ff] mb-6 animate-pulse text-xs tracking-[4px]">TAP SIDES TO STEER</p>
         <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLYING</button>
     </div>
 
@@ -142,12 +150,10 @@ const db = getFirestore(initializeApp(firebaseConfig));
 const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL";
 
-// Identity
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
 
-// JOIN LOGIC
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
@@ -183,30 +189,18 @@ document.getElementById("join-btn").onclick = async () => {
     });
 };
 
-// MESSAGE LOGIC
 async function sendMessage() {
     const input = document.getElementById("input");
     const text = input.innerText.trim();
     if(!text) return;
-    
     input.innerText = ""; 
-    const msgData = { 
-        text, user: myName, uid: myId, isAdmin, 
-        timestamp: serverTimestamp(), 
-        reply: currentReply 
-    };
-    
+    const msgData = { text, user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply };
     await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
     cancelReply();
 }
 
 document.getElementById("send-btn").onclick = sendMessage;
-document.getElementById("input").onkeydown = (e) => {
-    if(e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-};
+document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
 function render(u, t, me, msgId, senderIsAdmin, reply) {
     const box = document.getElementById("messages");
@@ -229,7 +223,6 @@ function render(u, t, me, msgId, senderIsAdmin, reply) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-// DELETE LOGIC
 window.openDeleteModal = (id) => { 
     const modal = document.getElementById("delete-modal");
     modal.style.display = "flex";
@@ -240,7 +233,7 @@ window.openDeleteModal = (id) => {
 };
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 
-// GAME ENGINE (SHIP RUSH)
+// GAME ENGINE (SHIP RUSH) - WITH MOBILE PHYSICS
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, level = 1, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0, spawnInterval = 25;
 const gameKeys = { left: false, right: false };
@@ -269,6 +262,16 @@ function initShipRush() {
     const rWing = lWing.clone(); rWing.position.x = 0.8; rWing.rotation.y = -0.3;
     playerGroup.add(hull, cockpit, lWing, rWing);
     scene.add(playerGroup);
+
+    // MOBILE TOUCH LISTENERS
+    const tL = document.getElementById('touch-left'), tR = document.getElementById('touch-right');
+    const setL = (v) => gameKeys.left = v;
+    const setR = (v) => gameKeys.right = v;
+
+    tL.addEventListener('touchstart', (e) => { e.preventDefault(); setL(true); });
+    tL.addEventListener('touchend', () => setL(false));
+    tR.addEventListener('touchstart', (e) => { e.preventDefault(); setR(true); });
+    tR.addEventListener('touchend', () => setR(false));
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
@@ -284,9 +287,11 @@ function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
+
     if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.28; playerGroup.rotation.z = Math.min(playerGroup.rotation.z + 0.1, 0.6); } 
     else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.28; playerGroup.rotation.z = Math.max(playerGroup.rotation.z - 0.1, -0.6); } 
     else { playerGroup.rotation.z *= 0.85; }
+
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
     if(++spawnTimer > spawnInterval) {
         const theme = themes[(level-1)%themes.length];
@@ -297,7 +302,9 @@ function animateGame() {
     for(let i=obstacles.length-1; i>=0; i--) {
         obstacles[i].position.z += gameSpeed;
         if(Math.abs(playerGroup.position.x - obstacles[i].position.x) < 0.9 && Math.abs(playerGroup.position.z - obstacles[i].position.z) < 1.2) {
-            isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden');
+            isGameRunning = false; 
+            if ("vibrate" in navigator) navigator.vibrate(200); // HAPTIC CRASH
+            document.getElementById('gameOverScreen').classList.remove('hidden');
         }
         if(obstacles[i].position.z > 10) { scene.remove(obstacles[i]); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; 
             if(score % 15 === 0) { level++; gameSpeed += 0.04; document.getElementById('level-display').innerText = level; }
@@ -309,13 +316,11 @@ function animateGame() {
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
 
-// UTILS
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
 window.leaveRoom = () => location.reload();
 function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
 
-// SNOW
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }

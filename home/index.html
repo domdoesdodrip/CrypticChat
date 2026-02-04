@@ -225,7 +225,7 @@ document.getElementById("join-btn").onclick = async () => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const d = change.doc.data();
-                    render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply, d.image);
+                    render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply, d.image, d.timestamp);
                     if(!isWindowFocused && d.uid !== myId) { unreadCount++; document.title = `(${unreadCount}) New Message!`; }
                 }
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
@@ -301,6 +301,7 @@ async function sendMessage() {
         return;
     }
 
+    // 1. ADD MESSAGE
     await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
         text: text || "", 
         user: myName, 
@@ -310,13 +311,41 @@ async function sendMessage() {
         reply: currentReply,
         image: imgToSend 
     });
+    
+    // 2. AUTO-CLEANUP LOGIC (Delete oldest 5 if count > 35)
+    try {
+        const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
+        const snapshot = await getDocs(q);
+        if(snapshot.size > 35) {
+            const batch = writeBatch(db);
+            snapshot.docs.slice(0, 5).forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+    } catch(e) { console.error("Cleanup error", e); }
+
     cancelReply();
 }
 
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-function render(u, t, me, msgId, senderIsAdmin, reply, img) {
+// TIME FORMATTER
+function getFriendlyTime(ts) {
+    if(!ts) return "Just now";
+    const date = ts.toDate ? ts.toDate() : new Date(ts);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    if(isToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    if(diffDays === 1) return "1 day ago";
+    return `${diffDays} days ago`;
+}
+
+function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); div.id = msgId;
@@ -327,12 +356,17 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
     if(t) contentHtml += `<span class="text-sm mt-1">${t}</span>`;
 
+    const timeStr = getFriendlyTime(ts);
+
     div.innerHTML = `
         ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
         <div class="flex flex-col">
             ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}
             <div class="flex justify-between items-start gap-4">
-                <div class="flex flex-col">${contentHtml}</div>
+                <div class="flex flex-col flex-1">
+                    ${contentHtml}
+                    <span class="text-[9px] opacity-40 self-end mt-1 font-mono">${timeStr}</span>
+                </div>
                 <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
                     <button onclick="window.startReply('${u}', '${(t || "Image").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}

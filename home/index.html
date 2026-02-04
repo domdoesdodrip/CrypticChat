@@ -42,19 +42,13 @@
 
         /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
-        
-        /* TOUCH CONTROLS - FIXED Z-INDEX (LOWER THAN BUTTONS) */
         #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: none; }
         .touch-zone { flex: 1; height: 100%; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
-
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
-        
-        /* OVERLAY IS 120, BUTTONS CLICKABLE ABOVE TOUCH ZONES */
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; margin: 10px; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
-        
         #leaderboard-panel { max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; background: rgba(0,0,0,0.9); border: 1px solid #0ff; padding: 20px; border-radius: 10px; display: none; z-index: 130; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
         .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; font-size: 14px; color: white; }
     </style>
@@ -71,7 +65,7 @@
 <!-- CALCULATOR -->
 <div id="calc-ui" class="glass p-5">
     <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move">
-        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Calculator</span>
+        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Core</span>
         <button onclick="toggleCalc()">✕</button>
     </div>
     <input id="calc-display" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
@@ -88,12 +82,7 @@
 
 <!-- GAME UI -->
 <div id="game-view">
-    <!-- Mobile Controls -->
-    <div id="touch-controls">
-        <div class="touch-zone" id="touch-left"></div>
-        <div class="touch-zone" id="touch-right"></div>
-    </div>
-
+    <div id="touch-controls"><div class="touch-zone" id="touch-left"></div><div class="touch-zone" id="touch-right"></div></div>
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
@@ -225,11 +214,9 @@ document.getElementById("join-btn").onclick = async () => {
     if(userDoc.exists()) {
         const data = userDoc.data();
         if(data.uid !== myId) {
-            // Check if name is "abandoned" (older than 60 seconds)
             const now = new Date();
             const lastSeen = data.timestamp ? data.timestamp.toDate() : new Date(0);
             const diffSeconds = (now - lastSeen) / 1000;
-            
             if(diffSeconds < 60) {
                 document.getElementById("error-msg").innerText = "Username currently active on another device."; 
                 document.getElementById("error-msg").classList.remove("hidden"); 
@@ -238,7 +225,6 @@ document.getElementById("join-btn").onclick = async () => {
         }
     }
     
-    // Lock Name & Start Heartbeat
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
     setInterval(async () => {
         if(myName) await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
@@ -359,12 +345,17 @@ async function sendMessage() {
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
+// HTML ESCAPE FUNCTION (Sanitizer)
+function escapeHtml(text) {
+    if (!text) return text;
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function getFriendlyTime(ts) {
     if(!ts) return "Just now";
     const date = ts.toDate ? ts.toDate() : new Date(ts);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
-    
     if(isToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
@@ -381,21 +372,21 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
     
     let contentHtml = '';
     if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
-    if(t) contentHtml += `<span class="text-sm mt-1">${t}</span>`;
+    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`; // ESCAPED
 
     const timeStr = getFriendlyTime(ts);
 
     div.innerHTML = `
-        ${reply ? `<div class="reply-preview">@${reply.user}: ${reply.text}</div>` : ''}
+        ${reply ? `<div class="reply-preview">@${escapeHtml(reply.user)}: ${escapeHtml(reply.text)}</div>` : ''} 
         <div class="flex flex-col">
-            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${u} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}
+            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${escapeHtml(u)} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}
             <div class="flex justify-between items-start gap-4">
                 <div class="flex flex-col flex-1">
                     ${contentHtml}
                     <span class="text-[9px] opacity-40 self-end mt-1 font-mono">${timeStr}</span>
                 </div>
                 <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
-                    <button onclick="window.startReply('${u}', '${(t || "Image").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    <button onclick="window.startReply('${escapeHtml(u)}', '${(t || "Image").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
             </div>
@@ -423,7 +414,7 @@ window.calcIn = v => {
     else { d.value = d.value==="0" ? v : d.value+v; }
 };
 
-// GAME ENGINE 4.1
+// GAME ENGINE 4.2
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
@@ -550,7 +541,7 @@ function syncUsers() {
                 unique.push(m);
             }
         });
-        document.getElementById("users-desktop").innerHTML = unique.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); 
+        document.getElementById("users-desktop").innerHTML = unique.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${escapeHtml(m.data.user)}</span></div>`).join(""); 
     }); 
 }
 

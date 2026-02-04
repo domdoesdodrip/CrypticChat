@@ -83,7 +83,10 @@
 <div id="game-view">
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
-            <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span><span id="score" class="text-2xl font-bold">0</span></div>
+            <div class="flex gap-4">
+                <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">SCORE</span><span id="score" class="text-2xl font-bold">0</span></div>
+                <div class="stat-box"><span class="text-[10px] text-[#0ff] block tracking-widest">SPEED</span><span id="speed-display" class="text-2xl font-bold">100%</span></div>
+            </div>
             <button onclick="exitGame()" class="stat-box text-red-500 font-bold hover:bg-red-500/10">CLOSE GAME</button>
         </div>
     </div>
@@ -128,7 +131,6 @@
             <div id="roomLabel" class="font-black text-purple-500 uppercase tracking-widest text-sm"></div>
             <div class="flex items-center gap-3">
                 <button onclick="toggleCalc()" class="bg-white/5 p-2 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                    <!-- Lucide Calculator Icon -->
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
                 </button>
                 <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
@@ -162,7 +164,7 @@
                         <button onclick="document.getElementById('img-upload').click()" class="text-gray-400 hover:text-white p-2">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
-                        <div id="input" contenteditable="true" placeholder="Type a message..." spellcheck="false"></div>
+                        <div id="input" contenteditable="true" placeholder="Type a message (or paste image)..." spellcheck="false"></div>
                         <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
@@ -244,7 +246,26 @@ document.getElementById("input").oninput = () => {
     typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
 };
 
-// IMAGE UPLOAD HANDLER
+// PASTE LISTENER (Ctrl+V Image)
+document.getElementById("input").addEventListener('paste', (e) => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (let item of items) {
+        if (item.type.indexOf("image") === 0) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                pendingImage = event.target.result;
+                document.getElementById("preview-img").src = pendingImage;
+                document.getElementById("upload-preview").style.display = "flex";
+            };
+            reader.readAsDataURL(blob);
+            break; 
+        }
+    }
+});
+
+// FILE INPUT HANDLER
 document.getElementById("img-upload").addEventListener('change', function() {
     if (this.files && this.files[0]) {
         const reader = new FileReader();
@@ -266,10 +287,8 @@ window.clearUpload = () => {
 async function sendMessage() {
     const inputEl = document.getElementById("input");
     const text = inputEl.innerText.trim();
-    
     if(!text && !pendingImage) return;
     
-    // Clear UI immediately
     inputEl.innerText = "";
     const imgToSend = pendingImage;
     clearUpload(); 
@@ -297,7 +316,6 @@ async function sendMessage() {
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-// RENDER MESSAGE
 function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
@@ -306,7 +324,6 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img) {
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
     
     let contentHtml = '';
-    // Click calls showLightbox instead of window.open
     if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
     if(t) contentHtml += `<span class="text-sm mt-1">${t}</span>`;
 
@@ -356,9 +373,9 @@ window.calcIn = v => {
     } else { d.value = d.value==="0" ? v : d.value+v; }
 };
 
-// GAME ENGINE 2.0 (Better Models)
+// GAME ENGINE 3.0 (Difficult Scaling & Better Model)
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
-let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnTimer = 0;
+let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
 
 function initShipRush() {
@@ -374,26 +391,42 @@ function initShipRush() {
     const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(0, 10, 5); scene.add(dirLight);
     grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -2; scene.add(grid);
 
-    // Composite Ship Model (Arwing Style)
+    // NEW MODEL: STAR-FIGHTER
     playerGroup = new THREE.Group();
-    const matBody = new THREE.MeshPhongMaterial({ color: 0x999999, flatShading: true });
-    const matTrim = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x004444 });
-    // Fuselage
-    const body = new THREE.Mesh(new THREE.ConeGeometry(0.5, 3, 4), matBody);
-    body.rotation.x = -Math.PI / 2;
-    // Wings
-    const wings = new THREE.Mesh(new THREE.BufferGeometry(), matTrim);
-    const vertices = new Float32Array([ 0,0,1,  2,0,2,  0,0,-1,   0,0,1, -2,0,2, 0,0,-1 ]);
-    wings.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    wings.geometry.computeVertexNormals();
-    playerGroup.add(body, wings);
+    const matBody = new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true });
+    const matEngine = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    
+    // 1. Main Fuselage (Cylinder tapered)
+    const bodyGeo = new THREE.CylinderGeometry(0.1, 0.4, 3, 6);
+    bodyGeo.rotateX(Math.PI/2);
+    const body = new THREE.Mesh(bodyGeo, matBody);
+    
+    // 2. Wings (Box Geometry scaled)
+    const wingGeo = new THREE.BoxGeometry(3, 0.05, 1.5);
+    const wings = new THREE.Mesh(wingGeo, matBody);
+    wings.position.set(0, 0, 0.5);
+    
+    // 3. Engines
+    const engGeo = new THREE.CylinderGeometry(0.15, 0.1, 1, 8);
+    engGeo.rotateX(Math.PI/2);
+    const engL = new THREE.Mesh(engGeo, matEngine); engL.position.set(-0.6, 0, 1);
+    const engR = new THREE.Mesh(engGeo, matEngine); engR.position.set(0.6, 0, 1);
+
+    playerGroup.add(body, wings, engL, engR);
     scene.add(playerGroup);
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
-window.retryGame = () => { score = 0; gameSpeed = 0.45; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); isGameRunning = true; };
+window.retryGame = () => { 
+    score = 0; gameSpeed = 0.45; spawnRate = 25; 
+    obstacles.forEach(o => scene.remove(o)); obstacles = []; 
+    playerGroup.position.x = 0; 
+    document.getElementById('gameOverScreen').classList.add('hidden'); 
+    document.getElementById('speed-display').innerText = "100%";
+    isGameRunning = true; 
+};
 
 window.showLeaderboard = async () => {
     const p = document.getElementById("leaderboard-panel"), c = document.getElementById("lb-content");
@@ -411,22 +444,19 @@ function animateGame() {
     requestAnimationFrame(animateGame);
     if(!isGameRunning) return;
     
-    // Movement & Tilt
     if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.3; playerGroup.rotation.z = 0.5; playerGroup.rotation.y = 0.2; } 
     else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.3; playerGroup.rotation.z = -0.5; playerGroup.rotation.y = -0.2; } 
     else { playerGroup.rotation.z *= 0.85; playerGroup.rotation.y *= 0.85; }
     
     grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
     
-    if(++spawnTimer > 25) {
-        // Better Obstacles: Octahedrons with wireframes
+    if(++spawnTimer > spawnRate) {
         const group = new THREE.Group();
-        const geo = new THREE.OctahedronGeometry(1.5); // "Data Crystal" shape
+        const geo = new THREE.OctahedronGeometry(1.5);
         const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0xaa00aa, transparent: true, opacity: 0.9 }));
         const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xff00ff }));
         group.add(mesh, wire);
         group.position.set((Math.random()-0.5)*16, 0.5, -60);
-        // Random spin speed for obstacle
         group.userData = { rotX: Math.random()*0.1, rotY: Math.random()*0.1 };
         scene.add(group); obstacles.push(group); spawnTimer = 0;
     }
@@ -434,7 +464,7 @@ function animateGame() {
     for(let i=obstacles.length-1; i>=0; i--) {
         const ob = obstacles[i];
         ob.position.z += gameSpeed;
-        ob.rotation.x += ob.userData.rotX; ob.rotation.y += ob.userData.rotY; // Rotate Crystal
+        ob.rotation.x += ob.userData.rotX; ob.rotation.y += ob.userData.rotY;
 
         if(playerGroup.position.distanceTo(ob.position) < 2) { 
             isGameRunning = false; 
@@ -442,7 +472,17 @@ function animateGame() {
             document.getElementById('final-score').innerText = `SCORE: ${score}`;
             if(score > 0) addDoc(collection(db, "leaderboard"), { user: myName, score: score, date: serverTimestamp() });
         }
-        if(ob.position.z > 10) { scene.remove(ob); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
+        if(ob.position.z > 10) { 
+            scene.remove(ob); obstacles.splice(i, 1); 
+            score++; document.getElementById('score').innerText = score; 
+            
+            // DIFFICULTY SCALING LOGIC
+            if(score % 10 === 0) {
+                gameSpeed = Math.min(gameSpeed + 0.05, 1.2); // Cap Max Speed
+                spawnRate = Math.max(spawnRate - 1, 10);     // Cap Spawn Rate
+                document.getElementById('speed-display').innerText = Math.floor((gameSpeed/0.45)*100) + "%";
+            }
+        }
     }
     renderer.render(scene, camera);
 }

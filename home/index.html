@@ -50,6 +50,10 @@
         
         #leaderboard-panel { max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; background: rgba(0,0,0,0.9); border: 1px solid #0ff; padding: 20px; border-radius: 10px; display: none; z-index: 130; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
         .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; font-size: 14px; color: white; }
+
+        /* MOBILE CONTROLS */
+        #touch-controls { position: absolute; inset: 0; display: flex; z-index: 150; pointer-events: none; }
+        .touch-zone { flex: 1; height: 100%; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
 <body>
@@ -81,6 +85,12 @@
 
 <!-- GAME UI -->
 <div id="game-view">
+    <!-- Mobile Controls -->
+    <div id="touch-controls">
+        <div class="touch-zone" id="touch-left"></div>
+        <div class="touch-zone" id="touch-right"></div>
+    </div>
+
     <div id="game-ui-layer">
         <div class="flex justify-between items-start">
             <div class="flex gap-4">
@@ -95,7 +105,8 @@
         <div id="lb-content">Loading...</div>
     </div>
     <div id="startScreen" class="game-overlay">
-        <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px]">SHIP RUSH</h1>
+        <h1 class="text-6xl font-bold mb-8 text-white drop-shadow-[0_0_15px_#0ff] tracking-[10px] text-center">SHIP RUSH</h1>
+        <p class="text-[#0ff] text-xs mb-8 tracking-[2px] opacity-70">PC: ARROWS / AD | MOBILE: TAP SIDES</p>
         <button onclick="beginFlight()" class="game-btn text-xl">BEGIN FLIGHT</button>
         <button onclick="showLeaderboard()" class="game-btn text-sm">GLOBAL LEADERBOARD</button>
     </div>
@@ -136,7 +147,6 @@
                 <button onclick="openGameView()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 p-2 rounded-lg border border-purple-500/20 transition-all active:scale-90">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
                 </button>
-                <span id="admin-indicator" class="hidden text-[10px] bg-purple-500/20 text-purple-400 px-2 py-1 rounded border border-purple-500/30 font-black tracking-tighter">ADMIN</span>
                 <button onclick="leaveRoom()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-1.5 rounded-lg text-xs font-black transition-colors">LEAVE</button>
             </div>
         </header>
@@ -187,9 +197,9 @@ import * as THREE from 'three';
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-const adminUID = 'uid-hn8whyyxhl';
+const adminUID = 'uid-hn8whyyxhl'; // Kept for backend logic but removed name blocking
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", typingTimeout;
-let pendingImage = null; // Store base64 here
+let pendingImage = null; 
 let unreadCount = 0, isWindowFocused = true;
 
 window.onblur = () => { isWindowFocused = false; };
@@ -197,21 +207,43 @@ window.onfocus = () => { isWindowFocused = true; unreadCount = 0; document.title
 
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
-if(myId === adminUID) { isAdmin = true; document.getElementById("admin-indicator").classList.remove("hidden"); }
+if(myId === adminUID) isAdmin = true;
 
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     if(!rawName) return;
     const lowerName = rawName.toLowerCase();
+    
+    // SMART NAME CHECK
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
-    if(userDoc.exists() && userDoc.data().uid !== myId) {
-        document.getElementById("error-msg").innerText = "Username taken by another device."; 
-        document.getElementById("error-msg").classList.remove("hidden"); return;
+    
+    if(userDoc.exists()) {
+        const data = userDoc.data();
+        if(data.uid !== myId) {
+            // Check if name is "abandoned" (older than 60 seconds)
+            const now = new Date();
+            const lastSeen = data.timestamp ? data.timestamp.toDate() : new Date(0);
+            const diffSeconds = (now - lastSeen) / 1000;
+            
+            if(diffSeconds < 60) {
+                document.getElementById("error-msg").innerText = "Username currently active on another device."; 
+                document.getElementById("error-msg").classList.remove("hidden"); 
+                return;
+            }
+            // If diffSeconds > 60, we allow stealing the name (reclaiming it)
+        }
     }
+    
+    // Lock Name
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
     
+    // Heartbeat Interval (Keep name locked while open)
+    setInterval(async () => {
+        if(myName) await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
+    }, 30000);
+
     myName = rawName;
     ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
     channel = ably.channels.get("room-" + currentRoom);
@@ -246,7 +278,7 @@ document.getElementById("input").oninput = () => {
     typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
 };
 
-// PASTE LISTENER (Ctrl+V Image)
+// PASTE LISTENER
 document.getElementById("input").addEventListener('paste', (e) => {
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     for (let item of items) {
@@ -301,7 +333,6 @@ async function sendMessage() {
         return;
     }
 
-    // 1. ADD MESSAGE
     await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
         text: text || "", 
         user: myName, 
@@ -312,7 +343,6 @@ async function sendMessage() {
         image: imgToSend 
     });
     
-    // 2. AUTO-CLEANUP LOGIC (Delete oldest 5 if count > 35)
     try {
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
         const snapshot = await getDocs(q);
@@ -329,7 +359,6 @@ async function sendMessage() {
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-// TIME FORMATTER
 function getFriendlyTime(ts) {
     if(!ts) return "Just now";
     const date = ts.toDate ? ts.toDate() : new Date(ts);
@@ -337,10 +366,8 @@ function getFriendlyTime(ts) {
     const isToday = date.toDateString() === now.toDateString();
     
     if(isToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
     if(diffDays === 1) return "1 day ago";
     return `${diffDays} days ago`;
 }
@@ -385,35 +412,24 @@ window.showLightbox = (src) => {
 const calcUi = document.getElementById("calc-ui");
 const calcHeader = document.getElementById("calc-drag");
 let isDragging = false, offset = { x: 0, y: 0 };
-
-calcHeader.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    offset.x = e.clientX - calcUi.offsetLeft;
-    offset.y = e.clientY - calcUi.offsetTop;
-});
+calcHeader.addEventListener("mousedown", (e) => { isDragging = true; offset.x = e.clientX - calcUi.offsetLeft; offset.y = e.clientY - calcUi.offsetTop; });
 window.addEventListener("mouseup", () => isDragging = false);
-window.addEventListener("mousemove", (e) => {
-    if (isDragging) {
-        calcUi.style.left = (e.clientX - offset.x) + "px";
-        calcUi.style.top = (e.clientY - offset.y) + "px";
-    }
-});
+window.addEventListener("mousemove", (e) => { if (isDragging) { calcUi.style.left = (e.clientX - offset.x) + "px"; calcUi.style.top = (e.clientY - offset.y) + "px"; } });
 window.toggleCalc = () => calcUi.style.display = (calcUi.style.display === 'block' ? 'none' : 'block');
 window.calcIn = v => { 
     const d = document.getElementById("calc-display"); 
     if(v==='C') d.value="0"; 
-    else if(v==='=') {
-        try { d.value = eval(d.value.replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/sqrt/g, 'Math.sqrt').replace(/\^/g, '**')); } catch { d.value = "ERR"; }
-    } else { d.value = d.value==="0" ? v : d.value+v; }
+    else if(v==='=') { try { d.value = eval(d.value.replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/sqrt/g, 'Math.sqrt').replace(/\^/g, '**')); } catch { d.value = "ERR"; } } 
+    else { d.value = d.value==="0" ? v : d.value+v; }
 };
 
-// GAME ENGINE 3.0 (Difficult Scaling & Better Model)
+// GAME ENGINE 3.5 (Mobile, Reset Fix, Difficulty)
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
 
 function initShipRush() {
-    if (renderer) return;
+    if (renderer) return; // Prevent double init
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x000510, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -425,29 +441,23 @@ function initShipRush() {
     const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(0, 10, 5); scene.add(dirLight);
     grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -2; scene.add(grid);
 
-    // NEW MODEL: STAR-FIGHTER
     playerGroup = new THREE.Group();
     const matBody = new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true });
     const matEngine = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-    
-    // 1. Main Fuselage (Cylinder tapered)
-    const bodyGeo = new THREE.CylinderGeometry(0.1, 0.4, 3, 6);
-    bodyGeo.rotateX(Math.PI/2);
-    const body = new THREE.Mesh(bodyGeo, matBody);
-    
-    // 2. Wings (Box Geometry scaled)
-    const wingGeo = new THREE.BoxGeometry(3, 0.05, 1.5);
-    const wings = new THREE.Mesh(wingGeo, matBody);
-    wings.position.set(0, 0, 0.5);
-    
-    // 3. Engines
-    const engGeo = new THREE.CylinderGeometry(0.15, 0.1, 1, 8);
-    engGeo.rotateX(Math.PI/2);
+    const bodyGeo = new THREE.CylinderGeometry(0.1, 0.4, 3, 6); bodyGeo.rotateX(Math.PI/2); const body = new THREE.Mesh(bodyGeo, matBody);
+    const wingGeo = new THREE.BoxGeometry(3, 0.05, 1.5); const wings = new THREE.Mesh(wingGeo, matBody); wings.position.set(0, 0, 0.5);
+    const engGeo = new THREE.CylinderGeometry(0.15, 0.1, 1, 8); engGeo.rotateX(Math.PI/2);
     const engL = new THREE.Mesh(engGeo, matEngine); engL.position.set(-0.6, 0, 1);
     const engR = new THREE.Mesh(engGeo, matEngine); engR.position.set(0.6, 0, 1);
+    playerGroup.add(body, wings, engL, engR); scene.add(playerGroup);
 
-    playerGroup.add(body, wings, engL, engR);
-    scene.add(playerGroup);
+    // MOBILE LISTENERS
+    const tL = document.getElementById("touch-left");
+    const tR = document.getElementById("touch-right");
+    tL.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.left = true; });
+    tL.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.left = false; });
+    tR.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.right = true; });
+    tR.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.right = false; });
 }
 
 window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
@@ -509,11 +519,9 @@ function animateGame() {
         if(ob.position.z > 10) { 
             scene.remove(ob); obstacles.splice(i, 1); 
             score++; document.getElementById('score').innerText = score; 
-            
-            // DIFFICULTY SCALING LOGIC
             if(score % 10 === 0) {
-                gameSpeed = Math.min(gameSpeed + 0.05, 1.2); // Cap Max Speed
-                spawnRate = Math.max(spawnRate - 1, 10);     // Cap Spawn Rate
+                gameSpeed = Math.min(gameSpeed + 0.05, 1.2); 
+                spawnRate = Math.max(spawnRate - 1, 10);
                 document.getElementById('speed-display').innerText = Math.floor((gameSpeed/0.45)*100) + "%";
             }
         }
@@ -529,7 +537,22 @@ window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') g
 window.startReply = (u, t) => { currentReply = { user: u, text: t.substring(0, 30) }; document.getElementById("reply-bar").classList.remove("hidden"); document.getElementById("reply-user").innerText = `Replying to @${u}`; };
 window.cancelReply = () => { currentReply = null; document.getElementById("reply-bar").classList.add("hidden"); };
 window.leaveRoom = () => location.reload();
-function syncUsers() { channel.presence.get((err, members) => { if(!members) return; document.getElementById("users-desktop").innerHTML = members.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); }); }
+
+function syncUsers() { 
+    channel.presence.get((err, members) => { 
+        if(!members) return; 
+        const unique = []; 
+        const seen = new Set();
+        members.forEach(m => {
+            // Deduplicate logic: If we have seen this ClientID OR User Name, skip
+            if(!seen.has(m.clientId)) {
+                seen.add(m.clientId);
+                unique.push(m);
+            }
+        });
+        document.getElementById("users-desktop").innerHTML = unique.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${m.data.user}</span></div>`).join(""); 
+    }); 
+}
 
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [];

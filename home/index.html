@@ -42,18 +42,21 @@
 
         /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
+        
+        /* TOUCH CONTROLS - FIXED Z-INDEX (LOWER THAN BUTTONS) */
+        #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: none; }
+        .touch-zone { flex: 1; height: 100%; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
+
         #game-ui-layer { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 110; }
         .stat-box { background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 255, 255, 0.3); padding: 10px 20px; border-radius: 4px; backdrop-filter: blur(8px); pointer-events: auto; }
+        
+        /* OVERLAY IS 120, BUTTONS CLICKABLE ABOVE TOUCH ZONES */
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; margin: 10px; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
         
         #leaderboard-panel { max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; background: rgba(0,0,0,0.9); border: 1px solid #0ff; padding: 20px; border-radius: 10px; display: none; z-index: 130; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
         .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; font-size: 14px; color: white; }
-
-        /* MOBILE CONTROLS */
-        #touch-controls { position: absolute; inset: 0; display: flex; z-index: 150; pointer-events: none; }
-        .touch-zone { flex: 1; height: 100%; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
 <body>
@@ -68,7 +71,7 @@
 <!-- CALCULATOR -->
 <div id="calc-ui" class="glass p-5">
     <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move">
-        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Core</span>
+        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Calculator</span>
         <button onclick="toggleCalc()">✕</button>
     </div>
     <input id="calc-display" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
@@ -197,7 +200,7 @@ import * as THREE from 'three';
 const firebaseConfig = { apiKey: "AIzaSyBQgVAxkkRao1PzzR6IAwjUSSf7YComLyY", authDomain: "crypticchat-2265e.firebaseapp.com", projectId: "crypticchat-2265e", storageBucket: "crypticchat-2265e.firebasestorage.app", messagingSenderId: "684175124793", appId: "1:684175124793:web:4163bf1f53e4da9fad20e8" };
 const db = getFirestore(initializeApp(firebaseConfig));
 
-const adminUID = 'uid-hn8whyyxhl'; // Kept for backend logic but removed name blocking
+const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", typingTimeout;
 let pendingImage = null; 
 let unreadCount = 0, isWindowFocused = true;
@@ -232,14 +235,11 @@ document.getElementById("join-btn").onclick = async () => {
                 document.getElementById("error-msg").classList.remove("hidden"); 
                 return;
             }
-            // If diffSeconds > 60, we allow stealing the name (reclaiming it)
         }
     }
     
-    // Lock Name
+    // Lock Name & Start Heartbeat
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
-    
-    // Heartbeat Interval (Keep name locked while open)
     setInterval(async () => {
         if(myName) await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
     }, 30000);
@@ -423,13 +423,13 @@ window.calcIn = v => {
     else { d.value = d.value==="0" ? v : d.value+v; }
 };
 
-// GAME ENGINE 3.5 (Mobile, Reset Fix, Difficulty)
+// GAME ENGINE 4.1
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
 const gameKeys = { left: false, right: false };
 
 function initShipRush() {
-    if (renderer) return; // Prevent double init
+    if (renderer) return; 
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x000510, 10, 60);
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);

@@ -194,22 +194,30 @@ let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRo
 let pendingImage = null; 
 let unreadCount = 0, isWindowFocused = true;
 
-// --- CONNECTION HANDLER: FIXES LID CLOSING/TAB SWITCHING ---
+// ------------------------------------------------------------------
+// CONNECTION & VISIBILITY HANDLER
+// Fixes "Lid Closed" disconnects and "180Hz" speed issues
+// ------------------------------------------------------------------
 document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState === "visible") {
-        // TAB OPENED/LID OPENED
         isWindowFocused = true;
         unreadCount = 0;
         document.title = "CrypticChat";
         
-        // Restart snow
-        if(!isSnowRunning) { isSnowRunning = true; draw(); }
+        // Reset timing trackers to avoid huge "jumps" when waking up
+        gameLastTime = performance.now();
+        snowLastTime = performance.now();
         
-        // Reconnect Realtime System
+        if(!isSnowRunning) { 
+            isSnowRunning = true; 
+            draw(); 
+        }
+
         if (ably) {
             const state = ably.connection.state;
+            // Force reconnect if suspended
             if (state !== 'connected') {
-                console.log("Wake up: Reconnecting Ably...");
+                console.log("Waking up: Reconnecting Ably...");
                 ably.connection.connect();
             }
             if (channel && channel.state !== 'attached') {
@@ -218,18 +226,16 @@ document.addEventListener("visibilitychange", async () => {
             syncUsers();
         }
     } else {
-        // TAB HIDDEN/LID CLOSED
         isWindowFocused = false;
-        isSnowRunning = false; // Pause graphics to save memory
+        isSnowRunning = false; // Pause graphics to save battery/resources
     }
 });
 
-// Extra safety: Reconnect if network interface comes back online
 window.addEventListener('online', () => {
     if(ably) ably.connection.connect();
     console.log("Network online: Reconnecting...");
 });
-// ------------------------------------------------------------
+// ------------------------------------------------------------------
 
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
@@ -260,6 +266,8 @@ document.getElementById("join-btn").onclick = async () => {
     }
     
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
+    
+    // Keep alive heartbeat
     setInterval(async () => {
         if(myName && document.visibilityState === 'visible') {
             await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
@@ -268,12 +276,11 @@ document.getElementById("join-btn").onclick = async () => {
 
     myName = rawName;
     
-    // Initialize Ably with recovery features
     ably = new Ably.Realtime({ 
         key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", 
         clientId: myId,
         closeOnUnload: true,
-        recover: (last, cb) => cb(true) // Try to recover previous connection
+        recover: (last, cb) => cb(true) // Enable session recovery
     });
 
     channel = ably.channels.get("room-" + currentRoom);
@@ -298,10 +305,9 @@ document.getElementById("join-btn").onclick = async () => {
             document.getElementById('typing-indicator').innerText = msg.data ? `${msg.data} is typing...` : '';
         });
         
-        // Presence Handling
         channel.presence.subscribe(() => syncUsers());
         
-        // If connection dropped and came back, ensure we are still "present"
+        // Re-enter presence if connection drops and comes back
         ably.connection.on('connected', () => {
             channel.presence.get((err, members) => {
                 const me = members && members.find(m => m.clientId === myId);
@@ -386,7 +392,7 @@ async function sendMessage() {
             image: imgToSend 
         });
         
-        // Auto-cleanup older messages
+        // Auto-cleanup
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
         const snapshot = await getDocs(q);
         if(snapshot.size > 35) {
@@ -404,7 +410,7 @@ async function sendMessage() {
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-// HTML ESCAPE FUNCTION (Sanitizer)
+// HTML ESCAPE FUNCTION
 function escapeHtml(text) {
     if (!text) return text;
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -431,7 +437,7 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
     
     let contentHtml = '';
     if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
-    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`; // ESCAPED
+    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`; 
 
     const timeStr = getFriendlyTime(ts);
 
@@ -473,9 +479,13 @@ window.calcIn = v => {
     else { d.value = d.value==="0" ? v : d.value+v; }
 };
 
-// GAME ENGINE 4.2
+// ------------------------------------------------------------------
+// GAME ENGINE 4.3 (HZ INDEPENDENT)
+// Uses Delta Time to ensure same speed on 60hz, 144hz, and 180hz
+// ------------------------------------------------------------------
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
+let gameLastTime = 0; 
 const gameKeys = { left: false, right: false };
 
 function initShipRush() {
@@ -510,9 +520,18 @@ function initShipRush() {
     tR.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.right = false; });
 }
 
-window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); animateGame(); };
+window.openGameView = () => { 
+    document.getElementById("game-view").style.display = 'block'; 
+    initShipRush(); 
+    gameLastTime = performance.now(); 
+    animateGame(); 
+};
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
-window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; };
+window.beginFlight = () => { 
+    document.getElementById('startScreen').classList.add('hidden'); 
+    isGameRunning = true; 
+    gameLastTime = performance.now(); 
+};
 window.retryGame = () => { 
     score = 0; gameSpeed = 0.45; spawnRate = 25; 
     obstacles.forEach(o => scene.remove(o)); obstacles = []; 
@@ -520,6 +539,7 @@ window.retryGame = () => {
     document.getElementById('gameOverScreen').classList.add('hidden'); 
     document.getElementById('speed-display').innerText = "100%";
     isGameRunning = true; 
+    gameLastTime = performance.now(); 
 };
 
 window.showLeaderboard = async () => {
@@ -535,24 +555,39 @@ window.showLeaderboard = async () => {
 
 function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
+    if(document.visibilityState === 'visible') requestAnimationFrame(animateGame);
+    else { setTimeout(animateGame, 1000); return; }
     
-    // VISIBILITY CHECK: Don't drain battery if hidden
-    if(document.visibilityState === 'visible') {
-        requestAnimationFrame(animateGame);
-    } else {
-        setTimeout(animateGame, 1000); // Slow check
-        return;
-    }
-    
+    // --- TIME SCALING LOGIC START ---
+    const now = performance.now();
+    let delta = (now - gameLastTime) / 1000;
+    gameLastTime = now;
+    if (delta > 0.1) delta = 0.1; // Cap lag spikes
+    // Normalize to target 60 FPS
+    const timeScale = delta * 60; 
+    // --------------------------------
+
     if(!isGameRunning) return;
     
-    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.3; playerGroup.rotation.z = 0.5; playerGroup.rotation.y = 0.2; } 
-    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.3; playerGroup.rotation.z = -0.5; playerGroup.rotation.y = -0.2; } 
-    else { playerGroup.rotation.z *= 0.85; playerGroup.rotation.y *= 0.85; }
+    // Apply timeScale to all movement values
+    if(gameKeys.left && playerGroup.position.x > -8) { 
+        playerGroup.position.x -= 0.3 * timeScale; 
+        playerGroup.rotation.z = 0.5; 
+        playerGroup.rotation.y = 0.2; 
+    } else if(gameKeys.right && playerGroup.position.x < 8) { 
+        playerGroup.position.x += 0.3 * timeScale; 
+        playerGroup.rotation.z = -0.5; 
+        playerGroup.rotation.y = -0.2; 
+    } else { 
+        playerGroup.rotation.z *= 0.85; 
+        playerGroup.rotation.y *= 0.85; 
+    } 
     
-    grid.position.z += gameSpeed; if(grid.position.z > 8) grid.position.z = 0;
+    grid.position.z += gameSpeed * timeScale; 
+    if(grid.position.z > 8) grid.position.z = 0;
     
-    if(++spawnTimer > spawnRate) {
+    spawnTimer += timeScale; 
+    if(spawnTimer > spawnRate) {
         const group = new THREE.Group();
         const geo = new THREE.OctahedronGeometry(1.5);
         const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0xaa00aa, transparent: true, opacity: 0.9 }));
@@ -565,8 +600,9 @@ function animateGame() {
     
     for(let i=obstacles.length-1; i>=0; i--) {
         const ob = obstacles[i];
-        ob.position.z += gameSpeed;
-        ob.rotation.x += ob.userData.rotX; ob.rotation.y += ob.userData.rotY;
+        ob.position.z += gameSpeed * timeScale;
+        ob.rotation.x += ob.userData.rotX * timeScale; 
+        ob.rotation.y += ob.userData.rotY * timeScale;
 
         if(playerGroup.position.distanceTo(ob.position) < 2) { 
             isGameRunning = false; 
@@ -588,7 +624,14 @@ function animateGame() {
 }
 
 // UTILS
-window.openDeleteModal = (id) => { const m = document.getElementById("delete-modal"); m.style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); m.style.display = "none"; }; };
+window.openDeleteModal = (id) => { 
+    const m = document.getElementById("delete-modal"); 
+    m.style.display = "flex"; 
+    document.getElementById("confirm-delete-btn").onclick = async () => { 
+        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); 
+        m.style.display = "none"; 
+    }; 
+};
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
@@ -612,15 +655,29 @@ function syncUsers() {
     }); 
 }
 
+// ------------------------------------------------------------------
+// SNOW ANIMATION (HZ INDEPENDENT)
+// ------------------------------------------------------------------
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
-let snow = [], isSnowRunning = true;
+let snow = [], isSnowRunning = true, snowLastTime = performance.now();
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
 res(); window.onresize = res;
+
 function draw() { 
     if(!isSnowRunning) return;
+    
+    // --- SNOW TIME SCALING ---
+    const now = performance.now();
+    let delta = (now - snowLastTime) / 1000;
+    snowLastTime = now;
+    if (delta > 0.1) delta = 0.1;
+    const timeScale = delta * 60;
+    // -------------------------
+
     ctx.clearRect(0,0,canvas.width,canvas.height); 
     snow.forEach(p => { 
-        p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; 
+        p.y += p.d * timeScale; 
+        p.x += Math.sin(p.a += (0.03 * timeScale)) * (0.4 * timeScale); 
         if(p.y > canvas.height) p.y = -10; 
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); 
         ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); 

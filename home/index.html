@@ -194,8 +194,42 @@ let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRo
 let pendingImage = null; 
 let unreadCount = 0, isWindowFocused = true;
 
-window.onblur = () => { isWindowFocused = false; };
-window.onfocus = () => { isWindowFocused = true; unreadCount = 0; document.title = "CrypticChat"; };
+// --- CONNECTION HANDLER: FIXES LID CLOSING/TAB SWITCHING ---
+document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible") {
+        // TAB OPENED/LID OPENED
+        isWindowFocused = true;
+        unreadCount = 0;
+        document.title = "CrypticChat";
+        
+        // Restart snow
+        if(!isSnowRunning) { isSnowRunning = true; draw(); }
+        
+        // Reconnect Realtime System
+        if (ably) {
+            const state = ably.connection.state;
+            if (state !== 'connected') {
+                console.log("Wake up: Reconnecting Ably...");
+                ably.connection.connect();
+            }
+            if (channel && channel.state !== 'attached') {
+                channel.attach();
+            }
+            syncUsers();
+        }
+    } else {
+        // TAB HIDDEN/LID CLOSED
+        isWindowFocused = false;
+        isSnowRunning = false; // Pause graphics to save memory
+    }
+});
+
+// Extra safety: Reconnect if network interface comes back online
+window.addEventListener('online', () => {
+    if(ably) ably.connection.connect();
+    console.log("Network online: Reconnecting...");
+});
+// ------------------------------------------------------------
 
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
@@ -227,11 +261,21 @@ document.getElementById("join-btn").onclick = async () => {
     
     await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
     setInterval(async () => {
-        if(myName) await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
+        if(myName && document.visibilityState === 'visible') {
+            await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
+        }
     }, 30000);
 
     myName = rawName;
-    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId });
+    
+    // Initialize Ably with recovery features
+    ably = new Ably.Realtime({ 
+        key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", 
+        clientId: myId,
+        closeOnUnload: true,
+        recover: (last, cb) => cb(true) // Try to recover previous connection
+    });
+
     channel = ably.channels.get("room-" + currentRoom);
     
     channel.presence.enter({ user: myName, isAdmin }, () => {
@@ -253,7 +297,19 @@ document.getElementById("join-btn").onclick = async () => {
         channel.subscribe('typing', msg => {
             document.getElementById('typing-indicator').innerText = msg.data ? `${msg.data} is typing...` : '';
         });
+        
+        // Presence Handling
         channel.presence.subscribe(() => syncUsers());
+        
+        // If connection dropped and came back, ensure we are still "present"
+        ably.connection.on('connected', () => {
+            channel.presence.get((err, members) => {
+                const me = members && members.find(m => m.clientId === myId);
+                if (!me) channel.presence.enter({ user: myName, isAdmin });
+            });
+            syncUsers();
+        });
+
         syncUsers();
     });
 };
@@ -319,17 +375,18 @@ async function sendMessage() {
         return;
     }
 
-    await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
-        text: text || "", 
-        user: myName, 
-        uid: myId, 
-        isAdmin, 
-        timestamp: serverTimestamp(), 
-        reply: currentReply,
-        image: imgToSend 
-    });
-    
     try {
+        await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
+            text: text || "", 
+            user: myName, 
+            uid: myId, 
+            isAdmin, 
+            timestamp: serverTimestamp(), 
+            reply: currentReply,
+            image: imgToSend 
+        });
+        
+        // Auto-cleanup older messages
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
         const snapshot = await getDocs(q);
         if(snapshot.size > 35) {
@@ -337,7 +394,9 @@ async function sendMessage() {
             snapshot.docs.slice(0, 5).forEach(doc => batch.delete(doc.ref));
             await batch.commit();
         }
-    } catch(e) { console.error("Cleanup error", e); }
+    } catch(e) {
+        console.error("Failed to send", e);
+    }
 
     cancelReply();
 }
@@ -476,7 +535,15 @@ window.showLeaderboard = async () => {
 
 function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
-    requestAnimationFrame(animateGame);
+    
+    // VISIBILITY CHECK: Don't drain battery if hidden
+    if(document.visibilityState === 'visible') {
+        requestAnimationFrame(animateGame);
+    } else {
+        setTimeout(animateGame, 1000); // Slow check
+        return;
+    }
+    
     if(!isGameRunning) return;
     
     if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.3; playerGroup.rotation.z = 0.5; playerGroup.rotation.y = 0.2; } 
@@ -530,12 +597,12 @@ window.cancelReply = () => { currentReply = null; document.getElementById("reply
 window.leaveRoom = () => location.reload();
 
 function syncUsers() { 
+    if(!channel) return;
     channel.presence.get((err, members) => { 
         if(!members) return; 
         const unique = []; 
         const seen = new Set();
         members.forEach(m => {
-            // Deduplicate logic: If we have seen this ClientID OR User Name, skip
             if(!seen.has(m.clientId)) {
                 seen.add(m.clientId);
                 unique.push(m);
@@ -546,10 +613,20 @@ function syncUsers() {
 }
 
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
-let snow = [];
+let snow = [], isSnowRunning = true;
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
 res(); window.onresize = res;
-function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); snow.forEach(p => { p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; if(p.y > canvas.height) p.y = -10; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); }); requestAnimationFrame(draw); }
+function draw() { 
+    if(!isSnowRunning) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height); 
+    snow.forEach(p => { 
+        p.y += p.d; p.x += Math.sin(p.a += 0.03) * 0.4; 
+        if(p.y > canvas.height) p.y = -10; 
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); 
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); 
+    }); 
+    requestAnimationFrame(draw); 
+}
 draw();
 </script>
 </body>

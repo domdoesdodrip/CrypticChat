@@ -26,6 +26,11 @@
         .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; }
         .chat-img:hover { transform: scale(1.02); }
 
+        /* FILE CARD STYLE */
+        .file-card { display: flex; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; cursor: pointer; text-decoration: none; color: white; gap: 10px; }
+        .file-card:hover { background: rgba(255,255,255,0.1); }
+        .file-icon { width: 32px; height: 32px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; color: #aaa; text-transform: uppercase; }
+
         /* LIGHTBOX */
         #lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); cursor: zoom-out; }
         #lightbox img { max-width: 95vw; max-height: 95vh; box-shadow: 0 0 50px rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 4px; animation: msgIn 0.3s ease; }
@@ -158,15 +163,15 @@
                     </div>
                     <div id="upload-preview">
                         <img id="preview-img" src="">
-                        <span class="flex-1 text-gray-400">Image attached</span>
+                        <span id="preview-text" class="flex-1 text-gray-400 text-xs truncate ml-2">File attached</span>
                         <button onclick="clearUpload()" class="text-red-400 hover:text-red-200">✕</button>
                     </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
-                        <input type="file" id="img-upload" hidden accept="image/*">
-                        <button onclick="document.getElementById('img-upload').click()" class="text-gray-400 hover:text-white p-2">
+                        <input type="file" id="file-input" hidden>
+                        <button onclick="document.getElementById('file-input').click()" class="text-gray-400 hover:text-white p-2">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
-                        <div id="input" contenteditable="true" placeholder="Type a message (or paste image)..." spellcheck="false"></div>
+                        <div id="input" contenteditable="true" placeholder="Type a message (or paste file)..." spellcheck="false"></div>
                         <button id="send-btn" class="bg-purple-600 hover:bg-purple-500 p-3 rounded-xl font-bold transition-all active:scale-90">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
@@ -191,63 +196,60 @@ const db = getFirestore(initializeApp(firebaseConfig));
 
 const adminUID = 'uid-hn8whyyxhl';
 let ably, channel, myName, myId, isAdmin = false, currentReply = null, currentRoom = "GLOBAL", typingTimeout;
-let pendingImage = null; 
+let pendingAttachment = null; 
 let unreadCount = 0, isWindowFocused = true;
+let userIP = "Hidden";
 
 // ------------------------------------------------------------------
 // CONNECTION & VISIBILITY HANDLER
-// Fixes "Lid Closed" disconnects and "180Hz" speed issues
 // ------------------------------------------------------------------
 document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState === "visible") {
         isWindowFocused = true;
         unreadCount = 0;
         document.title = "CrypticChat";
-        
-        // Reset timing trackers to avoid huge "jumps" when waking up
         gameLastTime = performance.now();
         snowLastTime = performance.now();
-        
-        if(!isSnowRunning) { 
-            isSnowRunning = true; 
-            draw(); 
-        }
+        if(!isSnowRunning) { isSnowRunning = true; draw(); }
 
         if (ably) {
             const state = ably.connection.state;
-            // Force reconnect if suspended
-            if (state !== 'connected') {
-                console.log("Waking up: Reconnecting Ably...");
-                ably.connection.connect();
-            }
-            if (channel && channel.state !== 'attached') {
-                channel.attach();
-            }
+            if (state !== 'connected') ably.connection.connect();
+            if (channel && channel.state !== 'attached') channel.attach();
             syncUsers();
         }
     } else {
         isWindowFocused = false;
-        isSnowRunning = false; // Pause graphics to save battery/resources
+        isSnowRunning = false; 
     }
 });
 
-window.addEventListener('online', () => {
-    if(ably) ably.connection.connect();
-    console.log("Network online: Reconnecting...");
-});
-// ------------------------------------------------------------------
+window.addEventListener('online', () => { if(ably) ably.connection.connect(); });
 
+// ------------------------------------------------------------------
+// LOGIN & ABLY SETUP (IP LOGGING INCLUDED, HIDDEN FROM UI)
+// ------------------------------------------------------------------
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) isAdmin = true;
 
 document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
+    const btn = document.getElementById("join-btn");
+    
+    // FETCH IP SILENTLY FOR DATABASE
+    btn.innerHTML = "CONNECTING...";
+    try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        userIP = ipData.ip;
+    } catch(e) { userIP = "Unknown"; }
+
     currentRoom = (document.getElementById("room").value.trim() || "GLOBAL").toUpperCase();
     if(!rawName) return;
     const lowerName = rawName.toLowerCase();
     
-    // SMART NAME CHECK
+    // SMART NAME CHECK (45s Timeout)
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
     
@@ -257,22 +259,33 @@ document.getElementById("join-btn").onclick = async () => {
             const now = new Date();
             const lastSeen = data.timestamp ? data.timestamp.toDate() : new Date(0);
             const diffSeconds = (now - lastSeen) / 1000;
-            if(diffSeconds < 60) {
-                document.getElementById("error-msg").innerText = "Username currently active on another device."; 
+            // If active within 45 seconds, lock it.
+            if(diffSeconds < 45) {
+                document.getElementById("error-msg").innerText = "Username active. Try again in 45s."; 
                 document.getElementById("error-msg").classList.remove("hidden"); 
+                btn.innerHTML = "JOIN";
                 return;
             }
         }
     }
     
-    await setDoc(userRegRef, { uid: myId, timestamp: serverTimestamp() });
+    // Save User Data + IP to Firestore (Private Log)
+    await setDoc(userRegRef, { 
+        uid: myId, 
+        ip: userIP, 
+        timestamp: serverTimestamp() 
+    });
     
-    // Keep alive heartbeat
+    // Heartbeat every 15s
     setInterval(async () => {
         if(myName && document.visibilityState === 'visible') {
-            await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, timestamp: serverTimestamp() });
+            await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { 
+                uid: myId, 
+                ip: userIP,
+                timestamp: serverTimestamp() 
+            });
         }
-    }, 30000);
+    }, 15000);
 
     myName = rawName;
     
@@ -280,11 +293,12 @@ document.getElementById("join-btn").onclick = async () => {
         key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", 
         clientId: myId,
         closeOnUnload: true,
-        recover: (last, cb) => cb(true) // Enable session recovery
+        recover: (last, cb) => cb(true)
     });
 
     channel = ably.channels.get("room-" + currentRoom);
     
+    // Enter Presence (IP NOT SENT HERE TO KEEP IT HIDDEN FROM USERS)
     channel.presence.enter({ user: myName, isAdmin }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
@@ -294,7 +308,7 @@ document.getElementById("join-btn").onclick = async () => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "added") {
                     const d = change.doc.data();
-                    render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply, d.image, d.timestamp);
+                    render(d.user, d.text, d.uid === myId, change.doc.id, d.isAdmin, d.reply, d.image, d.file, d.timestamp);
                     if(!isWindowFocused && d.uid !== myId) { unreadCount++; document.title = `(${unreadCount}) New Message!`; }
                 }
                 if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
@@ -307,7 +321,6 @@ document.getElementById("join-btn").onclick = async () => {
         
         channel.presence.subscribe(() => syncUsers());
         
-        // Re-enter presence if connection drops and comes back
         ably.connection.on('connected', () => {
             channel.presence.get((err, members) => {
                 const me = members && members.find(m => m.clientId === myId);
@@ -326,73 +339,136 @@ document.getElementById("input").oninput = () => {
     typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
 };
 
-// PASTE LISTENER
+// ------------------------------------------------------------------
+// FILE CHUNKING LOGIC (25MB LIMIT)
+// ------------------------------------------------------------------
+function handleFileSelect(file) {
+    if(!file) return;
+    
+    // 25MB Limit Check (25 * 1024 * 1024)
+    if(file.size > 26214400) { 
+        alert("File too large. Max 25MB allowed for free upload.");
+        return;
+    }
+    
+    const type = file.type.startsWith('image/') ? 'image' : 'file';
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        pendingAttachment = {
+            type: type,
+            data: e.target.result,
+            name: file.name
+        };
+
+        const previewImg = document.getElementById("preview-img");
+        const previewText = document.getElementById("preview-text");
+        
+        if(type === 'image') {
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+            previewText.innerText = "Image attached";
+        } else {
+            previewImg.style.display = 'none';
+            // Show pretty file size
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            previewText.innerText = `📄 ${file.name} (${sizeMB} MB)`;
+        }
+        document.getElementById("upload-preview").style.display = "flex";
+    };
+    reader.readAsDataURL(file);
+}
+
+// Drag & Drop / Paste Handler
 document.getElementById("input").addEventListener('paste', (e) => {
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     for (let item of items) {
-        if (item.type.indexOf("image") === 0) {
+        if (item.kind === 'file') {
             e.preventDefault();
-            const blob = item.getAsFile();
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                pendingImage = event.target.result;
-                document.getElementById("preview-img").src = pendingImage;
-                document.getElementById("upload-preview").style.display = "flex";
-            };
-            reader.readAsDataURL(blob);
+            handleFileSelect(item.getAsFile());
             break; 
         }
     }
 });
 
-// FILE INPUT HANDLER
-document.getElementById("img-upload").addEventListener('change', function() {
-    if (this.files && this.files[0]) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            pendingImage = e.target.result;
-            document.getElementById("preview-img").src = pendingImage;
-            document.getElementById("upload-preview").style.display = "flex";
-        };
-        reader.readAsDataURL(this.files[0]);
-    }
+document.getElementById("file-input").addEventListener('change', function() {
+    if (this.files && this.files[0]) handleFileSelect(this.files[0]);
 });
 
 window.clearUpload = () => {
-    pendingImage = null;
-    document.getElementById("img-upload").value = "";
+    pendingAttachment = null;
+    document.getElementById("file-input").value = "";
     document.getElementById("upload-preview").style.display = "none";
 };
 
+// Chunk Upload Logic
+async function uploadChunks(base64, fileId) {
+    const CHUNK_SIZE = 800000; // ~800KB per chunk to be safe
+    const totalChunks = Math.ceil(base64.length / CHUNK_SIZE);
+    const batch = writeBatch(db);
+    
+    for (let i = 0; i < totalChunks; i++) {
+        const chunk = base64.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const chunkRef = doc(db, "file_chunks", `${fileId}_${i}`);
+        batch.set(chunkRef, { 
+            data: chunk, 
+            index: i, 
+            fileId: fileId,
+            ts: serverTimestamp() 
+        });
+    }
+    await batch.commit();
+}
+
 async function sendMessage() {
     const inputEl = document.getElementById("input");
+    const sendBtn = document.getElementById("send-btn");
     const text = inputEl.innerText.trim();
-    if(!text && !pendingImage) return;
+    if(!text && !pendingAttachment) return;
     
     inputEl.innerText = "";
-    const imgToSend = pendingImage;
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = "•••"; // Loading State
+    
+    const att = pendingAttachment;
     clearUpload(); 
 
+    // Admin Purge Command
     if(text === "/purge" && isAdmin) {
         const snap = await getDocs(query(collection(db, "rooms", currentRoom, "messages")));
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
         return;
     }
 
     try {
-        await addDoc(collection(db, "rooms", currentRoom, "messages"), { 
+        const msgData = { 
             text: text || "", 
             user: myName, 
             uid: myId, 
             isAdmin, 
             timestamp: serverTimestamp(), 
-            reply: currentReply,
-            image: imgToSend 
-        });
+            reply: currentReply
+        };
+
+        if (att) {
+            // Optimization: If image is small (<900KB), save directly to message
+            // Otherwise, use chunking system
+            if(att.type === 'image' && att.data.length < 900000) {
+                 msgData.image = att.data;
+            } else {
+                 const fileId = Math.random().toString(36).substring(2, 15);
+                 await uploadChunks(att.data, fileId);
+                 msgData.file = { name: att.name, id: fileId };
+            }
+        }
+
+        await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
         
-        // Auto-cleanup
+        // Auto-Cleanup: Keep chat fast by removing old messages
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
         const snapshot = await getDocs(q);
         if(snapshot.size > 35) {
@@ -403,14 +479,53 @@ async function sendMessage() {
     } catch(e) {
         console.error("Failed to send", e);
     }
-
+    
+    // Reset Button
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
     cancelReply();
 }
 
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-// HTML ESCAPE FUNCTION
+// FILE DOWNLOAD ASSEMBLER
+window.downloadLargeFile = async (btn, fileId, fileName) => {
+    btn.innerHTML = "Downloading...";
+    try {
+        const q = query(collection(db, "file_chunks"), orderBy("index"));
+        const snapshot = await getDocs(q);
+        let fullData = "";
+        
+        // Assemble chunks
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            if(d.fileId === fileId) fullData += d.data;
+        });
+
+        if(!fullData) { 
+            alert("File expired or corrupt."); 
+            btn.innerHTML = "Error"; 
+            return; 
+        }
+
+        // Trigger Download
+        const a = document.createElement("a");
+        a.href = fullData;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        btn.innerHTML = "Click to Download";
+    } catch(e) {
+        console.error(e);
+        btn.innerHTML = "Fail";
+    }
+};
+
+// ------------------------------------------------------------------
+// HELPER FUNCTIONS (RENDER, HTML ESCAPE, TIME)
+// ------------------------------------------------------------------
 function escapeHtml(text) {
     if (!text) return text;
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -420,15 +535,12 @@ function getFriendlyTime(ts) {
     if(!ts) return "Just now";
     const date = ts.toDate ? ts.toDate() : new Date(ts);
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    if(isToday) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    if(diffDays === 1) return "1 day ago";
-    return `${diffDays} days ago`;
+    if(date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const diffDays = Math.ceil(Math.abs(now - date) / (1000 * 60 * 60 * 24)); 
+    return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
 }
 
-function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
+function render(u, t, me, msgId, senderIsAdmin, reply, img, file, ts) {
     const box = document.getElementById("messages");
     if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); div.id = msgId;
@@ -436,10 +548,25 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
     
     let contentHtml = '';
+    
+    // Image
     if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
-    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`; 
+    
+    // File Card
+    if(file) {
+        const ext = file.name.split('.').pop().toUpperCase();
+        contentHtml += `
+        <div class="file-card" onclick="window.downloadLargeFile(this.querySelector('.dl-status'), '${file.id}', '${file.name}')">
+            <div class="file-icon">${ext.substring(0,4)}</div>
+            <div class="flex-1 overflow-hidden">
+                <div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div>
+                <div class="text-[9px] opacity-70 dl-status">Click to Download</div>
+            </div>
+            <div>⬇</div>
+        </div>`;
+    }
 
-    const timeStr = getFriendlyTime(ts);
+    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`; 
 
     div.innerHTML = `
         ${reply ? `<div class="reply-preview">@${escapeHtml(reply.user)}: ${escapeHtml(reply.text)}</div>` : ''} 
@@ -448,10 +575,10 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
             <div class="flex justify-between items-start gap-4">
                 <div class="flex flex-col flex-1">
                     ${contentHtml}
-                    <span class="text-[9px] opacity-40 self-end mt-1 font-mono">${timeStr}</span>
+                    <span class="text-[9px] opacity-40 self-end mt-1 font-mono">${getFriendlyTime(ts)}</span>
                 </div>
                 <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
-                    <button onclick="window.startReply('${escapeHtml(u)}', '${(t || "Image").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
+                    <button onclick="window.startReply('${escapeHtml(u)}', '${(t || "Attachment").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
                     ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
                 </div>
             </div>
@@ -459,12 +586,11 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img, ts) {
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
-window.showLightbox = (src) => {
-    document.getElementById("lightbox-img").src = src;
-    document.getElementById("lightbox").style.display = "flex";
-};
+window.showLightbox = (src) => { document.getElementById("lightbox-img").src = src; document.getElementById("lightbox").style.display = "flex"; };
 
+// ------------------------------------------------------------------
 // DRAGGABLE CALCULATOR
+// ------------------------------------------------------------------
 const calcUi = document.getElementById("calc-ui");
 const calcHeader = document.getElementById("calc-drag");
 let isDragging = false, offset = { x: 0, y: 0 };
@@ -480,8 +606,7 @@ window.calcIn = v => {
 };
 
 // ------------------------------------------------------------------
-// GAME ENGINE 4.3 (HZ INDEPENDENT)
-// Uses Delta Time to ensure same speed on 60hz, 144hz, and 180hz
+// GAME ENGINE (FIXED RESTART & HZ)
 // ------------------------------------------------------------------
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
@@ -490,54 +615,50 @@ const gameKeys = { left: false, right: false };
 
 function initShipRush() {
     if (renderer) return; 
-    scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x000510, 10, 60);
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById("game-view").appendChild(renderer.domElement);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(0, 10, 5); scene.add(dirLight);
+    scene = new THREE.Scene(); scene.fog = new THREE.Fog(0x000510, 10, 60);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000); camera.position.set(0, 4, 8); camera.lookAt(0, 0, -5);
+    renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); document.getElementById("game-view").appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(0, 10, 5); scene.add(dirLight);
     grid = new THREE.GridHelper(400, 100, 0x00ffff, 0x003333); grid.position.y = -2; scene.add(grid);
-
     playerGroup = new THREE.Group();
-    const matBody = new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true });
-    const matEngine = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const matBody = new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }); const matEngine = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     const bodyGeo = new THREE.CylinderGeometry(0.1, 0.4, 3, 6); bodyGeo.rotateX(Math.PI/2); const body = new THREE.Mesh(bodyGeo, matBody);
     const wingGeo = new THREE.BoxGeometry(3, 0.05, 1.5); const wings = new THREE.Mesh(wingGeo, matBody); wings.position.set(0, 0, 0.5);
     const engGeo = new THREE.CylinderGeometry(0.15, 0.1, 1, 8); engGeo.rotateX(Math.PI/2);
-    const engL = new THREE.Mesh(engGeo, matEngine); engL.position.set(-0.6, 0, 1);
-    const engR = new THREE.Mesh(engGeo, matEngine); engR.position.set(0.6, 0, 1);
+    const engL = new THREE.Mesh(engGeo, matEngine); engL.position.set(-0.6, 0, 1); const engR = new THREE.Mesh(engGeo, matEngine); engR.position.set(0.6, 0, 1);
     playerGroup.add(body, wings, engL, engR); scene.add(playerGroup);
-
-    // MOBILE LISTENERS
-    const tL = document.getElementById("touch-left");
-    const tR = document.getElementById("touch-right");
-    tL.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.left = true; });
-    tL.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.left = false; });
-    tR.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.right = true; });
-    tR.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.right = false; });
+    const tL = document.getElementById("touch-left"); const tR = document.getElementById("touch-right");
+    tL.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.left = true; }); tL.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.left = false; });
+    tR.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.right = true; }); tR.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.right = false; });
 }
 
 window.openGameView = () => { 
     document.getElementById("game-view").style.display = 'block'; 
     initShipRush(); 
+    
+    // FULL RESET LOGIC
+    score = 0; gameSpeed = 0.45; spawnRate = 25; 
+    obstacles.forEach(o => scene.remove(o)); obstacles = []; 
+    if(playerGroup) playerGroup.position.x = 0;
+    
+    document.getElementById('score').innerText = "0";
+    document.getElementById('speed-display').innerText = "100%";
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden'); 
+    
+    isGameRunning = false; 
     gameLastTime = performance.now(); 
     animateGame(); 
 };
+
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
-window.beginFlight = () => { 
-    document.getElementById('startScreen').classList.add('hidden'); 
-    isGameRunning = true; 
-    gameLastTime = performance.now(); 
-};
+window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; gameLastTime = performance.now(); };
 window.retryGame = () => { 
     score = 0; gameSpeed = 0.45; spawnRate = 25; 
     obstacles.forEach(o => scene.remove(o)); obstacles = []; 
     playerGroup.position.x = 0; 
     document.getElementById('gameOverScreen').classList.add('hidden'); 
-    document.getElementById('speed-display').innerText = "100%";
+    document.getElementById('speed-display').innerText = "100%"; 
     isGameRunning = true; 
     gameLastTime = performance.now(); 
 };
@@ -558,33 +679,19 @@ function animateGame() {
     if(document.visibilityState === 'visible') requestAnimationFrame(animateGame);
     else { setTimeout(animateGame, 1000); return; }
     
-    // --- TIME SCALING LOGIC START ---
     const now = performance.now();
     let delta = (now - gameLastTime) / 1000;
     gameLastTime = now;
-    if (delta > 0.1) delta = 0.1; // Cap lag spikes
-    // Normalize to target 60 FPS
-    const timeScale = delta * 60; 
-    // --------------------------------
+    if (delta > 0.1) delta = 0.1; 
+    const timeScale = delta * 60; // HZ Adjustment
 
     if(!isGameRunning) return;
     
-    // Apply timeScale to all movement values
-    if(gameKeys.left && playerGroup.position.x > -8) { 
-        playerGroup.position.x -= 0.3 * timeScale; 
-        playerGroup.rotation.z = 0.5; 
-        playerGroup.rotation.y = 0.2; 
-    } else if(gameKeys.right && playerGroup.position.x < 8) { 
-        playerGroup.position.x += 0.3 * timeScale; 
-        playerGroup.rotation.z = -0.5; 
-        playerGroup.rotation.y = -0.2; 
-    } else { 
-        playerGroup.rotation.z *= 0.85; 
-        playerGroup.rotation.y *= 0.85; 
-    } 
+    if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.3 * timeScale; playerGroup.rotation.z = 0.5; playerGroup.rotation.y = 0.2; } 
+    else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.3 * timeScale; playerGroup.rotation.z = -0.5; playerGroup.rotation.y = -0.2; } 
+    else { playerGroup.rotation.z *= 0.85; playerGroup.rotation.y *= 0.85; }
     
-    grid.position.z += gameSpeed * timeScale; 
-    if(grid.position.z > 8) grid.position.z = 0;
+    grid.position.z += gameSpeed * timeScale; if(grid.position.z > 8) grid.position.z = 0;
     
     spawnTimer += timeScale; 
     if(spawnTimer > spawnRate) {
@@ -601,8 +708,7 @@ function animateGame() {
     for(let i=obstacles.length-1; i>=0; i--) {
         const ob = obstacles[i];
         ob.position.z += gameSpeed * timeScale;
-        ob.rotation.x += ob.userData.rotX * timeScale; 
-        ob.rotation.y += ob.userData.rotY * timeScale;
+        ob.rotation.x += ob.userData.rotX * timeScale; ob.rotation.y += ob.userData.rotY * timeScale;
 
         if(playerGroup.position.distanceTo(ob.position) < 2) { 
             isGameRunning = false; 
@@ -623,15 +729,10 @@ function animateGame() {
     renderer.render(scene, camera);
 }
 
-// UTILS
-window.openDeleteModal = (id) => { 
-    const m = document.getElementById("delete-modal"); 
-    m.style.display = "flex"; 
-    document.getElementById("confirm-delete-btn").onclick = async () => { 
-        await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); 
-        m.style.display = "none"; 
-    }; 
-};
+// ------------------------------------------------------------------
+// USER SYNC & SNOW
+// ------------------------------------------------------------------
+window.openDeleteModal = (id) => { const m = document.getElementById("delete-modal"); m.style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); m.style.display = "none"; }; };
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
 window.addEventListener('keyup', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=false; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=false; });
@@ -651,13 +752,16 @@ function syncUsers() {
                 unique.push(m);
             }
         });
-        document.getElementById("users-desktop").innerHTML = unique.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${escapeHtml(m.data.user)}</span></div>`).join(""); 
+        
+        // SIMPLE USER LIST (REQUESTED TO SCRAP EXTRA INFO)
+        document.getElementById("users-desktop").innerHTML = unique.map(m => `
+            <div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div>
+                <span class="text-xs font-bold">${escapeHtml(m.data.user)}</span>
+            </div>`).join(""); 
     }); 
 }
 
-// ------------------------------------------------------------------
-// SNOW ANIMATION (HZ INDEPENDENT)
-// ------------------------------------------------------------------
 const canvas = document.getElementById("snow-canvas"), ctx = canvas.getContext("2d");
 let snow = [], isSnowRunning = true, snowLastTime = performance.now();
 function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; snow = Array.from({length: 45}, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 1, d: Math.random() * 0.6 + 0.3, a: Math.random() * Math.PI, o: Math.random() * 0.5 + 0.3 })); }
@@ -665,14 +769,11 @@ res(); window.onresize = res;
 
 function draw() { 
     if(!isSnowRunning) return;
-    
-    // --- SNOW TIME SCALING ---
-    const now = performance.now();
-    let delta = (now - snowLastTime) / 1000;
+    const now = performance.now(); 
+    let delta = (now - snowLastTime) / 1000; 
     snowLastTime = now;
-    if (delta > 0.1) delta = 0.1;
+    if (delta > 0.1) delta = 0.1; 
     const timeScale = delta * 60;
-    // -------------------------
 
     ctx.clearRect(0,0,canvas.width,canvas.height); 
     snow.forEach(p => { 

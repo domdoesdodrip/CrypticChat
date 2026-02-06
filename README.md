@@ -42,7 +42,7 @@ To leave the network, click **DISCONNECT**.
 
 **"I can't see my friend's messages!"**
 1. Check that you both spelled the **Room ID** exactly the same (it is case-sensitive).
-2. Ensure you both have a stable internet connection to the Ably cluster.
+2. Ensure you both have a stable internet connection.
 
 **"The site won't load!"**
 Ensure you are using a modern browser (Chrome, Firefox, Edge, or Safari). Internet Explorer is not supported.

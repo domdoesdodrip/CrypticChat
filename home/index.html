@@ -20,36 +20,47 @@
             position: relative; border: 2px solid transparent; transition: all 0.2s; 
             overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; 
         }
+        .bubble a { color: #c084fc; text-decoration: underline; }
+        .bubble a:hover { color: #d8b4fe; }
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .mine a { color: white; } 
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         .ping-active { border: 2px solid var(--ping-red) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
         #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
         #input:empty:before { content: attr(placeholder); color: #6b7280; }
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; }
+        .chat-img { 
+            max-width: 100%; 
+            max-height: 300px; 
+            width: auto;
+            border-radius: 8px; 
+            margin-top: 5px; 
+            cursor: pointer; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            transition: transform 0.2s; 
+            object-fit: contain;
+        }
         .chat-img:hover { transform: scale(1.02); }
-
-        /* FILE CARD STYLE */
+        .chat-video {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 5px;
+            background: black;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
         .file-card { display: flex; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; cursor: pointer; text-decoration: none; color: white; gap: 10px; overflow: hidden; }
         .file-card:hover { background: rgba(255,255,255,0.1); }
         .file-icon { width: 32px; height: 32px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; color: #aaa; text-transform: uppercase; flex-shrink: 0; }
-
-        /* LIGHTBOX */
         #lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); cursor: zoom-out; }
         #lightbox img { max-width: 95vw; max-height: 95vh; box-shadow: 0 0 50px rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 4px; animation: msgIn 0.3s ease; }
-
-        /* CALCULATOR */
         #calc-ui { position: absolute; width: 260px; z-index: 500; display: none; user-select: none; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); top: 100px; left: 100px; }
         .calc-btn { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; font-size: 14px; }
         .calc-btn:hover { background: var(--accent); }
         .sci-btn { color: #0ff; font-family: 'Orbitron', monospace; font-size: 10px; padding: 12px 0; }
-
-        /* UPLOAD PREVIEW */
         #upload-preview { display: none; align-items: center; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 5px; font-size: 12px; }
         #upload-preview img { height: 30px; width: 30px; object-fit: cover; border-radius: 4px; margin-right: 8px; }
-
-        /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
         #touch-controls { position: absolute; inset: 0; display: flex; z-index: 105; pointer-events: none; }
         .touch-zone { flex: 1; height: 100%; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
@@ -58,15 +69,7 @@
         .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,20,40,0.9) 0%, rgba(0,0,0,1) 100%); z-index: 120; }
         .game-btn { background: transparent; border: 2px solid #0ff; color: #0ff; padding: 12px 30px; font-family: 'Orbitron', sans-serif; cursor: pointer; transition: 0.3s; pointer-events: auto; margin: 10px; }
         .game-btn:hover { background: #0ff; color: #000; box-shadow: 0 0 20px #0ff; }
-        
-        /* FIXED LEADERBOARD Z-INDEX */
-        #leaderboard-panel { 
-            max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; 
-            background: rgba(0,0,0,0.95); border: 1px solid #0ff; padding: 20px; 
-            border-radius: 10px; display: none; z-index: 200; /* High Z-index ensures it sits over game */
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            box-shadow: 0 0 50px rgba(0,255,255,0.2);
-        }
+        #leaderboard-panel { max-height: 60vh; overflow-y: auto; width: 90%; max-width: 400px; background: rgba(0,0,0,0.9); border: 1px solid #0ff; padding: 20px; border-radius: 10px; display: none; z-index: 130; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
         .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; font-size: 14px; color: white; }
     </style>
 </head>
@@ -74,15 +77,25 @@
 
 <canvas id="snow-canvas"></canvas>
 
-<!-- LIGHTBOX -->
 <div id="lightbox" onclick="this.style.display='none'">
     <img id="lightbox-img" src="">
 </div>
 
-<!-- CALCULATOR -->
+<div id="camera-modal" class="modal-base">
+    <div class="glass p-6 rounded-3xl max-w-lg w-full text-center flex flex-col items-center">
+        <h3 class="text-xl font-bold mb-4 text-white">Camera</h3>
+        <video id="cam-feed" autoplay playsinline class="w-full rounded-lg bg-black mb-4 border border-white/10"></video>
+        <canvas id="cam-canvas" class="hidden"></canvas>
+        <div class="flex gap-3 w-full">
+            <button onclick="closeCamera()" class="flex-1 bg-white/10 py-3 rounded-xl font-bold hover:bg-white/20">Cancel</button>
+            <button onclick="takePicture()" class="flex-1 bg-purple-600 py-3 rounded-xl font-bold hover:bg-purple-500">Take Picture</button>
+        </div>
+    </div>
+</div>
+
 <div id="calc-ui" class="glass p-5">
     <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move">
-        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Calculator</span>
+        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Core</span>
         <button onclick="toggleCalc()">✕</button>
     </div>
     <input id="calc-display" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
@@ -97,7 +110,6 @@
     </div>
 </div>
 
-<!-- GAME UI -->
 <div id="game-view">
     <div id="touch-controls"><div class="touch-zone" id="touch-left"></div><div class="touch-zone" id="touch-right"></div></div>
     <div id="game-ui-layer">
@@ -110,7 +122,6 @@
         </div>
     </div>
     
-    <!-- LEADERBOARD PANEL -->
     <div id="leaderboard-panel">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-bold text-[#0ff] tracking-widest">GLOBAL ELITE</h2>
@@ -132,7 +143,6 @@
     </div>
 </div>
 
-<!-- DELETE MODAL -->
 <div id="delete-modal" class="modal-base">
     <div class="glass p-6 rounded-3xl max-w-xs w-full text-center border-red-500/30">
         <h3 class="text-xl font-bold mb-4 text-white">Delete Message?</h3>
@@ -140,7 +150,6 @@
     </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app-root" class="h-full w-full relative z-10 flex flex-col">
     <div id="view-login" class="flex-1 flex items-center justify-center p-4">
         <div class="glass w-full max-w-md p-8 rounded-3xl text-center shadow-2xl border-purple-500/20">
@@ -188,6 +197,11 @@
                     </div>
                     <div class="flex gap-2 max-w-4xl mx-auto items-center">
                         <input type="file" id="file-input" hidden>
+                        
+                        <button onclick="openCamera()" class="text-gray-400 hover:text-white p-2">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </button>
+
                         <button onclick="document.getElementById('file-input').click()" class="text-gray-400 hover:text-white p-2">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         </button>
@@ -220,9 +234,6 @@ let pendingAttachment = null;
 let unreadCount = 0, isWindowFocused = true;
 let userIP = "Hidden";
 
-// ------------------------------------------------------------------
-// AGGRESSIVE VISIBILITY & RECONNECT HANDLER (Fixes 15min Bug)
-// ------------------------------------------------------------------
 document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState === "visible") {
         isWindowFocused = true;
@@ -232,7 +243,6 @@ document.addEventListener("visibilitychange", async () => {
         snowLastTime = performance.now();
         if(!isSnowRunning) { isSnowRunning = true; draw(); }
 
-        // FORCE RECONNECT
         if (ably) {
             console.log("Waking up: Refreshing connections...");
             ably.connection.close(); 
@@ -250,19 +260,15 @@ document.addEventListener("visibilitychange", async () => {
     }
 });
 
-// AUTO UPDATE TIMESTAMP "Just now" -> "1 min ago"
 setInterval(() => {
     document.querySelectorAll('.msg-time').forEach(el => {
         const ts = el.getAttribute('data-ts');
         if(ts) el.innerText = getFriendlyTime(new Date(ts));
     });
-}, 15000); // Check every 15s
+}, 15000); 
 
 window.addEventListener('online', () => { if(ably) ably.connection.connect(); });
 
-// ------------------------------------------------------------------
-// LOGIN & ABLY SETUP
-// ------------------------------------------------------------------
 myId = localStorage.getItem('cryptic_uid') || 'uid-' + Math.random().toString(36).substring(2, 12);
 localStorage.setItem('cryptic_uid', myId);
 if(myId === adminUID) isAdmin = true;
@@ -340,20 +346,27 @@ document.getElementById("join-btn").onclick = async () => {
 
 document.getElementById("input").oninput = () => { channel.publish('typing', myName); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => channel.publish('typing', null), 2000); };
 
-// ------------------------------------------------------------------
-// FILE CHUNKING (25MB LIMIT)
-// ------------------------------------------------------------------
 function handleFileSelect(file) {
     if(!file) return;
     if(file.size > 26214400) { alert("File too large. Max 25MB allowed for free upload."); return; }
-    const type = file.type.startsWith('image/') ? 'image' : 'file';
+    
+    let type = 'file';
+    if(file.type.startsWith('image/')) type = 'image';
+    else if(file.type.startsWith('video/')) type = 'video';
+
     const reader = new FileReader();
     reader.onload = (e) => {
         pendingAttachment = { type: type, data: e.target.result, name: file.name };
         const previewImg = document.getElementById("preview-img");
         const previewText = document.getElementById("preview-text");
-        if(type === 'image') { previewImg.src = e.target.result; previewImg.style.display = 'block'; previewText.innerText = "Image attached"; } 
-        else { previewImg.style.display = 'none'; previewText.innerText = `📄 ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`; }
+        
+        if(type === 'image') { 
+            previewImg.src = e.target.result; previewImg.style.display = 'block'; previewText.innerText = "Image attached"; 
+        } else if(type === 'video') {
+            previewImg.style.display = 'none'; previewText.innerText = "Video attached"; 
+        } else { 
+            previewImg.style.display = 'none'; previewText.innerText = `📄 ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`; 
+        }
         document.getElementById("upload-preview").style.display = "flex";
     };
     reader.readAsDataURL(file);
@@ -362,6 +375,34 @@ function handleFileSelect(file) {
 document.getElementById("input").addEventListener('paste', (e) => { const items = (e.clipboardData || e.originalEvent.clipboardData).items; for (let item of items) { if (item.kind === 'file') { e.preventDefault(); handleFileSelect(item.getAsFile()); break; } } });
 document.getElementById("file-input").addEventListener('change', function() { if (this.files && this.files[0]) handleFileSelect(this.files[0]); });
 window.clearUpload = () => { pendingAttachment = null; document.getElementById("file-input").value = ""; document.getElementById("upload-preview").style.display = "none"; };
+
+let stream = null;
+window.openCamera = async () => {
+    document.getElementById('camera-modal').style.display = 'flex';
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 1920 }, height: { ideal: 1080 } } 
+        });
+        document.getElementById('cam-feed').srcObject = stream;
+    } catch(e) { alert("Camera denied or unavailable"); window.closeCamera(); }
+};
+
+window.takePicture = () => {
+    const vid = document.getElementById('cam-feed');
+    const can = document.getElementById('cam-canvas');
+    can.width = vid.videoWidth; can.height = vid.videoHeight;
+    can.getContext('2d').drawImage(vid, 0, 0);
+    const dataUrl = can.toDataURL('image/jpeg', 0.9);
+    pendingAttachment = { type: 'image', data: dataUrl, name: 'camera_snap.jpg' };
+    document.getElementById("preview-img").src = dataUrl;
+    document.getElementById("upload-preview").style.display = "flex";
+    window.closeCamera();
+};
+
+window.closeCamera = () => {
+    if(stream) stream.getTracks().forEach(t => t.stop());
+    document.getElementById('camera-modal').style.display = 'none';
+};
 
 async function uploadChunks(base64, fileId) {
     const CHUNK_SIZE = 800000; const totalChunks = Math.ceil(base64.length / CHUNK_SIZE); const batch = writeBatch(db);
@@ -389,8 +430,15 @@ async function sendMessage() {
     try {
         const msgData = { text: text || "", user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply };
         if (att) {
-            if(att.type === 'image' && att.data.length < 900000) { msgData.image = att.data; } 
-            else { const fileId = Math.random().toString(36).substring(2, 15); await uploadChunks(att.data, fileId); msgData.file = { name: att.name, id: fileId }; }
+            if(att.data.length < 900000) { 
+                if(att.type === 'image') msgData.image = att.data;
+                else if(att.type === 'video') msgData.video = att.data;
+                else msgData.file = { name: att.name, data: att.data }; 
+            } else { 
+                const fileId = Math.random().toString(36).substring(2, 15); 
+                await uploadChunks(att.data, fileId); 
+                msgData.file = { name: att.name, id: fileId, type: att.type }; 
+            }
         }
         await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
@@ -404,7 +452,7 @@ async function sendMessage() {
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-window.downloadLargeFile = async (btn, fileId, fileName) => {
+window.downloadLargeFile = async (btn, fileId, fileName, fileType) => {
     btn.innerHTML = "Downloading...";
     try {
         const q = query(collection(db, "file_chunks"), orderBy("index"));
@@ -412,19 +460,38 @@ window.downloadLargeFile = async (btn, fileId, fileName) => {
         let fullData = "";
         snapshot.forEach(doc => { if(doc.data().fileId === fileId) fullData += doc.data().data; });
         if(!fullData) { alert("File expired or corrupt."); btn.innerHTML = "Error"; return; }
+        
+        if(fileType === 'video') {
+            const vidContainer = btn.closest('.file-card');
+            vidContainer.outerHTML = `<video controls autoplay muted class="chat-video" src="${fullData}"></video>`;
+            return;
+        }
+
         const a = document.createElement("a"); a.href = fullData; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); btn.innerHTML = "Click to Download";
     } catch(e) { console.error(e); btn.innerHTML = "Fail"; }
 };
 
 function escapeHtml(text) { if (!text) return text; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 
+function processText(text) {
+    let safe = escapeHtml(text);
+    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = safe.match(ytRegex);
+    let embed = "";
+    if (match && match[1]) {
+        const vidId = match[1];
+        embed = `<div class="mt-2 w-full max-w-[400px]"><iframe class="w-full aspect-video rounded-lg border border-white/10" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    }
+    safe = safe.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+    return safe + embed;
+}
+
 function getFriendlyTime(ts) {
     if(!ts) return "Just now";
     const date = ts.toDate ? ts.toDate() : new Date(ts);
     const now = new Date();
-    // Default to time string if pending
     if(isNaN(date.getTime())) return "Sending..."; 
-    const diff = (now - date) / 1000; // Seconds
+    const diff = (now - date) / 1000; 
     if (diff < 60) return "Just now";
     if (diff < 3600) return Math.floor(diff / 60) + "m ago";
     if (date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -438,14 +505,30 @@ function render(u, t, me, msgId, senderIsAdmin, reply, img, file, ts) {
     const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
     let contentHtml = '';
-    if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
-    if(file) {
-        const ext = file.name.split('.').pop().toUpperCase();
-        contentHtml += `<div class="file-card" onclick="window.downloadLargeFile(this.querySelector('.dl-status'), '${file.id}', '${file.name}')"><div class="file-icon">${ext.substring(0,4)}</div><div class="flex-1 overflow-hidden"><div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div><div class="text-[9px] opacity-70 dl-status">Click to Download</div></div><div>⬇</div></div>`;
-    }
-    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`;
     
-    // Store ISO string for auto-updater
+    if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
+    
+    // FILE LOGIC
+    if(file) {
+        if(file.data && !file.id && (file.type || '').startsWith('video')) {
+             // Small Video (Direct)
+             contentHtml += `<video controls autoplay muted class="chat-video" src="${file.data}"></video>`;
+        } else if(file.type === 'video') {
+             // Large Video (Chunked)
+             contentHtml += `<div class="file-card" onclick="window.downloadLargeFile(this.querySelector('.dl-status'), '${file.id}', '${file.name}', 'video')"><div class="file-icon">VID</div><div class="flex-1 overflow-hidden"><div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div><div class="text-[9px] opacity-70 dl-status">Click to Play Video</div></div><div>▶</div></div>`;
+        } else {
+             // Normal File
+             const ext = file.name.split('.').pop().toUpperCase();
+             if(file.data && !file.id) {
+                  contentHtml += `<a href="${file.data}" download="${file.name}" class="file-card"><div class="file-icon">${ext.substring(0,4)}</div><div class="flex-1 overflow-hidden"><div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div><div class="text-[9px] opacity-70">Click to Download</div></div><div>⬇</div></a>`;
+             } else {
+                  contentHtml += `<div class="file-card" onclick="window.downloadLargeFile(this.querySelector('.dl-status'), '${file.id}', '${file.name}', 'file')"><div class="file-icon">${ext.substring(0,4)}</div><div class="flex-1 overflow-hidden"><div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div><div class="text-[9px] opacity-70 dl-status">Click to Download</div></div><div>⬇</div></div>`;
+             }
+        }
+    }
+    
+    if(t) contentHtml += `<span class="text-sm mt-1">${processText(t)}</span>`;
+    
     const isoTime = ts && ts.toDate ? ts.toDate().toISOString() : new Date().toISOString();
     
     div.innerHTML = `${reply ? `<div class="reply-preview">@${escapeHtml(reply.user)}: ${escapeHtml(reply.text)}</div>` : ''} <div class="flex flex-col">${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${escapeHtml(u)} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}<div class="flex justify-between items-start gap-4"><div class="flex flex-col flex-1">${contentHtml}<span class="msg-time text-[9px] opacity-40 self-end mt-1 font-mono" data-ts="${isoTime}">${getFriendlyTime(ts)}</span></div><div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1"><button onclick="window.startReply('${escapeHtml(u)}', '${(t || "Attachment").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}</div></div></div>`;
@@ -459,7 +542,6 @@ window.addEventListener("mouseup", () => isDragging = false); window.addEventLis
 window.toggleCalc = () => calcUi.style.display = (calcUi.style.display === 'block' ? 'none' : 'block');
 window.calcIn = v => { const d = document.getElementById("calc-display"); if(v==='C') d.value="0"; else if(v==='=') { try { d.value = eval(d.value.replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/sqrt/g, 'Math.sqrt').replace(/\^/g, '**')); } catch { d.value = "ERR"; } } else { d.value = d.value==="0" ? v : d.value+v; } };
 
-// GAME ENGINE
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
 let gameLastTime = 0; const gameKeys = { left: false, right: false };
@@ -488,7 +570,6 @@ window.exitGame = () => { isGameRunning = false; document.getElementById("game-v
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; gameLastTime = performance.now(); };
 window.retryGame = () => { score = 0; gameSpeed = 0.45; spawnRate = 25; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); document.getElementById('speed-display').innerText = "100%"; isGameRunning = true; gameLastTime = performance.now(); };
 
-// LEADERBOARD FIX
 window.showLeaderboard = async () => {
     const p = document.getElementById("leaderboard-panel"), c = document.getElementById("lb-content");
     p.style.display = 'block'; c.innerHTML = "Fetching global data...";
@@ -497,10 +578,7 @@ window.showLeaderboard = async () => {
         let html = "", rank = 1;
         snap.forEach(doc => { const d = doc.data(); html += `<div class="lb-row"><span class="text-[#0ff]">#${rank++}</span><span>${escapeHtml(d.user)}</span><span class="font-bold">${d.score}</span></div>`; });
         c.innerHTML = html || "No records yet.";
-    } catch(e) { 
-        console.error(e);
-        c.innerHTML = "Error loading. Database rules might be blocking access."; 
-    }
+    } catch(e) { c.innerHTML = "Error loading. Database rules might be blocking access."; }
 };
 
 function animateGame() {
@@ -527,7 +605,6 @@ function animateGame() {
     renderer.render(scene, camera);
 }
 
-// UTILS & USERS
 window.openDeleteModal = (id) => { const m = document.getElementById("delete-modal"); m.style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); m.style.display = "none"; }; };
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });

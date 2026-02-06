@@ -1,4 +1,4 @@
-# 🔓 CrypticChat Protocol
+# 🔓 CrypticChat Documentation
 
 ![Status](https://img.shields.io/badge/Status-Operational-9667f4?style=for-the-badge)
 ![Encryption](https://img.shields.io/badge/Encryption-AES--256-blueviolet?style=for-the-badge)
@@ -12,15 +12,13 @@ A secure, real-time messaging terminal designed for ephemeral communication. No 
 1. **Access the Terminal:** Go to [domdoesdodrip.github.io/CrypticChat](https://domdoesdodrip.github.io/CrypticChat/), [ cryptical.wtf](https://cryptical.wtf) or [ crypticchat.vercel.app](https://crypticchat.vercel.app)
 2. **Read the Protocol:** Click through the documentation home page.
 3. **Connect:** Hit **ENTER TERMINAL**.
-4. **Signup:** Click Sign Up then enter a Username and a password.
-5. **Login:** The login with a Username and a password.
-6. **Enter Room:** Enter a Alias (Name) and a RoomID (Leave blankt to join a global room).
+4. **Enter Room:** Enter a Name and a RoomID (Leave blank to join a global room).
 ---
 
 ## 📖 Usage Protocol (Tutorial)
 
 ### 1. Identity Creation
-Your **Alias** is public to all users in the room. 
+Your **Name** is public to all users in the room. 
 * **Limit:** 20 Characters.
 * **Advice:** Use a nickname. This network is designed for anonymity.
 

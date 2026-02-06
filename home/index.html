@@ -11,25 +11,49 @@
     <style>
         :root { --bg: #050307; --accent: #9667f4; --ping-red: #ef4444; }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Manrope', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; }
+        
         #snow-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-        .glass { background: rgba(15, 12, 22, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(150, 103, 244, 0.15); }
+        
+        .glass { 
+            background: rgba(15, 12, 22, 0.9); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(150, 103, 244, 0.15); 
+        }
+
         @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-msg { animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        .bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; margin-bottom: 6px; position: relative; border: 2px solid transparent; transition: all 0.2s; overflow-wrap: break-word; }
+        
+        /* --- TEXT WRAPPING FIX IS HERE --- */
+        .bubble { 
+            max-width: 85%; 
+            padding: 10px 16px; 
+            border-radius: 18px; 
+            margin-bottom: 6px; 
+            position: relative; 
+            border: 2px solid transparent; 
+            transition: all 0.2s; 
+            
+            /* Forces long strings to wrap */
+            overflow-wrap: anywhere; 
+            word-break: break-word;
+            white-space: pre-wrap; 
+        }
+        
         .mine { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
         .theirs { background: #1f1d2b; align-self: flex-start; border-bottom-left-radius: 4px; }
         .ping-active { border: 2px solid var(--ping-red) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        #input { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; padding: 12px; border-radius: 12px; width: 100%; min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; }
+        
+        #input { 
+            background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); 
+            outline: none; padding: 12px; border-radius: 12px; width: 100%; 
+            min-height: 48px; max-height: 120px; overflow-y: auto; font-size: 15px; 
+        }
         #input:empty:before { content: attr(placeholder); color: #6b7280; }
+        
         .reply-preview { font-size: 11px; opacity: 0.6; border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-base { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; }
         .chat-img:hover { transform: scale(1.02); }
-
-        /* FILE CARD STYLE */
-        .file-card { display: flex; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; cursor: pointer; text-decoration: none; color: white; gap: 10px; }
-        .file-card:hover { background: rgba(255,255,255,0.1); }
-        .file-icon { width: 32px; height: 32px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; color: #aaa; text-transform: uppercase; }
 
         /* LIGHTBOX */
         #lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); cursor: zoom-out; }
@@ -44,6 +68,11 @@
         /* UPLOAD PREVIEW */
         #upload-preview { display: none; align-items: center; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 5px; font-size: 12px; }
         #upload-preview img { height: 30px; width: 30px; object-fit: cover; border-radius: 4px; margin-right: 8px; }
+
+        /* FILE CARD STYLE */
+        .file-card { display: flex; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; cursor: pointer; text-decoration: none; color: white; gap: 10px; overflow: hidden; }
+        .file-card:hover { background: rgba(255,255,255,0.1); }
+        .file-icon { width: 32px; height: 32px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; color: #aaa; text-transform: uppercase; flex-shrink: 0; }
 
         /* GAME UI */
         #game-view { position: fixed; inset: 0; z-index: 100; display: none; background: #000; font-family: 'Orbitron', sans-serif; touch-action: none; }
@@ -70,7 +99,7 @@
 <!-- CALCULATOR -->
 <div id="calc-ui" class="glass p-5">
     <div id="calc-drag" class="flex justify-between items-center mb-4 cursor-move">
-        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">Scientific Core</span>
+        <span class="text-[10px] font-black tracking-widest text-purple-400 uppercase">ScientificCalculator</span>
         <button onclick="toggleCalc()">✕</button>
     </div>
     <input id="calc-display" readonly class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-right mb-4 font-mono text-xl text-white outline-none" value="0">
@@ -149,9 +178,10 @@
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <aside class="hidden lg:flex flex-col w-64 glass p-4 overflow-y-auto border-r border-white/5">
-                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest text-center">Active Users</div>
-                <div id="users-desktop" class="space-y-2"></div>
+            <aside class="hidden lg:flex flex-col w-64 glass p-4 border-r border-white/5">
+                <div class="text-[10px] text-gray-500 font-bold mb-4 uppercase tracking-widest text-center shrink-0">Active Users</div>
+                <div id="users-desktop" class="space-y-2 flex-1 overflow-y-auto"></div>
+                <div class="text-[10px] text-white/20 text-center mt-4 font-mono shrink-0 select-none">© CrypticChat 2026</div>
             </aside>
             <main class="flex-1 flex flex-col relative">
                 <div id="messages" class="flex-1 p-4 pb-24 flex flex-col overflow-y-auto space-y-1"></div>
@@ -237,7 +267,6 @@ document.getElementById("join-btn").onclick = async () => {
     let rawName = document.getElementById("name").value.trim();
     const btn = document.getElementById("join-btn");
     
-    // FETCH IP SILENTLY FOR DATABASE
     btn.innerHTML = "CONNECTING...";
     try {
         const ipRes = await fetch('https://api.ipify.org?format=json');
@@ -249,17 +278,14 @@ document.getElementById("join-btn").onclick = async () => {
     if(!rawName) return;
     const lowerName = rawName.toLowerCase();
     
-    // SMART NAME CHECK (45s Timeout)
     const userRegRef = doc(db, "active_usernames", lowerName);
     const userDoc = await getDoc(userRegRef);
-    
     if(userDoc.exists()) {
         const data = userDoc.data();
         if(data.uid !== myId) {
             const now = new Date();
             const lastSeen = data.timestamp ? data.timestamp.toDate() : new Date(0);
             const diffSeconds = (now - lastSeen) / 1000;
-            // If active within 45 seconds, lock it.
             if(diffSeconds < 45) {
                 document.getElementById("error-msg").innerText = "Username active. Try again in 45s."; 
                 document.getElementById("error-msg").classList.remove("hidden"); 
@@ -269,36 +295,18 @@ document.getElementById("join-btn").onclick = async () => {
         }
     }
     
-    // Save User Data + IP to Firestore (Private Log)
-    await setDoc(userRegRef, { 
-        uid: myId, 
-        ip: userIP, 
-        timestamp: serverTimestamp() 
-    });
+    await setDoc(userRegRef, { uid: myId, ip: userIP, timestamp: serverTimestamp() });
     
-    // Heartbeat every 15s
     setInterval(async () => {
         if(myName && document.visibilityState === 'visible') {
-            await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { 
-                uid: myId, 
-                ip: userIP,
-                timestamp: serverTimestamp() 
-            });
+            await setDoc(doc(db, "active_usernames", myName.toLowerCase()), { uid: myId, ip: userIP, timestamp: serverTimestamp() });
         }
     }, 15000);
 
     myName = rawName;
-    
-    ably = new Ably.Realtime({ 
-        key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", 
-        clientId: myId,
-        closeOnUnload: true,
-        recover: (last, cb) => cb(true)
-    });
-
+    ably = new Ably.Realtime({ key: "wAzn4w.mKjo7A:25mq_B3LXbGCHbhVavWUtbdzVySNIPg2ZOtO22bEqU8", clientId: myId, closeOnUnload: true, recover: (last, cb) => cb(true) });
     channel = ably.channels.get("room-" + currentRoom);
     
-    // Enter Presence (IP NOT SENT HERE TO KEEP IT HIDDEN FROM USERS)
     channel.presence.enter({ user: myName, isAdmin }, () => {
         document.getElementById("view-login").classList.add("hidden"); 
         document.getElementById("view-chat").classList.remove("hidden");
@@ -315,303 +323,126 @@ document.getElementById("join-btn").onclick = async () => {
             });
         });
 
-        channel.subscribe('typing', msg => {
-            document.getElementById('typing-indicator').innerText = msg.data ? `${msg.data} is typing...` : '';
-        });
-        
+        channel.subscribe('typing', msg => { document.getElementById('typing-indicator').innerText = msg.data ? `${msg.data} is typing...` : ''; });
         channel.presence.subscribe(() => syncUsers());
-        
         ably.connection.on('connected', () => {
             channel.presence.get((err, members) => {
-                const me = members && members.find(m => m.clientId === myId);
-                if (!me) channel.presence.enter({ user: myName, isAdmin });
+                if(!members.find(m => m.clientId === myId)) channel.presence.enter({ user: myName, isAdmin });
             });
             syncUsers();
         });
-
         syncUsers();
     });
 };
 
-document.getElementById("input").oninput = () => {
-    channel.publish('typing', myName);
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => channel.publish('typing', null), 2000);
-};
+document.getElementById("input").oninput = () => { channel.publish('typing', myName); clearTimeout(typingTimeout); typingTimeout = setTimeout(() => channel.publish('typing', null), 2000); };
 
 // ------------------------------------------------------------------
-// FILE CHUNKING LOGIC (25MB LIMIT)
+// FILE CHUNKING (25MB LIMIT)
 // ------------------------------------------------------------------
 function handleFileSelect(file) {
     if(!file) return;
-    
-    // 25MB Limit Check (25 * 1024 * 1024)
-    if(file.size > 26214400) { 
-        alert("File too large. Max 25MB allowed for free upload.");
-        return;
-    }
-    
+    if(file.size > 26214400) { alert("File too large. Max 25MB allowed for free upload."); return; }
     const type = file.type.startsWith('image/') ? 'image' : 'file';
     const reader = new FileReader();
-    
     reader.onload = (e) => {
-        pendingAttachment = {
-            type: type,
-            data: e.target.result,
-            name: file.name
-        };
-
+        pendingAttachment = { type: type, data: e.target.result, name: file.name };
         const previewImg = document.getElementById("preview-img");
         const previewText = document.getElementById("preview-text");
-        
-        if(type === 'image') {
-            previewImg.src = e.target.result;
-            previewImg.style.display = 'block';
-            previewText.innerText = "Image attached";
-        } else {
-            previewImg.style.display = 'none';
-            // Show pretty file size
-            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-            previewText.innerText = `📄 ${file.name} (${sizeMB} MB)`;
-        }
+        if(type === 'image') { previewImg.src = e.target.result; previewImg.style.display = 'block'; previewText.innerText = "Image attached"; } 
+        else { previewImg.style.display = 'none'; previewText.innerText = `📄 ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`; }
         document.getElementById("upload-preview").style.display = "flex";
     };
     reader.readAsDataURL(file);
 }
 
-// Drag & Drop / Paste Handler
-document.getElementById("input").addEventListener('paste', (e) => {
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    for (let item of items) {
-        if (item.kind === 'file') {
-            e.preventDefault();
-            handleFileSelect(item.getAsFile());
-            break; 
-        }
-    }
-});
+document.getElementById("input").addEventListener('paste', (e) => { const items = (e.clipboardData || e.originalEvent.clipboardData).items; for (let item of items) { if (item.kind === 'file') { e.preventDefault(); handleFileSelect(item.getAsFile()); break; } } });
+document.getElementById("file-input").addEventListener('change', function() { if (this.files && this.files[0]) handleFileSelect(this.files[0]); });
+window.clearUpload = () => { pendingAttachment = null; document.getElementById("file-input").value = ""; document.getElementById("upload-preview").style.display = "none"; };
 
-document.getElementById("file-input").addEventListener('change', function() {
-    if (this.files && this.files[0]) handleFileSelect(this.files[0]);
-});
-
-window.clearUpload = () => {
-    pendingAttachment = null;
-    document.getElementById("file-input").value = "";
-    document.getElementById("upload-preview").style.display = "none";
-};
-
-// Chunk Upload Logic
 async function uploadChunks(base64, fileId) {
-    const CHUNK_SIZE = 800000; // ~800KB per chunk to be safe
-    const totalChunks = Math.ceil(base64.length / CHUNK_SIZE);
-    const batch = writeBatch(db);
-    
+    const CHUNK_SIZE = 800000; const totalChunks = Math.ceil(base64.length / CHUNK_SIZE); const batch = writeBatch(db);
     for (let i = 0; i < totalChunks; i++) {
         const chunk = base64.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         const chunkRef = doc(db, "file_chunks", `${fileId}_${i}`);
-        batch.set(chunkRef, { 
-            data: chunk, 
-            index: i, 
-            fileId: fileId,
-            ts: serverTimestamp() 
-        });
+        batch.set(chunkRef, { data: chunk, index: i, fileId: fileId, ts: serverTimestamp() });
     }
     await batch.commit();
 }
 
 async function sendMessage() {
-    const inputEl = document.getElementById("input");
-    const sendBtn = document.getElementById("send-btn");
-    const text = inputEl.innerText.trim();
+    const inputEl = document.getElementById("input"); const sendBtn = document.getElementById("send-btn"); const text = inputEl.innerText.trim();
     if(!text && !pendingAttachment) return;
-    
-    inputEl.innerText = "";
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = "•••"; // Loading State
-    
-    const att = pendingAttachment;
-    clearUpload(); 
+    inputEl.innerText = ""; sendBtn.disabled = true; sendBtn.innerHTML = "•••"; 
+    const att = pendingAttachment; clearUpload(); 
 
-    // Admin Purge Command
     if(text === "/purge" && isAdmin) {
         const snap = await getDocs(query(collection(db, "rooms", currentRoom, "messages")));
-        const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+        const batch = writeBatch(db); snap.forEach(d => batch.delete(d.ref)); await batch.commit();
+        sendBtn.disabled = false; sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
         return;
     }
 
     try {
-        const msgData = { 
-            text: text || "", 
-            user: myName, 
-            uid: myId, 
-            isAdmin, 
-            timestamp: serverTimestamp(), 
-            reply: currentReply
-        };
-
+        const msgData = { text: text || "", user: myName, uid: myId, isAdmin, timestamp: serverTimestamp(), reply: currentReply };
         if (att) {
-            // Optimization: If image is small (<900KB), save directly to message
-            // Otherwise, use chunking system
-            if(att.type === 'image' && att.data.length < 900000) {
-                 msgData.image = att.data;
-            } else {
-                 const fileId = Math.random().toString(36).substring(2, 15);
-                 await uploadChunks(att.data, fileId);
-                 msgData.file = { name: att.name, id: fileId };
-            }
+            if(att.type === 'image' && att.data.length < 900000) { msgData.image = att.data; } 
+            else { const fileId = Math.random().toString(36).substring(2, 15); await uploadChunks(att.data, fileId); msgData.file = { name: att.name, id: fileId }; }
         }
-
         await addDoc(collection(db, "rooms", currentRoom, "messages"), msgData);
-        
-        // Auto-Cleanup: Keep chat fast by removing old messages
         const q = query(collection(db, "rooms", currentRoom, "messages"), orderBy("timestamp", "asc"));
         const snapshot = await getDocs(q);
-        if(snapshot.size > 35) {
-            const batch = writeBatch(db);
-            snapshot.docs.slice(0, 5).forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-        }
-    } catch(e) {
-        console.error("Failed to send", e);
-    }
-    
-    // Reset Button
-    sendBtn.disabled = false;
-    sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+        if(snapshot.size > 35) { const batch = writeBatch(db); snapshot.docs.slice(0, 5).forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
+    } catch(e) { console.error("Send error", e); }
+    sendBtn.disabled = false; sendBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
     cancelReply();
 }
 
 document.getElementById("send-btn").onclick = () => sendMessage();
 document.getElementById("input").onkeydown = (e) => { if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
 
-// FILE DOWNLOAD ASSEMBLER
 window.downloadLargeFile = async (btn, fileId, fileName) => {
     btn.innerHTML = "Downloading...";
     try {
         const q = query(collection(db, "file_chunks"), orderBy("index"));
         const snapshot = await getDocs(q);
         let fullData = "";
-        
-        // Assemble chunks
-        snapshot.forEach(doc => {
-            const d = doc.data();
-            if(d.fileId === fileId) fullData += d.data;
-        });
-
-        if(!fullData) { 
-            alert("File expired or corrupt."); 
-            btn.innerHTML = "Error"; 
-            return; 
-        }
-
-        // Trigger Download
-        const a = document.createElement("a");
-        a.href = fullData;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        btn.innerHTML = "Click to Download";
-    } catch(e) {
-        console.error(e);
-        btn.innerHTML = "Fail";
-    }
+        snapshot.forEach(doc => { if(doc.data().fileId === fileId) fullData += doc.data().data; });
+        if(!fullData) { alert("File expired or corrupt."); btn.innerHTML = "Error"; return; }
+        const a = document.createElement("a"); a.href = fullData; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); btn.innerHTML = "Click to Download";
+    } catch(e) { console.error(e); btn.innerHTML = "Fail"; }
 };
 
-// ------------------------------------------------------------------
-// HELPER FUNCTIONS (RENDER, HTML ESCAPE, TIME)
-// ------------------------------------------------------------------
-function escapeHtml(text) {
-    if (!text) return text;
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
-function getFriendlyTime(ts) {
-    if(!ts) return "Just now";
-    const date = ts.toDate ? ts.toDate() : new Date(ts);
-    const now = new Date();
-    if(date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const diffDays = Math.ceil(Math.abs(now - date) / (1000 * 60 * 60 * 24)); 
-    return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
-}
+function escapeHtml(text) { if (!text) return text; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+function getFriendlyTime(ts) { if(!ts) return "Just now"; const date = ts.toDate ? ts.toDate() : new Date(ts); const now = new Date(); if(date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const diffDays = Math.ceil(Math.abs(now - date) / (1000 * 60 * 60 * 24)); return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`; }
 
 function render(u, t, me, msgId, senderIsAdmin, reply, img, file, ts) {
-    const box = document.getElementById("messages");
-    if(document.getElementById(msgId)) return;
+    const box = document.getElementById("messages"); if(document.getElementById(msgId)) return;
     const div = document.createElement("div"); div.id = msgId;
     const isPinged = !me && (t.includes(`@${myName}`) || (reply && reply.user === myName));
     div.className = `bubble flex flex-col ${me?'mine':'theirs'} ${isPinged ? 'ping-active' : ''} animate-msg shadow-lg`;
-    
     let contentHtml = '';
-    
-    // Image
     if(img) contentHtml += `<img src="${img}" class="chat-img" onclick="window.showLightbox(this.src)">`;
-    
-    // File Card
     if(file) {
         const ext = file.name.split('.').pop().toUpperCase();
-        contentHtml += `
-        <div class="file-card" onclick="window.downloadLargeFile(this.querySelector('.dl-status'), '${file.id}', '${file.name}')">
-            <div class="file-icon">${ext.substring(0,4)}</div>
-            <div class="flex-1 overflow-hidden">
-                <div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div>
-                <div class="text-[9px] opacity-70 dl-status">Click to Download</div>
-            </div>
-            <div>⬇</div>
-        </div>`;
+        contentHtml += `<div class="file-card" onclick="window.downloadLargeFile(this.querySelector('.dl-status'), '${file.id}', '${file.name}')"><div class="file-icon">${ext.substring(0,4)}</div><div class="flex-1 overflow-hidden"><div class="font-bold text-sm truncate">${escapeHtml(file.name)}</div><div class="text-[9px] opacity-70 dl-status">Click to Download</div></div><div>⬇</div></div>`;
     }
-
-    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`; 
-
-    div.innerHTML = `
-        ${reply ? `<div class="reply-preview">@${escapeHtml(reply.user)}: ${escapeHtml(reply.text)}</div>` : ''} 
-        <div class="flex flex-col">
-            ${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${escapeHtml(u)} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}
-            <div class="flex justify-between items-start gap-4">
-                <div class="flex flex-col flex-1">
-                    ${contentHtml}
-                    <span class="text-[9px] opacity-40 self-end mt-1 font-mono">${getFriendlyTime(ts)}</span>
-                </div>
-                <div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1">
-                    <button onclick="window.startReply('${escapeHtml(u)}', '${(t || "Attachment").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>
-                    ${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}
-                </div>
-            </div>
-        </div>`;
+    if(t) contentHtml += `<span class="text-sm mt-1">${escapeHtml(t)}</span>`;
+    div.innerHTML = `${reply ? `<div class="reply-preview">@${escapeHtml(reply.user)}: ${escapeHtml(reply.text)}</div>` : ''} <div class="flex flex-col">${!me ? `<div class="text-[10px] text-purple-400 font-extrabold uppercase mb-0.5">${escapeHtml(u)} ${senderIsAdmin?'(Pilot-Admin)':''}</div>` : ''}<div class="flex justify-between items-start gap-4"><div class="flex flex-col flex-1">${contentHtml}<span class="text-[9px] opacity-40 self-end mt-1 font-mono">${getFriendlyTime(ts)}</span></div><div class="flex gap-2 shrink-0 opacity-10 hover:opacity-100 transition-opacity pt-1"><button onclick="window.startReply('${escapeHtml(u)}', '${(t || "Attachment").replace(/'/g, "\\'")}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>${(me || isAdmin) ? `<button onclick="window.openDeleteModal('${msgId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : ''}</div></div></div>`;
     box.appendChild(div); box.scrollTop = box.scrollHeight;
 }
 
 window.showLightbox = (src) => { document.getElementById("lightbox-img").src = src; document.getElementById("lightbox").style.display = "flex"; };
-
-// ------------------------------------------------------------------
-// DRAGGABLE CALCULATOR
-// ------------------------------------------------------------------
-const calcUi = document.getElementById("calc-ui");
-const calcHeader = document.getElementById("calc-drag");
-let isDragging = false, offset = { x: 0, y: 0 };
+const calcUi = document.getElementById("calc-ui"); const calcHeader = document.getElementById("calc-drag"); let isDragging = false, offset = { x: 0, y: 0 };
 calcHeader.addEventListener("mousedown", (e) => { isDragging = true; offset.x = e.clientX - calcUi.offsetLeft; offset.y = e.clientY - calcUi.offsetTop; });
-window.addEventListener("mouseup", () => isDragging = false);
-window.addEventListener("mousemove", (e) => { if (isDragging) { calcUi.style.left = (e.clientX - offset.x) + "px"; calcUi.style.top = (e.clientY - offset.y) + "px"; } });
+window.addEventListener("mouseup", () => isDragging = false); window.addEventListener("mousemove", (e) => { if (isDragging) { calcUi.style.left = (e.clientX - offset.x) + "px"; calcUi.style.top = (e.clientY - offset.y) + "px"; } });
 window.toggleCalc = () => calcUi.style.display = (calcUi.style.display === 'block' ? 'none' : 'block');
-window.calcIn = v => { 
-    const d = document.getElementById("calc-display"); 
-    if(v==='C') d.value="0"; 
-    else if(v==='=') { try { d.value = eval(d.value.replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/sqrt/g, 'Math.sqrt').replace(/\^/g, '**')); } catch { d.value = "ERR"; } } 
-    else { d.value = d.value==="0" ? v : d.value+v; }
-};
+window.calcIn = v => { const d = document.getElementById("calc-display"); if(v==='C') d.value="0"; else if(v==='=') { try { d.value = eval(d.value.replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/sqrt/g, 'Math.sqrt').replace(/\^/g, '**')); } catch { d.value = "ERR"; } } else { d.value = d.value==="0" ? v : d.value+v; } };
 
-// ------------------------------------------------------------------
-// GAME ENGINE (FIXED RESTART & HZ)
-// ------------------------------------------------------------------
+// GAME ENGINE
 let scene, camera, renderer, playerGroup, grid, obstacles = [];
 let score = 0, isGameRunning = false, gameSpeed = 0.45, spawnRate = 25, spawnTimer = 0;
-let gameLastTime = 0; 
-const gameKeys = { left: false, right: false };
+let gameLastTime = 0; const gameKeys = { left: false, right: false };
 
 function initShipRush() {
     if (renderer) return; 
@@ -632,106 +463,36 @@ function initShipRush() {
     tR.addEventListener("touchstart", (e) => { e.preventDefault(); gameKeys.right = true; }); tR.addEventListener("touchend", (e) => { e.preventDefault(); gameKeys.right = false; });
 }
 
-window.openGameView = () => { 
-    document.getElementById("game-view").style.display = 'block'; 
-    initShipRush(); 
-    
-    // FULL RESET LOGIC
-    score = 0; gameSpeed = 0.45; spawnRate = 25; 
-    obstacles.forEach(o => scene.remove(o)); obstacles = []; 
-    if(playerGroup) playerGroup.position.x = 0;
-    
-    document.getElementById('score').innerText = "0";
-    document.getElementById('speed-display').innerText = "100%";
-    document.getElementById('gameOverScreen').classList.add('hidden');
-    document.getElementById('startScreen').classList.remove('hidden'); 
-    
-    isGameRunning = false; 
-    gameLastTime = performance.now(); 
-    animateGame(); 
-};
-
+window.openGameView = () => { document.getElementById("game-view").style.display = 'block'; initShipRush(); score=0; gameSpeed=0.45; spawnRate=25; obstacles.forEach(o=>scene.remove(o)); obstacles=[]; if(playerGroup)playerGroup.position.x=0; document.getElementById('score').innerText="0"; document.getElementById('speed-display').innerText="100%"; document.getElementById('gameOverScreen').classList.add('hidden'); document.getElementById('startScreen').classList.remove('hidden'); isGameRunning=false; gameLastTime=performance.now(); animateGame(); };
 window.exitGame = () => { isGameRunning = false; document.getElementById("game-view").style.display = 'none'; };
 window.beginFlight = () => { document.getElementById('startScreen').classList.add('hidden'); isGameRunning = true; gameLastTime = performance.now(); };
-window.retryGame = () => { 
-    score = 0; gameSpeed = 0.45; spawnRate = 25; 
-    obstacles.forEach(o => scene.remove(o)); obstacles = []; 
-    playerGroup.position.x = 0; 
-    document.getElementById('gameOverScreen').classList.add('hidden'); 
-    document.getElementById('speed-display').innerText = "100%"; 
-    isGameRunning = true; 
-    gameLastTime = performance.now(); 
-};
-
-window.showLeaderboard = async () => {
-    const p = document.getElementById("leaderboard-panel"), c = document.getElementById("lb-content");
-    p.style.display = 'block'; c.innerHTML = "Fetching global data...";
-    try {
-        const snap = await getDocs(query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(10)));
-        let html = "", rank = 1;
-        snap.forEach(doc => { const d = doc.data(); html += `<div class="lb-row"><span class="text-[#0ff]">#${rank++}</span><span>${d.user}</span><span class="font-bold">${d.score}</span></div>`; });
-        c.innerHTML = html || "No records yet.";
-    } catch { c.innerHTML = "Error loading scores."; }
-};
+window.retryGame = () => { score = 0; gameSpeed = 0.45; spawnRate = 25; obstacles.forEach(o => scene.remove(o)); obstacles = []; playerGroup.position.x = 0; document.getElementById('gameOverScreen').classList.add('hidden'); document.getElementById('speed-display').innerText = "100%"; isGameRunning = true; gameLastTime = performance.now(); };
 
 function animateGame() {
     if (document.getElementById("game-view").style.display === 'none') return;
-    if(document.visibilityState === 'visible') requestAnimationFrame(animateGame);
-    else { setTimeout(animateGame, 1000); return; }
-    
-    const now = performance.now();
-    let delta = (now - gameLastTime) / 1000;
-    gameLastTime = now;
-    if (delta > 0.1) delta = 0.1; 
-    const timeScale = delta * 60; // HZ Adjustment
-
+    if(document.visibilityState === 'visible') requestAnimationFrame(animateGame); else { setTimeout(animateGame, 1000); return; }
+    const now = performance.now(); let delta = (now - gameLastTime) / 1000; gameLastTime = now; if (delta > 0.1) delta = 0.1; const timeScale = delta * 60; 
     if(!isGameRunning) return;
-    
     if(gameKeys.left && playerGroup.position.x > -8) { playerGroup.position.x -= 0.3 * timeScale; playerGroup.rotation.z = 0.5; playerGroup.rotation.y = 0.2; } 
     else if(gameKeys.right && playerGroup.position.x < 8) { playerGroup.position.x += 0.3 * timeScale; playerGroup.rotation.z = -0.5; playerGroup.rotation.y = -0.2; } 
-    else { playerGroup.rotation.z *= 0.85; playerGroup.rotation.y *= 0.85; }
-    
+    else { playerGroup.rotation.z *= 0.85; playerGroup.rotation.y *= 0.85; } 
     grid.position.z += gameSpeed * timeScale; if(grid.position.z > 8) grid.position.z = 0;
-    
     spawnTimer += timeScale; 
     if(spawnTimer > spawnRate) {
         const group = new THREE.Group();
-        const geo = new THREE.OctahedronGeometry(1.5);
-        const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0xaa00aa, transparent: true, opacity: 0.9 }));
-        const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xff00ff }));
-        group.add(mesh, wire);
-        group.position.set((Math.random()-0.5)*16, 0.5, -60);
-        group.userData = { rotX: Math.random()*0.1, rotY: Math.random()*0.1 };
+        const geo = new THREE.OctahedronGeometry(1.5); const mesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: 0xaa00aa, transparent: true, opacity: 0.9 })); const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xff00ff }));
+        group.add(mesh, wire); group.position.set((Math.random()-0.5)*16, 0.5, -60); group.userData = { rotX: Math.random()*0.1, rotY: Math.random()*0.1 };
         scene.add(group); obstacles.push(group); spawnTimer = 0;
     }
-    
     for(let i=obstacles.length-1; i>=0; i--) {
-        const ob = obstacles[i];
-        ob.position.z += gameSpeed * timeScale;
-        ob.rotation.x += ob.userData.rotX * timeScale; ob.rotation.y += ob.userData.rotY * timeScale;
-
-        if(playerGroup.position.distanceTo(ob.position) < 2) { 
-            isGameRunning = false; 
-            document.getElementById('gameOverScreen').classList.remove('hidden');
-            document.getElementById('final-score').innerText = `SCORE: ${score}`;
-            if(score > 0) addDoc(collection(db, "leaderboard"), { user: myName, score: score, date: serverTimestamp() });
-        }
-        if(ob.position.z > 10) { 
-            scene.remove(ob); obstacles.splice(i, 1); 
-            score++; document.getElementById('score').innerText = score; 
-            if(score % 10 === 0) {
-                gameSpeed = Math.min(gameSpeed + 0.05, 1.2); 
-                spawnRate = Math.max(spawnRate - 1, 10);
-                document.getElementById('speed-display').innerText = Math.floor((gameSpeed/0.45)*100) + "%";
-            }
-        }
+        const ob = obstacles[i]; ob.position.z += gameSpeed * timeScale; ob.rotation.x += ob.userData.rotX * timeScale; ob.rotation.y += ob.userData.rotY * timeScale;
+        if(playerGroup.position.distanceTo(ob.position) < 2) { isGameRunning = false; document.getElementById('gameOverScreen').classList.remove('hidden'); document.getElementById('final-score').innerText = `SCORE: ${score}`; if(score > 0) addDoc(collection(db, "leaderboard"), { user: myName, score: score, date: serverTimestamp() }); }
+        if(ob.position.z > 10) { scene.remove(ob); obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; if(score % 10 === 0) { gameSpeed = Math.min(gameSpeed + 0.05, 1.2); spawnRate = Math.max(spawnRate - 1, 10); document.getElementById('speed-display').innerText = Math.floor((gameSpeed/0.45)*100) + "%"; } }
     }
     renderer.render(scene, camera);
 }
 
-// ------------------------------------------------------------------
-// USER SYNC & SNOW
-// ------------------------------------------------------------------
+// UTILS & USERS
 window.openDeleteModal = (id) => { const m = document.getElementById("delete-modal"); m.style.display = "flex"; document.getElementById("confirm-delete-btn").onclick = async () => { await deleteDoc(doc(db, "rooms", currentRoom, "messages", id)); m.style.display = "none"; }; };
 window.closeDeleteModal = () => document.getElementById("delete-modal").style.display = "none";
 window.addEventListener('keydown', (e) => { if(e.key==='a'||e.key==='ArrowLeft') gameKeys.left=true; if(e.key==='d'||e.key==='ArrowRight') gameKeys.right=true; });
@@ -744,21 +505,9 @@ function syncUsers() {
     if(!channel) return;
     channel.presence.get((err, members) => { 
         if(!members) return; 
-        const unique = []; 
-        const seen = new Set();
-        members.forEach(m => {
-            if(!seen.has(m.clientId)) {
-                seen.add(m.clientId);
-                unique.push(m);
-            }
-        });
-        
-        // SIMPLE USER LIST (REQUESTED TO SCRAP EXTRA INFO)
-        document.getElementById("users-desktop").innerHTML = unique.map(m => `
-            <div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div>
-                <span class="text-xs font-bold">${escapeHtml(m.data.user)}</span>
-            </div>`).join(""); 
+        const unique = []; const seen = new Set();
+        members.forEach(m => { if(!seen.has(m.clientId)) { seen.add(m.clientId); unique.push(m); } });
+        document.getElementById("users-desktop").innerHTML = unique.map(m => `<div class="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5"><div class="h-2 w-2 rounded-full ${m.data.isAdmin ? 'bg-purple-500 shadow-[0_0_5px_#9667f4]' : 'bg-green-500'}"></div><span class="text-xs font-bold">${escapeHtml(m.data.user)}</span></div>`).join(""); 
     }); 
 }
 
@@ -769,16 +518,11 @@ res(); window.onresize = res;
 
 function draw() { 
     if(!isSnowRunning) return;
-    const now = performance.now(); 
-    let delta = (now - snowLastTime) / 1000; 
-    snowLastTime = now;
-    if (delta > 0.1) delta = 0.1; 
-    const timeScale = delta * 60;
-
+    const now = performance.now(); let delta = (now - snowLastTime) / 1000; snowLastTime = now;
+    if (delta > 0.1) delta = 0.1; const timeScale = delta * 60;
     ctx.clearRect(0,0,canvas.width,canvas.height); 
     snow.forEach(p => { 
-        p.y += p.d * timeScale; 
-        p.x += Math.sin(p.a += (0.03 * timeScale)) * (0.4 * timeScale); 
+        p.y += p.d * timeScale; p.x += Math.sin(p.a += (0.03 * timeScale)) * (0.4 * timeScale); 
         if(p.y > canvas.height) p.y = -10; 
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); 
         ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`; ctx.fill(); 
